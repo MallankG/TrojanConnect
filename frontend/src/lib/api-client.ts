@@ -6,7 +6,8 @@ const API = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:8000";
 async function call<T>(path: string, init?: RequestInit & { json?: unknown }): Promise<T> {
   const res = await fetch(`${API}${path}`, {
     ...init,
-    headers: { "content-type": "application/json", ...init?.headers },
+    // Custom header forces a CORS preflight; the backend rejects mutations without it (CSRF guard).
+    headers: { "content-type": "application/json", "X-TrojanConnect-Client": "web", ...init?.headers },
     body: init?.json !== undefined ? JSON.stringify(init.json) : init?.body,
     cache: "no-store",
   });

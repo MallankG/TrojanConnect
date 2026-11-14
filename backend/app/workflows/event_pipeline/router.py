@@ -15,12 +15,27 @@ import subprocess
 import threading
 from typing import Any, Literal
 
-from fastapi import APIRouter, HTTPException
+from fastapi import APIRouter, Depends, Header, HTTPException, Request
 from pydantic import BaseModel
 
 from . import store
 
-router = APIRouter(prefix="/api/v1/pipeline", tags=["event-pipeline"])
+CLIENT_HEADER = "X-TrojanConnect-Client"
+
+
+def require_client_header(request: Request, x_trojanconnect_client: str | None = Header(default=None)) -> None:
+    """CSRF guard for state-changing requests.
+
+    A custom header turns every cross-origin request into a CORS-preflighted one, and CORS only
+    allows the TrojanConnect frontend origin. This stops a random website from silently resetting
+    the event or launching pre-fill browser windows. Not a substitute for real auth (PRD: Supabase
+    Auth + server-side session verification); add that dependency here when it lands.
+    """
+    if request.method in {"POST", "PUT", "PATCH", "DELETE"} and x_trojanconnect_client != "web":
+        raise HTTPException(403, f"Missing {CLIENT_HEADER} header.")
+
+
+router = APIRouter(prefix="/api/v1/pipeline", tags=["event-pipeline"], dependencies=[Depends(require_client_header)])
 
 USC_FORMS_DIR = store.BACKEND_ROOT / "app" / "integrations" / "usc_forms"
 
