@@ -1,0 +1,60 @@
+# Event Pipeline
+
+Automates the club event walkthrough (venue → food → permit → funding → EngageSC → accessibility → publicity). A club rep enters the event **once**. The `/pipeline` page then shows where they are in the waterfall, what each step is waiting on, and the deadlines counted back from the event date. Each USC web form is pre-filled in a visible browser window.
+
+**Nothing is submitted automatically.** Every pre-filler stops on the final page so a human reviews the form and presses Submit. This is in line with the PRD's non-goals: no live integration claims, no automatic confirmation.
+
+## Where things live
+
+| Layer | Path |
+|---|---|
+| UI (Next.js route `/pipeline`) | `frontend/src/app/pipeline/page.tsx`, `frontend/src/components/pipeline/*` |
+| Steps, deadlines, the fields each form needs, email templates | `frontend/src/lib/pipeline/plan.ts`, `fields.ts` |
+| API client | `frontend/src/lib/api-client.ts` (`NEXT_PUBLIC_API_URL`, default `http://localhost:8000`) |
+| API + state (FastAPI, `/api/v1/pipeline/*`) | `backend/app/workflows/event_pipeline/` |
+| Browser pre-fillers (Node + Playwright) | `backend/app/integrations/usc_forms/` |
+| Local state (git-ignored) | `backend/data/event_pipeline.json`, `backend/data/browser-profile/` |
+
+Storage is a JSON file for the hackathon. `store.py` is the only module to replace when Supabase lands.
+
+## Setup
+
+```bash
+cd backend/app/integrations/usc_forms && npm run setup   # Playwright + Chromium, needed for "Pre-fill in browser"
+```
+Then run the frontend and backend as described in the root README, and open http://localhost:3000/pipeline.
+
+## API
+
+| Method | Path | Purpose |
+|---|---|---|
+| GET | `/api/v1/pipeline/state` | profile, step progress and activity log |
+| PUT | `/api/v1/pipeline/profile` | merge profile fields |
+| PUT | `/api/v1/pipeline/progress` | `{step, check, value}` or `{step, dataKey, dataValue}` |
+| POST | `/api/v1/pipeline/run/{tcc\|outdoor\|classroom\|eeRoom\|permit}` | open a browser and pre-fill (the permit returns 409 until a 6-digit reservation # is recorded) |
+| GET | `/api/v1/pipeline/run/{form}` | live log of a pre-fill run |
+| GET | `/api/v1/pipeline/ee-availability` | read the public EEB/PHE calendars for the event date |
+| POST | `/api/v1/pipeline/reset` | clear the event |
+
+## How each step is automated
+
+| # | Step | Automated | Still manual |
+|---|------|-----------|--------------|
+| 1 | Venue | Picks the channel from the venue type. Pre-fills the TCC, Outdoor and Classroom forms (all 8 pages) and the EEB/PHE form. Drafts the email to Kevin Giang (Viterbi). Checks the EEB/PHE calendars. | Submit, then record the 6-digit reservation # and the venue manager |
+| 2 | Food | Lists the 20 caterers accepted by the permit lookup. Drafts an email to Hospitality for vendors that aren't approved. | The approved vendor sheet needs a USC login |
+| 3 | Permit | Locked until the venue is confirmed. Pre-fills 8 of the 11 Salesforce stages (No to trash/waste, attendance ≤ 60). | ADA / Smoke-Free / Plastic acknowledgements, then Submit |
+| 4 | Funding | Drafts the budget email to the VP of Finance | Fill the budget; order in person at OHE and be there for delivery |
+| 5 | EngageSC | Locked until venue + permit are done; checklist | Manual: needs a USC login, and the walkthrough video is private |
+| 6 | Accessibility | Drafts the request to the VP of Communications. Comes before publicity. | Add the statements |
+| 7 | Publicity | Drafts the emails to the VP of Communications and the advisor; tracks the day-of re-post | Make the Canva graphic |
+
+## Rules found on the live forms (Nov 2026)
+- **Outdoor (TES):** 6 weeks notice (the walkthrough says 3+; the tracker uses 6). 8:00 AM–11:30 PM. No amplified sound after 8 PM.
+- **TCC:** 3 weeks.
+- **Classroom:** weeks 4 through the last day of instruction. Mon–Thu events start at 6:00 PM or later, Fri at 3:00 PM or later, all end by 11:00 PM. Nothing within 48 hours. Fri–Sun requests are due by Thursday noon. A permit is required if 25+ people or food.
+- **EEB/PHE:** at least 3 days ahead; non-EE departments can book at most 1 month out.
+- **Permit:** reservation # exactly 6 digits, USC ID exactly 10 digits. Caterers that aren't approved need a one-time approval (health permit + insurance) 2 weeks before the event. Parking requests are due 14 business days ahead.
+
+## Known gaps
+- The budget template link in the walkthrough returns **410 Gone**. The vendor sheet and the EngageSC video are USC-login only.
+- If a USC form changes its wording, the pre-filler logs `not shown: …` and keeps going. Update the label in `usc_forms/forms.mjs`.

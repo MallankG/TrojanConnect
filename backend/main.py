@@ -1,6 +1,8 @@
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
+from app.workflows.event_pipeline import router as event_pipeline_router
+
 app = FastAPI()
 app.add_middleware(
     CORSMiddleware,
@@ -8,6 +10,7 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
+app.include_router(event_pipeline_router)
 
 
 @app.get("/api/health")

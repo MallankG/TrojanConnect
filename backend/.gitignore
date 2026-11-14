@@ -1,3 +1,6 @@
 .venv/
 __pycache__/
 .env
+# event pipeline: local state, saved USC browser logins, automation deps
+data/
+app/integrations/usc_forms/node_modules/
