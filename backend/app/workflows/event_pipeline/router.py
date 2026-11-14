@@ -15,7 +15,7 @@ import subprocess
 import threading
 from typing import Any, Literal
 
-from fastapi import APIRouter, Depends, Header, HTTPException, Request
+from fastapi import APIRouter, Depends, Header, HTTPException
 from pydantic import BaseModel
 
 from . import store
@@ -23,15 +23,17 @@ from . import store
 CLIENT_HEADER = "X-TrojanConnect-Client"
 
 
-def require_client_header(request: Request, x_trojanconnect_client: str | None = Header(default=None)) -> None:
-    """CSRF guard for state-changing requests.
+def require_client_header(x_trojanconnect_client: str | None = Header(default=None)) -> None:
+    """CSRF guard for every pipeline endpoint (any method).
 
     A custom header turns every cross-origin request into a CORS-preflighted one, and CORS only
     allows the TrojanConnect frontend origin. This stops a random website from silently resetting
-    the event or launching pre-fill browser windows. Not a substitute for real auth (PRD: Supabase
-    Auth + server-side session verification); add that dependency here when it lands.
+    the event, launching pre-fill browser windows, or triggering the headless calendar scrape
+    (GET /ee-availability). CORS preflights (OPTIONS) are answered by the middleware before this
+    runs. Not a substitute for real auth (PRD: Supabase Auth + server-side session verification);
+    add that dependency here when it lands.
     """
-    if request.method in {"POST", "PUT", "PATCH", "DELETE"} and x_trojanconnect_client != "web":
+    if x_trojanconnect_client != "web":
         raise HTTPException(403, f"Missing {CLIENT_HEADER} header.")
 
 

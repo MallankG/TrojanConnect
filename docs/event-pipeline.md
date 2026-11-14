@@ -36,7 +36,7 @@ Then run the frontend and backend as described in the root README, and open http
 | GET | `/api/v1/pipeline/ee-availability` | read the public EEB/PHE calendars for the event date |
 | POST | `/api/v1/pipeline/reset` | clear the event |
 
-All POST/PUT requests must send `X-TrojanConnect-Client: web`. This custom header makes browsers run a CORS check first, and CORS only allows the frontend origin, so other websites can't trigger resets or pre-fill runs. It is not real auth; add Supabase Auth to the router dependencies when it lands.
+All pipeline requests (any method) must send `X-TrojanConnect-Client: web`. This custom header makes browsers run a CORS check first, and CORS only allows the frontend origin, so other websites can't trigger resets or pre-fill runs. It is not real auth; add Supabase Auth to the router dependencies when it lands.
 
 ## How each step is automated
 
