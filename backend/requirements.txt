@@ -1,2 +1,10 @@
 fastapi
 uvicorn[standard]
+pydantic>=2
+pydantic-settings
+google-genai
+supabase
+pyjwt
+httpx
+pytest
+pytest-asyncio
