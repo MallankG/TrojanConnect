@@ -526,6 +526,10 @@ def build_llm(settings) -> LLMClient:
 
 
 def build_embedder(settings) -> Embedder:
+    if settings.embedding_provider == "ollama":
+        from app.integrations.ollama import OllamaEmbedder
+
+        return OllamaEmbedder(settings)
     if settings.use_gemini:
         try:
             return ResilientEmbedder(GeminiEmbedder(settings), HashEmbedder())

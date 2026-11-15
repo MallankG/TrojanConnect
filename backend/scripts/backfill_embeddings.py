@@ -5,7 +5,7 @@ each search, which is fine for the offline fallback embedder but slow and costly
 paid embedding API once the directory is ~2,000 clubs. With vectors in the database a search
 embeds only the query and `match_clubs` does the rest.
 
-Usage (from backend/, with SUPABASE_* and GEMINI_API_KEY set in .env):
+Usage (from backend/, with SUPABASE_* and the selected embedding provider configured in .env):
     python scripts/backfill_embeddings.py              # embed clubs missing a vector
     python scripts/backfill_embeddings.py --all        # re-embed every club
     python scripts/backfill_embeddings.py --limit 50   # stop after N clubs (cost control)

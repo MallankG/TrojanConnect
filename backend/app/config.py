@@ -1,7 +1,7 @@
 """Central settings. Every key is optional so the backend boots with an empty .env:
 no Supabase keys -> in-memory seeded repository; no Gemini key -> rule-based fallback LLM."""
 from functools import lru_cache
-from typing import ClassVar
+from typing import ClassVar, Literal
 
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
@@ -23,6 +23,9 @@ class Settings(BaseSettings):
     gemini_embedding_model: str = "gemini-embedding-001"
     gemini_decision_model: str = "gemini-decision-1"
     gemini_api_version: str = "v1beta"
+    embedding_provider: Literal["gemini", "ollama"] = "gemini"
+    ollama_base_url: str = "http://127.0.0.1:11434"
+    ollama_embedding_model: str = "nomic-embed-text:latest"
 
     # Messaging channel (WhatsApp alternative TBD) - unused by the student agent for now.
     whatsapp_access_token: str = ""
