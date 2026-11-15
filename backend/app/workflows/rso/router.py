@@ -105,6 +105,12 @@ def portal_submit() -> dict[str, Any]:
     return _call(portal_agent.start_submit)
 
 
+@router.post("/portal/check-directory")
+def portal_check_directory() -> dict[str, Any]:
+    """The portal agent searches the simulated Directory for the organization name; for a new RSO that isn't listed, it ticks the step."""
+    return _call(portal_agent.start_check_directory)
+
+
 @router.post("/portal/sync")
 def portal_sync() -> dict[str, Any]:
     """Read the application's status from the portal's My Activity and update the tracker."""

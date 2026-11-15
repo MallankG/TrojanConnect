@@ -248,3 +248,44 @@ def test_portal_agent_submits_only_when_ready_and_syncs_status(monkeypatch):
     portal_agent.start_sync()
     wait()
     assert rso.load()["status"] == "recognized"
+
+
+def test_real_usc_links_are_tagged_and_directory_check_ticks_the_step(monkeypatch):
+    import time
+    from app.workflows.rso import portal_agent
+    step = next(s for s in P.steps_for("new") if s["id"] == "check_directory")
+    kinds = {l["key"]: l["kind"] for l in step["links"]}
+    assert kinds == {"engage_directory": "usc_login", "page_check_form": "usc_form"}  # the Google Form goes to USC staff
+    assert P.link("constitution_template")["kind"] == "info"
+
+    class Dir(FakePortal):
+        def __init__(self, found):
+            super().__init__()
+            self.found = found
+
+        def check_directory(self, name, log):
+            return {"found": self.found, "matches": [name] if self.found else []}
+
+    def wait():
+        for _ in range(200):
+            if not portal_agent.run_status()["running"]:
+                return portal_agent.run_status()
+            time.sleep(0.01)
+        raise AssertionError("run did not finish")
+
+    rso.set_pathway("new")
+    with pytest.raises(rso.RsoError) as e:
+        portal_agent.start_check_directory()
+    assert e.value.code == "NO_NAME"
+    rso.set_fields({"organizationName": "Demo Chess Collective"})
+    monkeypatch.setattr(portal_agent, "get_adapter", lambda: Dir(True))
+    portal_agent.start_check_directory()
+    st = wait()
+    assert not rso.view()["steps"][0]["done"] and "Renew it instead" in st["lines"][-1]
+    rso.set_fields({"organizationName": "Demo Robotics Society"})
+    monkeypatch.setattr(portal_agent, "get_adapter", lambda: Dir(False))
+    portal_agent.start_check_directory()
+    wait()
+    assert rso.view()["steps"][0]["done"] and rso.load()["portal"]["directory_check"]["found"] is False
+    out = say("RSO step check_directory")
+    assert "real Google Form" in out["reply"] or out["reply"].startswith("Check the group")

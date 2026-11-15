@@ -116,7 +116,8 @@ export const pipelineApi = {
 };
 
 // ---- RSO recognition (/api/v1/rso) -----------------------------------------------------------
-export interface RsoLink { key: string; label: string; url: string }
+/** kind: usc_form = a real USC form that sends answers to Campus Activities; usc_login = a real USC site (login); info = public page. */
+export interface RsoLink { key: string; label: string; url: string; kind?: "usc_form" | "usc_login" | "info" }
 export interface RsoStep { id: string; title: string; detail: string; where: "engage" | "usc" | "trojanconnect"; links: RsoLink[]; done: boolean; handoff?: boolean }
 export interface RsoFieldDef { key: string; label: string; type: "text" | "textarea" | "email" | "number" | "select" | "bool"; group: string; options?: string[]; option_labels?: Record<string, string>; optional?: boolean }
 export type RsoStatus = "not_started" | "in_progress" | "pending_approval" | "requires_modifications" | "denied" | "recognized";
@@ -142,8 +143,9 @@ export interface RsoSchema {
 }
 export interface RsoPortal {
   enabled: boolean; mode: "simulated" | "live" | null; base_url: string; admin_url: string;
-  running: boolean; kind: "submit" | "sync" | null; error: string | null; lines: string[];
-  application: { application_id: string; portal_status: string; note?: string; submitted_at?: string; last_checked?: string } | null;
+  running: boolean; kind: "submit" | "sync" | "check" | null; error: string | null; lines: string[];
+  application: { application_id?: string; portal_status?: string; note?: string; submitted_at?: string; last_checked?: string;
+    directory_check?: { found: boolean; matches: string[]; name: string; at: string } } | null;
 }
 export interface RsoEmail { target: string; to: string; subject: string; body: string; mailto: string; ready: boolean }
 
@@ -159,4 +161,5 @@ export const rsoApi = {
   portal: () => call<RsoPortal>("/api/v1/rso/portal"),
   portalSubmit: () => call<RsoPortal>("/api/v1/rso/portal/submit", { method: "POST" }),
   portalSync: () => call<RsoPortal>("/api/v1/rso/portal/sync", { method: "POST" }),
+  portalCheckDirectory: () => call<RsoPortal>("/api/v1/rso/portal/check-directory", { method: "POST" }),
 };

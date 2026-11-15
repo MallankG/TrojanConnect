@@ -87,7 +87,7 @@ The **portal agent** (`backend/app/workflows/rso/portal_agent.py`, Playwright wi
 - answers the questions with demo text
 - submits and reads the application ID
 
-"Check status now" reads My Activity and updates the tracker. Set `RSO_PORTAL_SHOW_BROWSER=true` to watch it work. `RSO_PORTAL=off` turns the portal off, and the flow ends with the EngageSC hand-off instead.
+"Check the Directory for me" searches the simulated Directory and ticks the first step for a new club that isn't listed. "Check status now" reads My Activity and updates the tracker. Links that go to real USC forms are tagged "real USC form · sends to Campus Activities". Don't submit those with demo data. Set `RSO_PORTAL_SHOW_BROWSER=true` to watch it work. `RSO_PORTAL=off` turns the portal off, and the flow ends with the EngageSC hand-off instead.
 
 **Demo script:** Assistant → "Start a new RSO" → fill in the checklist → "Submit our RSO on EngageSC" → **Submit through the portal** → open the **Simulated Campus Activities review** link → Approved → **Check status now** → Recognized → "Plan an event".
 

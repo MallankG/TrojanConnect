@@ -151,6 +151,12 @@ def _step_reply(ctx: Ctx, step_id: str) -> str:
                     "Once it's submitted, record the status below (it should show Pending Approval).")
     elif sid == "review":
         ctx.add({"type": "rso_status"})
+    elif sid == "check_directory" and _portal_on() and not step["done"]:
+        ctx.add({"type": "rso_portal"})
+        ctx.add({"type": "rso_checklist", "section": "step", "step": sid})
+        return (f"{step['title']}.\n{step['detail']}\nPress \"Check the Directory for me\" and the portal agent searches the simulated "
+                "EngageSC Directory and ticks this step if your club isn't there. Or tick it yourself after searching the real Directory. "
+                "The other link is USC's real Google Form: it goes to Campus Activities staff, so don't submit it with demo data.")
     ctx.add({"type": "rso_checklist", "section": "step", "step": sid})
     gaps = ("\nStill needed: " + "; ".join(v["roster_gaps"])) if sid == "roster" and v["roster_gaps"] else ""
     return f"{step['title']}{' (done)' if step['done'] else ''}.\n{step['detail']}{gaps}"

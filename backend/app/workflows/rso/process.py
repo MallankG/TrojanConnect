@@ -70,8 +70,18 @@ L: dict[str, dict[str, str]] = {
 }
 
 
+def link_kind(url: str) -> str:
+    """What opening the link does, so the UI can warn before someone submits a real USC form with demo data.
+    usc_form: a real form that sends your answers to USC staff. usc_login: a real USC site that needs a USC login. info: a public page."""
+    if any(h in url for h in ("forms.gle/", "docs.google.com/forms", "docusign.net")):
+        return "usc_form"
+    if any(h in url for h in ("engage.usc.edu", "reach360.com", "prevent.zone", "trojanlearn", "drive.google.com", "docs.google.com/document")):
+        return "usc_login"
+    return "info"
+
+
 def link(key: str) -> dict[str, str]:
-    return {"key": key, **L[key]}
+    return {"key": key, **L[key], "kind": link_kind(L[key]["url"])}
 
 
 # ---- dates (exact page wording kept in `text`) ------------------------------------------------------

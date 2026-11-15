@@ -202,7 +202,7 @@ Every card is plain JSON, so you can style it any way you like. Where a card has
 | `handoff` | `{title, url, label, steps: string[]}` | A "continue on EngageSC" card: the steps, then a button to `url` | Open `url` in a new tab (USC login). Nothing is submitted by the app |
 | `rso_email` | `{target: "advisor" \| <officer role>}` | A reminder draft: `GET /rso/emails/{target}` returns `{to, subject, body, mailto, ready}` listing only what's still owed | Link to `mailto` |
 | `rso_status` | `{}` | Buttons: Pending Approval, Requires Modifications, Denied, Recognized | Confirm, then `PUT /rso/status {status}`. Only the user records this |
-| `rso_portal` | `{}` | The portal agent: from `GET /rso/portal`, the submitted application (ID, portal status, staff note), the live log of the current run, and links to the simulated portal and its review page | "Submit through the portal" → `POST /rso/portal/submit` (enabled when `ready_to_submit`); "Check status now" → `POST /rso/portal/sync`. Poll `GET /rso/portal` while `running`, then refresh RSO cards |
+| `rso_portal` | `{}` | The portal agent: from `GET /rso/portal`, the submitted application (ID, portal status, staff note), the live log of the current run, and links to the simulated portal and its review page | "Check the Directory for me" → `POST /rso/portal/check-directory`; "Submit through the portal" → `POST /rso/portal/submit` (enabled when `ready_to_submit`); "Check status now" → `POST /rso/portal/sync`. Poll `GET /rso/portal` while `running`, then refresh RSO cards |
 
 Rules for cards:
 - **Only the newest `booking` card per `kind`, and the newest `rso_checklist` per section, needs to be live.** Older ones can collapse to a line like "see the latest card below", because they show the same data. After any chat turn, refresh RSO cards from `GET /rso/state`.
@@ -296,6 +296,8 @@ USC requires every recognized student organization (RSO) to apply on EngageSC ea
 - submits and reads back the application ID
 
 **Check status now** opens My Activity and maps the portal's status onto the tracker: Pending Approval, Requires Modifications, Denied, or Approved → Recognized. Statuses read from the portal are recorded with the actor `portal:simulated-engagesc`. The chat agent still can't record or submit anything. Pointing the portal agent at the real EngageSC would need USC's authorization; `PortalAdapter` is where that connection would go.
+
+**Link tags.** Every step link has a `kind`. `usc_form` is a real USC form (Google Form or Docusign) that sends answers to Campus Activities staff. `usc_login` is a real USC site that needs a USC login. `info` is a public page. Show the tag next to the link, so nobody submits a real USC form with demo data. In demo mode, use **Check the Directory for me** (`rso_portal` card) instead of USC's "does my group have a page" form.
 
 **Connection to events:** only a recognized RSO can create EngageSC events. `GET /pipeline/status` includes `rso: {status, status_label, recognized}`, and the event agent's EngageSC answer points to RSO recognition until the status is Recognized. Once recognized, the RSO agent suggests planning an event.
 
@@ -442,6 +444,7 @@ The cards above use these. You only need them directly for screens beyond the As
 | `GET /emails/{target}` | Reminder draft for an officer role or `advisor` |
 | `GET /portal` | Portal agent: `enabled`, `mode`, `base_url`, `admin_url`, `running`, `kind`, `lines` (live log), `error`, `application` |
 | `POST /portal/submit` | Submit through the simulated EngageSC (409 `NOT_READY`, `ALREADY_SUBMITTED` or `PORTAL_BUSY`) |
+| `POST /portal/check-directory` | Search the simulated Directory for the organization name; for a new RSO that isn't listed, tick "Check the group isn't already on EngageSC" |
 | `POST /portal/sync` | Read the application's status from the portal and update the tracker |
 | `POST /agent/chat` | Standalone RSO agent turn (the main chat routes RSO messages here too) |
 | `POST /reset` | Clear the RSO tracker |

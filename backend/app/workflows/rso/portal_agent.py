@@ -153,6 +153,24 @@ class SimulatedEngageBrowser:
             finally:
                 browser.close()
 
+    def check_directory(self, name: str, log: Log) -> dict[str, Any]:
+        from playwright.sync_api import sync_playwright
+
+        with sync_playwright() as p:
+            browser = self._browser(p)
+            page = browser.new_page()
+            try:
+                self._sign_in(page, log)
+                log(f"Searching the Directory for \"{name}\"")
+                page.fill("#q", name)
+                page.click("#search")
+                hits = [h.strip() for h in page.locator("a.group-link").all_inner_texts()]
+                exact = [h for h in hits if h.lower() == name.lower()]
+                log(f"Found: {', '.join(hits)}" if hits else "No group with that name in the Directory")
+                return {"found": bool(exact), "matches": hits}
+            finally:
+                browser.close()
+
     def fetch_status(self, application_id: str, log: Log) -> dict[str, Any]:
         from playwright.sync_api import sync_playwright
 
@@ -229,6 +247,33 @@ def start_submit() -> dict[str, Any]:
         _record(result, log, submitted=True)
 
     return _start("submit", work)
+
+
+def start_check_directory() -> dict[str, Any]:
+    """Search the (simulated) Directory for the organization name and, if it isn't there, tick the step."""
+    adapter = get_adapter()
+    if not adapter:
+        raise rso.RsoError(409, "PORTAL_OFF", "The simulated portal is turned off. Search the EngageSC Directory yourself.")
+    name = str(rso.load()["fields"].get("organizationName") or "").strip()
+    if not name:
+        raise rso.RsoError(409, "NO_NAME", "Add the organization name first.")
+
+    def work(log: Log) -> None:
+        result = adapter.check_directory(name, log)
+        now = datetime.now(timezone.utc).isoformat(timespec="seconds")
+        rso.update(lambda s: s.setdefault("portal", {}).update(directory_check={**result, "name": name, "at": now}), actor=ACTOR)
+        flow = P.PATHWAYS.get(rso.load().get("pathway") or "", {}).get("flow")
+        if flow == "new" and not result["found"]:
+            rso.set_check("step.check_directory", True, actor=ACTOR)
+            log("Not registered yet, so a new registration is right. Step ticked: \"Check the group isn't already on EngageSC\"")
+        elif flow == "new":
+            log(f"\"{name}\" already exists. Renew it instead (say \"Renew our existing RSO\"), or choose a different name.")
+        elif result["found"]:
+            log(f"\"{name}\" is in the Directory, so it can be renewed.")
+        else:
+            log(f"\"{name}\" isn't in the Directory. Check the exact name, or register it as a new RSO.")
+
+    return _start("check", work)
 
 
 def start_sync() -> dict[str, Any]:

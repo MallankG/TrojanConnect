@@ -51,12 +51,17 @@ const MANUAL = new Set(["check_directory", "officer_access", "start_application"
 const card = "rounded-xl border border-line p-3.5";
 const sectionTitle = "mb-1.5 text-xs font-semibold uppercase tracking-wider text-muted";
 
-function ExternalLinks({ links }: { links: { label: string; url: string; key?: string }[] }) {
+const KIND_TAG: Record<string, string> = { usc_form: "real USC form · sends to Campus Activities", usc_login: "real USC site · USC login" };
+
+function ExternalLinks({ links }: { links: { label: string; url: string; key?: string; kind?: string }[] }) {
   if (!links.length) return null;
   return (
     <ul className="mt-1.5 flex list-none flex-wrap gap-x-3 gap-y-1 p-0 text-[13px]">
       {links.map(l => (
-        <li key={l.url}><a className="text-cardinal underline underline-offset-2" href={l.url} target="_blank" rel="noopener noreferrer">{l.label} ↗</a></li>
+        <li key={l.url}>
+          <a className="text-cardinal underline underline-offset-2" href={l.url} target="_blank" rel="noopener noreferrer">{l.label} ↗</a>
+          {l.kind && KIND_TAG[l.kind] && <span className={`ml-1 text-[11px] ${l.kind === "usc_form" ? "text-wait" : "text-muted"}`}>({KIND_TAG[l.kind]})</span>}
+        </li>
       ))}
     </ul>
   );
@@ -73,21 +78,30 @@ function Check({ checked, onChange, label, disabled }: { checked: boolean; onCha
 
 export function RsoStepRow({ step, act, compact = false }: { step: RsoStep; act: (p: Promise<unknown>) => void; compact?: boolean }) {
   const manual = MANUAL.has(step.id);
+  const toggle = () => act(rsoApi.setCheck(`step.${step.id}`, !step.done));
+  const id = `rso-step-${step.id}`;
   return (
     <div className="border-b border-dashed border-line py-2 last:border-0">
       <div className="flex flex-wrap items-start gap-2">
         {manual ? (
-          <input type="checkbox" aria-label={`Mark "${step.title}" done`} className="mt-1 h-[16px] w-[16px] accent-ok" checked={step.done}
-            onChange={e => act(rsoApi.setCheck(`step.${step.id}`, e.target.checked))} />
+          <input id={id} type="checkbox" className="mt-1 h-[16px] w-[16px] cursor-pointer accent-ok" checked={step.done} onChange={toggle} />
         ) : (
           <span aria-hidden className={`mt-0.5 text-sm ${step.done ? "text-ok" : "text-muted"}`}>{step.done ? "✓" : "○"}</span>
         )}
         <div className="min-w-0 flex-1">
-          <span className={`text-sm font-semibold ${step.done ? "text-muted line-through decoration-1" : ""}`}>{step.title}</span>
-          <span className="ml-2 text-xs text-muted">{step.done ? "Done" : WHERE[step.where]}</span>
+          {/* Clicking the title toggles a step you tick yourself; computed steps update from forms and checklists. */}
+          <label htmlFor={manual ? id : undefined} className={`text-sm font-semibold ${manual ? "cursor-pointer" : ""} ${step.done ? "text-muted line-through decoration-1" : ""}`}>
+            {step.title}
+          </label>
+          <span className="ml-2 text-xs text-muted">{step.done ? "Done" : manual ? WHERE[step.where] : `${WHERE[step.where]} · updates from your answers`}</span>
           {!compact && <p className="m-0 mt-0.5 text-[13px] text-muted">{step.detail}</p>}
           <ExternalLinks links={step.links} />
         </div>
+        {manual && (
+          <button type="button" className={`${step.done ? btn : btnPrimary} shrink-0`} onClick={toggle} aria-pressed={step.done}>
+            {step.done ? "Undo" : "Mark done"}
+          </button>
+        )}
       </div>
     </div>
   );
@@ -201,8 +215,10 @@ export function RsoPortalCard() {
   };
   if (!portal) return null;
   if (!portal.enabled) return <p className="text-[13px] text-muted">The simulated portal is turned off. Submit on EngageSC yourself.</p>;
-  const app = portal.application;
+  const app = portal.application?.application_id ? portal.application : null;
+  const dir = portal.application?.directory_check;
   const canResubmit = rso?.status === "requires_modifications";
+  const dirStepOpen = rso?.steps.some(s => s.id === "check_directory" && !s.done) ?? false;
   return (
     <div className={card}>
       <div className="flex flex-wrap items-center justify-between gap-2">
@@ -210,8 +226,9 @@ export function RsoPortalCard() {
         <Pill tone="waiting">Simulated EngageSC · demo data</Pill>
       </div>
       <p className="mt-1 mb-2 text-[13px] text-muted">
-        Drives a browser through the simulated EngageSC like a person: signs in, opens the Directory, fills in the form from this checklist,
-        uploads placeholder documents, submits, and reads the status from My Activity. Nothing reaches USC.
+        Drives a browser through the simulated EngageSC like a person: searches the Directory, fills in the form from this checklist,
+        uploads placeholder documents, submits, and reads the status from My Activity. Nothing reaches USC. Links marked
+        &ldquo;real USC form&rdquo; elsewhere do reach USC, so don&apos;t submit those with demo data.
       </p>
       {app && (
         <p className="m-0 mb-2 text-[13px]">
@@ -219,7 +236,19 @@ export function RsoPortalCard() {
           {app.last_checked && <span className="text-muted"> · checked {new Date(app.last_checked).toLocaleTimeString()}</span>}
         </p>
       )}
+      {dir && (
+        <p className="m-0 mb-2 text-[13px]">
+          Directory search for <b>{dir.name}</b>: {dir.found ? "already listed" : "not listed"}
+          {dir.matches.length > 0 && <span className="text-muted"> (results: {dir.matches.join(", ")})</span>}
+        </p>
+      )}
       <div className="flex flex-wrap gap-2">
+        {(dirStepOpen || (!app && !rso?.ready_to_submit)) && (
+          <button type="button" className={dirStepOpen ? btnPrimary : btn} disabled={running || !rso?.fields.organizationName} onClick={() => start(rsoApi.portalCheckDirectory)}
+            title={rso?.fields.organizationName ? undefined : "Add the organization name first"}>
+            {running && portal.kind === "check" ? "Searching…" : "Check the Directory for me"}
+          </button>
+        )}
         {(!app || canResubmit) && (
           <button type="button" className={btnPrimary} disabled={running || !rso?.ready_to_submit} onClick={() => start(rsoApi.portalSubmit)}
             title={rso?.ready_to_submit ? undefined : "Finish the checklist first"}>
@@ -230,7 +259,7 @@ export function RsoPortalCard() {
         <a className={btn} href={portal.base_url} target="_blank" rel="noopener noreferrer">Open simulated EngageSC ↗</a>
         {app && <a className={btn} href={portal.admin_url} target="_blank" rel="noopener noreferrer">Simulated Campus Activities review ↗</a>}
       </div>
-      {!rso?.ready_to_submit && !app && <p className="mt-2 mb-0 text-[13px] text-late">Not ready yet: {rso?.submit_blockers.join("; ") || "the application window is closed"}</p>}
+      {!rso?.ready_to_submit && !app && !dirStepOpen && <p className="mt-2 mb-0 text-[13px] text-late">Not ready to submit yet: {rso?.submit_blockers.join("; ") || "the application window is closed"}</p>}
       {(error || portal.error) && <p role="alert" className="mt-2 mb-0 text-[13px] text-late">{error || portal.error}</p>}
       {portal.lines.length > 0 && (
         <pre className="mt-2.5 max-h-56 overflow-auto whitespace-pre-wrap rounded-lg bg-paper p-2.5 text-xs" aria-live="polite">{portal.lines.join("\n")}</pre>
