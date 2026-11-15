@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { Volume2, VolumeX } from "lucide-react";
 import { useSound } from "@/lib/sound/SoundProvider";
+import { Brand } from "@/components/layout/Brand";
 
 export type HeaderTheme = "dark" | "cardinal" | "light";
 
@@ -21,9 +22,7 @@ export function Header({ theme, showCta }: { theme: HeaderTheme; showCta: boolea
     <header
       className={`${tone.wrap} ${tone.text} pointer-events-none fixed inset-x-0 top-0 z-50 flex items-center justify-between px-6 py-4 transition-colors duration-300 md:px-14`}
     >
-      <Link href="/" className="pointer-events-auto text-lg font-semibold tracking-[-0.01em]">
-        TrojanConnect
-      </Link>
+      <Brand className="pointer-events-auto" />
       <div className="pointer-events-auto flex items-center gap-2">
         <button
           type="button"

@@ -28,6 +28,7 @@ import { useSound } from "@/lib/sound/SoundProvider";
 import { sound } from "@/lib/sound/engine";
 import { fmtRelative } from "@/lib/time";
 import { Avatar, ListSkeleton, ToastProvider, buttonClass } from "@/components/ui/kit";
+import { Brand } from "@/components/layout/Brand";
 
 type NavItem = { href: string; label: string; icon: LucideIcon };
 
@@ -119,9 +120,7 @@ function TopBar({ user }: { user: DemoUser }) {
   return (
     <header className="sticky top-0 z-40 border-b border-line bg-paper/90 backdrop-blur">
       <div className="mx-auto grid h-16 max-w-6xl grid-cols-[auto_1fr_auto] items-center gap-4 px-5">
-        <Link href={HOME[user.role]} className="text-lg font-semibold tracking-[-0.01em]">
-          TrojanConnect
-        </Link>
+        <Brand href={HOME[user.role]} />
 
         <nav aria-label="Sections" className="hidden justify-center gap-1 md:flex">
           {nav.map((item) => {

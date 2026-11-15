@@ -16,7 +16,7 @@ def require_client_header(x_trojanconnect_client: str | None = Header(default=No
     """CSRF guard for every endpoint (any method).
 
     A custom header turns every cross-origin request into a CORS-preflighted one, and CORS only allows
-    the TrojanConnect frontend origin, so another website can't reset the event or act on a booking.
+    the Trojan Connect frontend origin, so another website can't reset the event or act on a booking.
     CORS preflights (OPTIONS) are answered by the middleware before this runs.
     """
     if x_trojanconnect_client != "web":

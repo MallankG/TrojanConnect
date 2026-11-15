@@ -3,7 +3,7 @@ import { Page } from "@/components/layout/AppShell";
 import { VenueReviewApp } from "@/components/review/VenueReviewApp";
 
 export const metadata: Metadata = {
-  title: "Venue Review · TrojanConnect",
+  title: "Venue Review · Trojan Connect",
   description: "Approve, reject or request changes on venue bookings and event permits prepared by the Club and Venue agents.",
 };
 

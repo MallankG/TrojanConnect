@@ -1,6 +1,6 @@
-# TrojanConnect
+# Trojan Connect
 
-TrojanConnect is a campus agent network for USC. Club officers plan events with an assistant that
+Trojan Connect is a campus agent network for USC. Club officers plan events with an assistant that
 books rooms through a venue agent and walks them through RSO recognition (new or renewing), students
 find clubs and question each club's agent, and student government answers questions only from its own
 published pages. Built for a hackathon; it is not an

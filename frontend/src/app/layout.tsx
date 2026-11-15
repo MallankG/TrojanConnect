@@ -22,8 +22,8 @@ const caslon = Libre_Caslon_Text({
 
 export const metadata: Metadata = {
   title: {
-    default: "TrojanConnect",
-    template: "%s · TrojanConnect",
+    default: "Trojan Connect",
+    template: "%s · Trojan Connect",
   },
   description:
     "Campus agents that prepare and coordinate club event-space requests at USC, so people only step in to decide. A hackathon project, not affiliated with USC.",

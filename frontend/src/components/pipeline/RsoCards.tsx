@@ -170,7 +170,7 @@ export function HandoffCard({ title, url, label, steps }: { title: string; url: 
       <p className={sectionTitle}>{title}</p>
       <ol className="m-0 mb-2.5 pl-5 text-[13px]">{steps.map(s => <li key={s}>{s}</li>)}</ol>
       <a className={btnPrimary} href={url} target="_blank" rel="noopener noreferrer">{label} ↗</a>
-      <p className="mt-2 mb-0 text-xs text-gray-70">Opens EngageSC (USC login). TrojanConnect doesn&apos;t sign in or submit for you.</p>
+      <p className="mt-2 mb-0 text-xs text-gray-70">Opens EngageSC (USC login). Trojan Connect doesn&apos;t sign in or submit for you.</p>
     </div>
   );
 }
@@ -326,7 +326,7 @@ export function RsoPanel({ onAsk }: { onAsk: (message: string) => void }) {
         <Header rso={rso} />
         <p className="mt-2 mb-0 text-[13px] text-gray-70">
           {rso.cycle}. Source: <a className="text-cardinal underline underline-offset-2" href={rso.source.url} target="_blank" rel="noopener noreferrer">{rso.source.label} ↗</a> (checked {rso.source.checked}).
-          You submit on EngageSC; TrojanConnect tracks the steps and hands off.
+          You submit on EngageSC; Trojan Connect tracks the steps and hands off.
         </p>
         {!rso.pathway ? (
           <div className="mt-3 grid gap-1.5">

@@ -107,7 +107,7 @@ def _start(ctx: Ctx, pathway: str, listed: bool | None = None) -> str:
             ctx.add({"type": "rso_status"})
             return (f"{pw['detail']} Check your fall application's status on EngageSC (My Activity > My Surveys/Forms) and record it below. "
                     "Questions: stuacts@usc.edu.")
-        return f"{pw['detail']} TrojanConnect doesn't handle that process. Contact Fraternity & Sorority Life, or Campus Activities at stuacts@usc.edu."
+        return f"{pw['detail']} Trojan Connect doesn't handle that process. Contact Fraternity & Sorority Life, or Campus Activities at stuacts@usc.edu."
     head = {"new": "Let's register a new RSO.", "renew": "Let's renew your RSO for 2026–27.", "religious": "Let's register your religious or spiritual group.",
             "club_sports": "Club sports first become an RSO through this process, then complete the Recreational Sports Council process."}[pathway]
     out = [head, pw["detail"], _deadline_line(v),

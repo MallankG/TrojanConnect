@@ -22,7 +22,7 @@ def _fail(status_code: int, code: str, message: str, retryable: bool = False, he
 
 def create_app() -> FastAPI:
     settings = get_settings()
-    app = FastAPI(title="TrojanConnect API", version="0.1.0")
+    app = FastAPI(title="Trojan Connect API", version="0.1.0")
     app.add_middleware(
         CORSMiddleware,
         # localhost is a dev convenience only; production allows the configured origin alone.

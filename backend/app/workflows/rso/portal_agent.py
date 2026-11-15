@@ -263,9 +263,9 @@ def _record(result: dict[str, Any], log: Log, submitted: bool = False) -> None:
     rso.update(keep, actor=ACTOR)
     if rso.load()["status"] != status:
         rso.record_status(status, result.get("note", ""), actor=ACTOR)
-        log(f"TrojanConnect status updated: {P.STATUSES[status]}")
+        log(f"Trojan Connect status updated: {P.STATUSES[status]}")
     else:
-        log("TrojanConnect status unchanged")
+        log("Trojan Connect status unchanged")
 
 
 def documents_folder() -> Path:

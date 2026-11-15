@@ -96,7 +96,7 @@ def page(title: str, body: str, user: str | None = None) -> HTMLResponse:
            f'<span style="color:#767676">Signed in as {html.escape(user)}</span>') if user else ""
     return HTMLResponse(f"""<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
 <title>{html.escape(title)} · Simulated EngageSC</title><style>{CSS}</style></head><body>
-<div class="banner" role="note"><b>Simulated EngageSC (demo)</b>: not a USC system. TrojanConnect uses this to demonstrate the RSO portal
+<div class="banner" role="note"><b>Simulated EngageSC (demo)</b>: not a USC system. Trojan Connect uses this to demonstrate the RSO portal
 agent with dummy data. Nothing here reaches USC. The real portal is engage.usc.edu.</div>
 <header><strong>Simulated EngageSC</strong>{nav}</header><main>{body}</main></body></html>""")
 
