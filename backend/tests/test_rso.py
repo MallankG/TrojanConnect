@@ -252,6 +252,27 @@ def test_portal_agent_submits_only_when_ready_and_syncs_status(monkeypatch):
     assert rso.load()["status"] == "recognized"
 
 
+def test_portal_browser_falls_back_to_system_chromium(monkeypatch):
+    from app.workflows.rso.portal_agent import SimulatedEngageBrowser
+
+    class Chromium:
+        def __init__(self):
+            self.calls = []
+
+        def launch(self, **options):
+            self.calls.append(options)
+            if "channel" in options:
+                raise RuntimeError("Chrome is not installed")
+            return options
+
+    chromium = Chromium()
+    monkeypatch.setenv("CHROMIUM_PATH", "/nix/bin/chromium")
+    browser = SimulatedEngageBrowser()._browser(type("Playwright", (), {"chromium": chromium})())
+
+    assert browser["executable_path"] == "/nix/bin/chromium"
+    assert chromium.calls[-1]["headless"] is True
+
+
 def test_review_fixes_hold():
     # A pathway with no steps survives "Requires Modifications" (was StopIteration -> every view() 500).
     rso.set_pathway("fall_applicant", None)
