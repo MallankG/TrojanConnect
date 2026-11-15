@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import { ArrowDown, Volume2, VolumeX } from "lucide-react";
 import { sound } from "@/lib/sound/engine";
 import { SENTENCE, SENTENCE_HEAD } from "./content";
+import { Texture } from "./Texture";
 
 type Props = {
   entered: boolean;
@@ -38,9 +39,10 @@ export function Hero({ entered, reduced, onEnter }: Props) {
   return (
     <section
       data-header="dark"
-      className="on-dark relative flex min-h-svh flex-col justify-center bg-ink px-6 py-28 text-paper md:px-14"
+      className="on-dark relative flex min-h-svh flex-col justify-center overflow-hidden bg-ink px-6 py-28 text-paper md:px-14"
     >
-      <div className="mx-auto w-full max-w-6xl">
+      <Texture />
+      <div className="relative z-10 mx-auto w-full max-w-6xl">
         <p className="text-base text-gray-30 md:text-lg">
           A club officer at USC needs a room, and writes:
         </p>

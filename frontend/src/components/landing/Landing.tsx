@@ -13,6 +13,7 @@ import { Hero } from "./Hero";
 import { ChaosStage } from "./ChaosStage";
 import { Solution } from "./Solution";
 import { Network, Principle, Start } from "./Closing";
+import { Campus } from "./Campus";
 
 gsap.registerPlugin(ScrollTrigger, useGSAP);
 
@@ -22,11 +23,21 @@ export function Landing() {
   const { enable, disable } = useSound();
   const [entered, setEntered] = useState(false);
   const [theme, setTheme] = useState<HeaderTheme>("dark");
+  const [scrolled, setScrolled] = useState(false);
   const root = useRef<HTMLDivElement>(null);
   const lenis = useRef<Lenis | null>(null);
 
   const setThemeStable = useCallback((next: HeaderTheme) => {
     setTheme((prev) => (prev === next ? prev : next));
+  }, []);
+
+  // The fixed bar is transparent over the hero and gains a backdrop after that,
+  // so headlines scrolling underneath it stay readable.
+  useEffect(() => {
+    const onScroll = () => setScrolled(window.scrollY > 24);
+    onScroll();
+    window.addEventListener("scroll", onScroll, { passive: true });
+    return () => window.removeEventListener("scroll", onScroll);
   }, []);
 
   // Always start at the top: the story only makes sense from the first line.
@@ -99,13 +110,14 @@ export function Landing() {
 
   return (
     <div ref={root}>
-      <Header theme={theme} showCta={entered} />
+      <Header theme={theme} showCta={entered} scrolled={scrolled} />
       <main>
         <Hero entered={entered} reduced={reduced} onEnter={handleEnter} />
         <ChaosStage reduced={reduced} narrow={narrow} setTheme={setThemeStable} />
         <Solution reduced={reduced} />
         <Principle />
         <Network reduced={reduced} />
+        <Campus reduced={reduced} />
         <Start />
       </main>
     </div>

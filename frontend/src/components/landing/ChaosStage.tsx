@@ -7,6 +7,7 @@ import { useGSAP } from "@gsap/react";
 import { ArrowUp } from "lucide-react";
 import { sound } from "@/lib/sound/engine";
 import { GHOST_WORDS, PEOPLE, PILE, SENTENCE } from "./content";
+import { Texture } from "./Texture";
 import { PileCard } from "./Pile";
 import type { HeaderTheme } from "./Header";
 
@@ -242,6 +243,7 @@ function ChaosPinned({ narrow, setTheme }: Props) {
         aria-label="What happens to the request today"
         className="on-dark relative h-svh overflow-hidden bg-ink text-paper"
       >
+        <Texture variant="quiet" />
         <div aria-hidden className="pointer-events-none absolute inset-0 grid place-items-center">
           {GHOST_WORDS.map((word) => (
             <p
@@ -394,8 +396,9 @@ function TurnContent({ settled = false }: { settled?: boolean }) {
 function ChaosStatic() {
   return (
     <>
-      <section data-header="dark" className="on-dark bg-ink px-6 py-24 text-paper md:px-14">
-        <div className="mx-auto max-w-6xl">
+      <section data-header="dark" className="on-dark relative overflow-hidden bg-ink px-6 py-24 text-paper md:px-14">
+        <Texture />
+        <div className="relative z-10 mx-auto max-w-6xl">
           <p className="text-sm text-gray-30">Day</p>
           <p className="tabular text-8xl font-extrabold leading-none text-gold">14</p>
           <p className="tabular mt-1 text-sm text-gray-30">11 follow-ups sent</p>

@@ -215,7 +215,7 @@ export function RsoPortalCard() {
       </div>
       <p className="mt-1 mb-2 text-[13px] text-gray-70">
         Drives a browser through the simulated EngageSC like a person: signs in, opens the Directory, fills in the form from this checklist,
-        uploads placeholder documents, submits, and reads the status from My Activity. Nothing reaches USC.
+        uploads stand-in documents, submits, and reads the status from My Activity. Nothing reaches USC.
       </p>
       {app && (
         <p className="m-0 mb-2 text-[13px]">

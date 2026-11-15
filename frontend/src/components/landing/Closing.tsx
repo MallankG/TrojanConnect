@@ -5,9 +5,11 @@ import Link from "next/link";
 import gsap from "gsap";
 import { ScrollTrigger } from "gsap/ScrollTrigger";
 import { useGSAP } from "@gsap/react";
-import { ArrowRight } from "lucide-react";
+import { ArrowRight, Hash } from "lucide-react";
 import { sound } from "@/lib/sound/engine";
 import { Poster } from "@/components/ui/Poster";
+import { Mark, Wordmark } from "@/components/brand/Logo";
+import { Texture } from "./Texture";
 
 gsap.registerPlugin(ScrollTrigger, useGSAP);
 
@@ -125,14 +127,14 @@ export function Network({ reduced }: { reduced: boolean }) {
         <div className="mt-24 grid items-center gap-12 md:grid-cols-[1fr_1.1fr]">
           <div>
             <h3 className="text-3xl font-semibold leading-tight tracking-[-0.02em] md:text-4xl">
-              Web and WhatsApp open the same conversation.
+              Web and Slack open the same conversation.
             </h3>
             <p className="mt-4 max-w-md text-lg leading-snug text-gray-70">
-              One identity, one history, one status. Start a request from your phone and finish it
-              at a desk.
+              One identity, one history, one status. Ask in the Slack your club already uses and
+              finish it at a desk.
             </p>
           </div>
-          <div className="flex items-end gap-5">
+          <div className="flex flex-col gap-5 sm:flex-row sm:items-end">
             <div className="min-w-0 flex-1 overflow-hidden rounded-2xl border border-line bg-paper">
               <div className="flex items-center gap-1.5 border-b border-line px-3.5 py-2.5">
                 {[0, 1, 2].map((i) => (
@@ -151,13 +153,30 @@ export function Network({ reduced }: { reduced: boolean }) {
                 </div>
               </div>
             </div>
-            <div className="w-40 shrink-0 rounded-[1.75rem] border border-line bg-paper p-3 pb-5">
-              <span aria-hidden className="mx-auto mb-3 block h-1 w-10 rounded-full bg-gray-30" />
-              <p className="text-[11px] text-gray-70">Club Agent</p>
-              <p className="mt-1 rounded-2xl rounded-bl-sm bg-wash px-2.5 py-2 text-[13px] leading-snug">
-                AI Networking Night is with the venue reviewer.
+            {/* The same status, asked for from the club's Slack with the /trojan command. */}
+            <div className="shrink-0 overflow-hidden rounded-2xl border border-line bg-paper sm:w-64">
+              <p className="flex items-center gap-1 border-b border-line px-3.5 py-2.5 text-[13px] font-semibold">
+                <Hash aria-hidden className="size-3.5 text-gray-70" />
+                sc-ai-club
               </p>
-              <InReview />
+              <div className="flex gap-2.5 p-3.5">
+                <span className="grid size-8 shrink-0 place-items-center rounded-lg border border-line">
+                  <Mark tone="light" size={22} />
+                </span>
+                <div className="min-w-0">
+                  <p className="flex items-baseline gap-1.5 text-[13px]">
+                    <span className="font-semibold">Trojan Connect</span>
+                    <span className="rounded bg-wash px-1 text-[10px] font-medium text-gray-70">App</span>
+                  </p>
+                  <p className="mt-0.5 text-[13px] leading-snug">
+                    AI Networking Night is with the venue reviewer.
+                  </p>
+                  <InReview />
+                </div>
+              </div>
+              <p className="mx-3.5 mb-3.5 rounded-lg border border-line px-2.5 py-1.5 font-mono text-xs text-gray-70">
+                /trojan status
+              </p>
             </div>
           </div>
         </div>
@@ -195,9 +214,10 @@ export function Start() {
     <>
       <section
         data-header="cardinal"
-        className="on-cardinal bg-cardinal px-6 py-32 text-gold md:px-14 md:py-44"
+        className="on-cardinal relative overflow-hidden bg-cardinal px-6 py-32 text-gold md:px-14 md:py-44"
       >
-        <div className="mx-auto max-w-6xl">
+        <Texture variant="grain" />
+        <div className="relative z-10 mx-auto max-w-6xl">
           <h2
             className="max-w-[14ch] text-[clamp(3rem,10vw,9rem)] font-bold leading-[0.88] tracking-[-0.04em]"
             style={{ fontVariationSettings: '"wdth" 80' }}
@@ -220,9 +240,10 @@ export function Start() {
           </div>
         </div>
       </section>
-      <footer data-header="dark" className="on-dark bg-ink px-6 py-10 text-gray-30 md:px-14">
-        <div className="mx-auto flex max-w-6xl flex-wrap items-start justify-between gap-6 text-sm leading-relaxed">
-          <p className="text-base font-semibold text-paper">Trojan Connect</p>
+      <footer data-header="dark" className="on-dark relative overflow-hidden bg-ink px-6 py-10 text-gray-30 md:px-14">
+        <Texture variant="quiet" seam />
+        <div className="relative z-10 mx-auto flex max-w-6xl flex-wrap items-start justify-between gap-6 text-sm leading-relaxed">
+          <Wordmark tone="dark" height={36} />
           <p className="max-w-2xl">
             A hackathon project built by USC students. It is not affiliated with or endorsed by the
             University of Southern California. Venues, availability and approvals in this demo are

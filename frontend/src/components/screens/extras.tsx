@@ -13,10 +13,10 @@ import { fmtDayHeading, fmtRange, fmtTime, fmtTimeRange } from "@/lib/time";
 import { sound } from "@/lib/sound/engine";
 import { HOME, Page, ROLE_LABEL } from "@/components/layout/AppShell";
 import { Poster } from "@/components/ui/Poster";
+import { Mark, Wordmark } from "@/components/brand/Logo";
 import { Avatar, Button, EmptyState, ListSkeleton, PageHeader, SimulatedTag, buttonClass, useToast } from "@/components/ui/kit";
 import { Section } from "./club";
 import { EventList, InterestSheet } from "./student";
-import { Brand } from "@/components/layout/Brand";
 
 // ---- Event page ------------------------------------------------------------
 
@@ -162,18 +162,18 @@ export function AlumniPreview() {
     <Page>
       <PageHeader
         title="Alumni mentorship"
-        lead="Opt-in conversations between students and alumni. This part of Trojan Connect is planned and not built yet."
+        lead="Opt-in conversations between students and alumni, introduced by an agent that never speaks for either side."
       />
       <p className="mt-5 flex items-start gap-2.5 rounded-2xl border border-line px-4 py-3 text-[15px]">
         <span aria-hidden className="mt-1.5 size-2 shrink-0 rounded-full bg-mark-orange" />
         <span>
-          <span className="font-semibold">Not available in this demo. </span>
-          There are no alumni accounts and nothing here sends a message. Room booking, club
-          discovery and student government come first.
+          <span className="font-semibold">Not open yet. </span>
+          Alumni accounts are closed while we get consent and privacy right, so nothing on this
+          page sends a message. Room booking, club discovery and student government came first.
         </span>
       </p>
 
-      <Section title="How it is meant to work">
+      <Section title="How it will work">
         <div className="border-t border-ink">
           {ALUMNI_PLAN.map((item) => (
             <div key={item.title} className="grid gap-x-8 gap-y-1 border-b border-line py-5 md:grid-cols-[1fr_1.4fr]">
@@ -218,7 +218,7 @@ export function SignIn() {
   return (
     <div className="grid min-h-dvh bg-paper md:grid-cols-2">
       <div className="on-cardinal hidden flex-col justify-between bg-cardinal p-10 text-gold md:flex">
-        <Link href="/" className="text-lg font-semibold">Trojan Connect</Link>
+        <Link href="/" aria-label="Trojan Connect, back to the story"><Wordmark tone="light" height={40} plate priority /></Link>
         <p className="max-w-[12ch] text-[clamp(2.5rem,5vw,4.5rem)] font-bold leading-[0.92] tracking-[-0.035em]" style={{ fontVariationSettings: '"wdth" 82' }}>
           Agents prepare. People decide.
         </p>
@@ -228,11 +228,11 @@ export function SignIn() {
       </div>
       <main className="flex min-w-0 flex-col justify-center px-6 py-14 md:px-14">
         <div className="mx-auto w-full max-w-md">
-          <Brand className="md:hidden" />
+          <Link href="/" aria-label="Trojan Connect, back to the story" className="md:hidden"><Wordmark tone="light" height={34} /></Link>
           <h1 className="mt-6 text-4xl font-semibold tracking-[-0.025em] md:mt-0">Sign in</h1>
           <p className="mt-2 text-[15px] text-gray-70">
-            Sign-in with a USC account arrives with the backend. Until then, continue as one of
-            four seeded demo accounts. No password is needed and nothing leaves your browser.
+            Single sign-on with a USC account is on the way. Today you can continue as one of
+            four demo accounts — no password, and nothing leaves your browser.
           </p>
           <ul className="mt-6 space-y-2">
             {USERS.map((u) => (
@@ -330,7 +330,7 @@ export function WhatsAppPreview({ conversation }: { conversation: Conversation }
       <div className="mx-auto w-full max-w-[360px] rounded-[2.5rem] border border-gray-30 bg-ink p-2.5">
         <div className="flex h-[36rem] flex-col overflow-hidden rounded-[2rem] bg-wash">
           <div className="flex items-center gap-2.5 bg-paper px-4 py-3">
-            <span aria-hidden className="grid size-9 place-items-center rounded-full bg-cardinal text-sm font-bold text-gold">T</span>
+            <Mark tone="light" size={36} />
             <div>
               <p className="text-[15px] font-semibold leading-tight">Trojan Connect</p>
               <p className="text-xs text-gray-70">{conversation.agentName} · business account</p>
