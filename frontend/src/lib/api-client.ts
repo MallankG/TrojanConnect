@@ -3,7 +3,7 @@ import type { BookingKind, PipelineState, StepId } from "./pipeline/plan";
 
 const API = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:8000";
 
-/** Backend errors: pipeline routes send `detail` as a string, booking routes as `{code, message}` (PRD §9.1). */
+/** Backend errors use the standard envelope `{ok: false, error: {code, message, retryable}}` (PRD §9.1); `detail` is still accepted. */
 export class ApiError extends Error {
   constructor(message: string, readonly code?: string, readonly status?: number) { super(message); }
 }
@@ -18,6 +18,7 @@ async function call<T>(path: string, init?: RequestInit & { json?: unknown }): P
   });
   const body = await res.json().catch(() => ({}));
   if (!res.ok) {
+    if (body?.error?.message) throw new ApiError(body.error.message, body.error.code, res.status);
     const d = body?.detail;
     if (d && typeof d === "object" && !Array.isArray(d)) throw new ApiError(d.message ?? res.statusText, d.code, res.status);
     if (Array.isArray(d)) throw new ApiError(d.map((x: { msg?: string }) => x.msg).join("; "), "VALIDATION", res.status);

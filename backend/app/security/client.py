@@ -24,6 +24,6 @@ def require_client_header(x_trojanconnect_client: str | None = Header(default=No
 
 
 def reviewer_id(x_trojanconnect_reviewer: str | None = Header(default=None)) -> str | None:
-    """The demo reviewer identity picked on /venue-review. The server checks it against the seeded
+    """The demo reviewer identity picked on /pipeline/review. The server checks it against the seeded
     reviewer list and their authority assignments; the model never supplies it."""
     return x_trojanconnect_reviewer

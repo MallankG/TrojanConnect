@@ -1,4 +1,10 @@
 fastapi
 uvicorn[standard]
-google-genai>=3.3,<4  # event agent (Gemini)
-pytest  # tests
+pydantic>=2
+pydantic-settings
+google-genai>=3.3  # student agents + event planning agent (Gemini)
+supabase
+pyjwt
+httpx
+pytest
+pytest-asyncio

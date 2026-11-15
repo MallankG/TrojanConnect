@@ -68,7 +68,7 @@ Settings in `backend/.env`:
 |---|---|---|
 | `ASSISTANT_MODE` | `rules`: the built-in agent answers, with no model calls and no API cost. `gemini`: Gemini answers, and the built-in agent takes over automatically if Gemini fails (quota, outage). | `gemini` if a key is set, else `rules` |
 | `GEMINI_API_KEY`, `GEMINI_CHAT_MODEL`, `GEMINI_API_VERSION` | Gemini settings (only for `gemini` mode) | none, `gemini-3.5-flash`, SDK default |
-| `DEMO_AUTO_REVIEW` | `true`: a **simulated** venue or permits office approves accepted requests, so the waterfall continues without a person. `false`: a reviewer approves on `/venue-review`. | `false` |
+| `DEMO_AUTO_REVIEW` | `true`: a **simulated** venue or permits office approves accepted requests, so the waterfall continues without a person. `false`: a reviewer approves on `/pipeline/review`. | `false` |
 | `FRONTEND_ORIGIN` | Browser origins allowed to call the API, comma-separated. **Add your host app's origin here.** | `http://localhost:3000` |
 
 ---
@@ -211,7 +211,7 @@ Generate a fresh `idempotency_key` per click (`crypto.randomUUID()`). Errors you
 - `409 PROPOSAL_EXPIRED` / `PROPOSAL_STALE`: ask for another option.
 - `409 ROUND_LIMIT`: no more alternatives; accept the current proposal or cancel.
 
-With `DEMO_AUTO_REVIEW=false`, a person approves on `/venue-review` (reference: `frontend/src/components/review/VenueReviewApp.tsx`; endpoints `GET /venue-review/queue`, `POST /reviews/{task}/decision`, `POST /reviews/{task}/confirm`, all with the header `X-TrojanConnect-Reviewer: <id>`).
+With `DEMO_AUTO_REVIEW=false`, a person approves on `/pipeline/review` (reference: `frontend/src/components/review/VenueReviewApp.tsx`; endpoints `GET /venue-review/queue`, `POST /reviews/{task}/decision`, `POST /reviews/{task}/confirm`, all with the header `X-TrojanConnect-Reviewer: <id>`).
 
 ### A full conversation
 

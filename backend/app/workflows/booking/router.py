@@ -1,15 +1,16 @@
 """Booking API (PRD §12): club-rep actions on venue bookings and event permits, and the human reviewer
 queue. These endpoints are the only way to submit, accept, approve or confirm; no agent tool reaches them.
 
-Errors use the PRD §9.1 shape under `detail`: `{code, message, retryable}`.
+Errors use the project's standard envelope (PRD §9.1): `{ok: false, data: null, error: {code, message, retryable}}`.
 """
 
 from __future__ import annotations
 
 from typing import Any, Literal
 
-from fastapi import APIRouter, Depends, HTTPException, Query
+from fastapi import APIRouter, Depends, Query
 
+from app.schemas.common import AppError
 from app.security.client import require_client_header, reviewer_id
 
 from . import inventory, service
@@ -23,7 +24,7 @@ def _call(fn, *args: Any, **kwargs: Any) -> Any:
     try:
         return fn(*args, **kwargs)
     except service.BookingError as e:
-        raise HTTPException(e.status, e.as_error()) from e
+        raise AppError(e.code, e.message, e.status, e.retryable) from e
 
 
 @router.get("/bookings")

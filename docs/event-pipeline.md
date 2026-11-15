@@ -2,7 +2,7 @@
 
 Automates the club event walkthrough (venue → food → permit → funding → EngageSC → accessibility → publicity). A club rep enters the event **once**. The `/pipeline` page then shows where they are in the waterfall, what each step is waiting on, and the deadlines counted back from the event date.
 
-The venue booking and the event permit are handled by **agents**, not USC web portals. The rep confirms a summary. The **Club Agent** and a **Venue Scheduling Agent** then negotiate a room and time, the rep accepts one proposal, and a **human reviewer** on `/venue-review` approves it. Only the backend marks a request confirmed, and only once it has that approval and a reference number. This follows the PRD's booking workflow (§5.1, §6–§9).
+The venue booking and the event permit are handled by **agents**, not USC web portals. The rep confirms a summary. The **Club Agent** and a **Venue Scheduling Agent** then negotiate a room and time, the rep accepts one proposal, and a **human reviewer** on `/pipeline/review` approves it. Only the backend marks a request confirmed, and only once it has that approval and a reference number. This follows the PRD's booking workflow (§5.1, §6–§9).
 
 **Nothing is sent to a USC system.** Availability comes from a seeded, clearly labelled **simulated** inventory. No form is submitted automatically and no email is sent. In line with the PRD's non-goals (§2.2, §7.3 #8–9), there is no live integration and no automatic approval.
 
@@ -11,7 +11,7 @@ The venue booking and the event permit are handled by **agents**, not USC web po
 | Layer | Path |
 |---|---|
 | UI: pipeline (`/pipeline`) | `frontend/src/app/pipeline/page.tsx`, `frontend/src/components/pipeline/*` (booking card: `BookingCard.tsx`) |
-| UI: human review (`/venue-review`) | `frontend/src/app/venue-review/page.tsx`, `frontend/src/components/review/VenueReviewApp.tsx` |
+| UI: human review (`/pipeline/review`) | `frontend/src/app/pipeline/review/page.tsx`, `frontend/src/components/review/VenueReviewApp.tsx` |
 | Steps, deadlines, the fields each form needs, email templates | `frontend/src/lib/pipeline/plan.ts`, `fields.ts` (mirrored in `backend/app/workflows/event_pipeline/plan.py`) |
 | API client | `frontend/src/lib/api-client.ts` (`NEXT_PUBLIC_API_URL`, default `http://localhost:8000`) |
 | Pipeline API + state | `backend/app/workflows/event_pipeline/` (`/api/v1/pipeline/*`) |
@@ -22,7 +22,7 @@ Storage is JSON files for the hackathon. Replace `event_pipeline/store.py` and `
 
 ## Setup
 
-Run the frontend and backend as described in the root README, and open http://localhost:3000/pipeline (club rep) and http://localhost:3000/venue-review (reviewer). No browser automation or Node setup is needed on the backend any more.
+Run the frontend and backend as described in the root README, and open http://localhost:3000/pipeline (club rep) and http://localhost:3000/pipeline/review (reviewer). No browser automation or Node setup is needed on the backend any more.
 
 ## The booking workflow
 
@@ -57,7 +57,7 @@ The event permit uses the same path without availability or negotiation. It open
 
 The venue step's "submitted / confirmed" checks, reservation #, and venue contact are set by the workflow, as are the permit's "submitted / approved" and permit code. The API refuses manual changes to them (409). When a booking is confirmed for a shifted time or another room, the profile follows it, because the rep explicitly accepted that change.
 
-**Reviewer identities.** `/venue-review` has a demo "Signed in as" picker: TES, Classroom Scheduling, Viterbi, ECE rooms, Event Permits, and a USG representative with no venue authority. The server checks each action against the reviewer's assigned authorities. A USG rep or the wrong office gets 403, and the attempt is logged. This stands in for Supabase Auth.
+**Reviewer identities.** `/pipeline/review` has a demo "Signed in as" picker: TES, Classroom Scheduling, Viterbi, ECE rooms, Event Permits, and a USG representative with no venue authority. The server checks each action against the reviewer's assigned authorities. A USG rep or the wrong office gets 403, and the attempt is logged. This stands in for Supabase Auth.
 
 ## API
 
@@ -108,7 +108,7 @@ Limits enforced in code:
 Setup: copy `backend/.env.example` to `backend/.env` and start the backend with `--env-file .env`.
 
 - `ASSISTANT_MODE=rules` (or no `GEMINI_API_KEY`): the **built-in Club Agent** (`backend/app/agents/rules_agent.py`) answers with no model calls. It reads sentences like "Book a 35 person event for December 20th 2026 from 7pm - 8pm", saves the facts, lists the free rooms across every venue office as clickable options, and after you pick one walks the waterfall: an inline form for missing details, the Confirm card, then caterer, quote, permit and email suggestions. With Gemini configured, the chat falls back to it whenever Gemini fails (e.g. quota).
-- `DEMO_AUTO_REVIEW=true` (demo only, off by default): a **simulated** venue or permits office approves accepted requests through the same authorization checks, so the waterfall continues without opening `/venue-review`. Its name, decision and reference are labelled simulated. Set it to `false` to have a person approve.
+- `DEMO_AUTO_REVIEW=true` (demo only, off by default): a **simulated** venue or permits office approves accepted requests through the same authorization checks, so the waterfall continues without opening `/pipeline/review`. Its name, decision and reference are labelled simulated. Set it to `false` to have a person approve.
 
 Code: `backend/app/agents/` (loop, model interface), `backend/app/tools/event_plan.py` (tools), `backend/app/workflows/booking/` (workflow, both negotiating agents, inventory, policy), `frontend/src/components/pipeline/AssistantPanel.tsx`. Tests: `cd backend && .venv/bin/python -m pytest` (`tests/test_booking.py` covers the PRD §16 booking cases).
 

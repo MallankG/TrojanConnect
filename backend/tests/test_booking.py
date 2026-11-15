@@ -400,7 +400,7 @@ def test_http_flow_and_error_shape(busy):
     task = q[0]["review"]["task_id"]
     denied = c.post(f"/api/v1/reviews/{task}/decision", json={"decision": "APPROVE", "idempotency_key": "http-key-3"},
                     headers={**HEADERS, "X-TrojanConnect-Reviewer": "rep-usg"})
-    assert denied.status_code == 403 and denied.json()["detail"]["code"] == "PERMISSION_DENIED"
+    assert denied.status_code == 403 and denied.json()["error"]["code"] == "PERMISSION_DENIED"
     ok_ = c.post(f"/api/v1/reviews/{task}/decision", json={"decision": "APPROVE", "external_confirmation_reference": "482913",
                                                           "idempotency_key": "http-key-4"}, headers={**HEADERS, "X-TrojanConnect-Reviewer": "rev-tes"})
     assert ok_.json()["state"] == "CONFIRMED"

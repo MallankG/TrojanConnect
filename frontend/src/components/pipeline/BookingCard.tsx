@@ -47,7 +47,7 @@ export function BookingCard({ kind, formId, profile, blocked, onJumpToField, onP
     return () => { alive = false; };
   }, [kind]);
 
-  // A reviewer decides elsewhere (/venue-review): poll while the request waits on a human.
+  // A reviewer decides elsewhere (/pipeline/review): poll while the request waits on a human.
   const state = b?.state;
   useEffect(() => {
     if (!state || !WAITING_ON_HUMAN.includes(state)) return;
