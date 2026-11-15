@@ -1,89 +1,195 @@
 @import "tailwindcss";
 
-:root {
-  --background: #ffffff;
-  --foreground: #171717;
+/*
+ * USC palette, from identity.usc.edu/identity/color.
+ * Rules the tokens are built around:
+ *  - Cardinal has shades (+10/20/30K) but no tints. Gold has tints (75/50/25%) but no shades.
+ *  - Never: gold text on white, white text on gold, cardinal on black, black on cardinal.
+ *  - Tertiary colours are graphic markers only, never text.
+ */
+@theme {
+  --color-cardinal: #990000;
+  --color-cardinal-10: #8a0000;
+  --color-cardinal-20: #7a0000;
+  --color-cardinal-30: #6b0000;
+  --color-gold: #ffcc00;
+  --color-gold-75: #ffd940;
+  --color-gold-50: #ffe680;
+  --color-gold-25: #fff2bf;
+  --color-ink: #000000;
+  --color-paper: #ffffff;
+  --color-gray-30: #cccccc;
+  --color-gray-70: #767676;
+  /* Neutral UI surfaces. Not brand colours; used only for panels and hairlines. */
+  --color-wash: #f5f5f5;
+  --color-line: #e2e2e2;
+  /* Tertiary markers */
+  --color-mark-blue: #2b5597;
+  --color-mark-olive: #908c13;
+  --color-mark-orange: #ff9015;
+  --color-mark-red: #e43d30;
+  --color-mark-peach: #f2c6a7;
+  --color-mark-pink: #f26178;
+  --color-mark-lime: #dae343;
+
+  --ease-out-quint: cubic-bezier(0.22, 1, 0.36, 1);
 }
 
 @theme inline {
-  --color-background: var(--background);
-  --color-foreground: var(--foreground);
-  --font-sans: var(--font-geist-sans);
-  --font-mono: var(--font-geist-mono);
+  --font-sans: var(--font-bricolage), ui-sans-serif, system-ui, sans-serif;
+  --font-serif: var(--font-caslon), Georgia, "Times New Roman", serif;
 }
 
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
-  }
+html {
+  background: var(--color-paper);
+  color: var(--color-ink);
+  font-optical-sizing: auto;
+  -webkit-text-size-adjust: 100%;
 }
 
-/* TrojanConnect tokens: cardinal accent, warm paper, clear status colors (PRD §11.2) */
-:root {
-  --tc-paper: #f6f4ef;
-  --tc-surface: #ffffff;
-  --tc-ink: #1d1b18;
-  --tc-muted: #6b665d;
-  --tc-line: #e4dfd4;
-  --tc-cardinal: #990000;
-  --tc-on-cardinal: #ffffff;
-  --tc-ok: #2f7d4f;
-  --tc-ok-bg: #e5f3ea;
-  --tc-wait: #8a5a00;
-  --tc-wait-bg: #fdf1d8;
-  --tc-late: #b42318;
-  --tc-late-bg: #fde8e6;
-  --tc-ready: #1f4fa8;
-  --tc-ready-bg: #e6eefc;
-  --tc-block: #7a7368;
-  --tc-block-bg: #efece6;
-}
-
-@media (prefers-color-scheme: dark) {
-  :root {
-    --tc-paper: #15130f;
-    --tc-surface: #1f1c17;
-    --tc-ink: #f1ede6;
-    --tc-muted: #a59f94;
-    --tc-line: #34302a;
-    --tc-cardinal: #e0574f;
-    --tc-on-cardinal: #15130f;
-    --tc-ok: #7fd3a0;
-    --tc-ok-bg: #1d3427;
-    --tc-wait: #f2c46d;
-    --tc-wait-bg: #3a2e14;
-    --tc-late: #ff8a80;
-    --tc-late-bg: #3d1d1a;
-    --tc-ready: #8fb3ff;
-    --tc-ready-bg: #1c2740;
-    --tc-block: #a59f94;
-    --tc-block-bg: #2a2620;
-  }
-}
-
-@theme inline {
-  --color-paper: var(--tc-paper);
-  --color-surface: var(--tc-surface);
-  --color-ink: var(--tc-ink);
-  --color-muted: var(--tc-muted);
-  --color-line: var(--tc-line);
-  --color-cardinal: var(--tc-cardinal);
-  --color-on-cardinal: var(--tc-on-cardinal);
-  --color-ok: var(--tc-ok);
-  --color-ok-bg: var(--tc-ok-bg);
-  --color-wait: var(--tc-wait);
-  --color-wait-bg: var(--tc-wait-bg);
-  --color-late: var(--tc-late);
-  --color-late-bg: var(--tc-late-bg);
-  --color-ready: var(--tc-ready);
-  --color-ready-bg: var(--tc-ready-bg);
-  --color-block: var(--tc-block);
-  --color-block-bg: var(--tc-block-bg);
+/*
+ * Event pipeline tokens (/pipeline). Paper, ink, line and cardinal come from the USC palette
+ * above; these add only what the pipeline needs on top: a card surface, secondary text, and
+ * status colours. Light only, like the rest of the app.
+ */
+@theme {
+  --color-surface: #ffffff;
+  --color-muted: var(--color-gray-70);
+  --color-on-cardinal: #ffffff;
+  --color-ok: #2f7d4f;
+  --color-ok-bg: #e5f3ea;
+  --color-wait: #8a5a00;
+  --color-wait-bg: #fdf1d8;
+  --color-late: #b42318;
+  --color-late-bg: #fde8e6;
+  --color-ready: #1f4fa8;
+  --color-ready-bg: #e6eefc;
+  --color-block: #7a7368;
+  --color-block-bg: #efece6;
 }
 
 body {
-  background: var(--background);
-  color: var(--foreground);
-  font-family: Arial, Helvetica, sans-serif;
+  font-family: var(--font-sans);
+  font-feature-settings: "ss01";
+  text-rendering: optimizeLegibility;
+}
+
+.tabular {
+  font-variant-numeric: tabular-nums;
+}
+
+:focus-visible {
+  outline: 2px solid var(--color-cardinal);
+  outline-offset: 2px;
+  border-radius: 4px;
+}
+
+.on-dark :focus-visible,
+.on-cardinal :focus-visible {
+  outline-color: var(--color-gold);
+}
+
+::selection {
+  background: var(--color-gold);
+  color: var(--color-ink);
+}
+
+/* Lenis smooth scroll (landing page only) */
+html.lenis,
+html.lenis body {
+  height: auto;
+}
+.lenis.lenis-smooth {
+  scroll-behavior: auto !important;
+}
+.lenis.lenis-stopped {
+  overflow: hidden;
+}
+
+@keyframes caret-blink {
+  0%,
+  49% {
+    opacity: 1;
+  }
+  50%,
+  100% {
+    opacity: 0;
+  }
+}
+.caret {
+  display: inline-block;
+  width: 0.08em;
+  height: 0.95em;
+  margin-left: 0.06em;
+  vertical-align: -0.08em;
+  background: var(--color-gold);
+  animation: caret-blink 1s steps(1) infinite;
+}
+
+@keyframes skeleton-pulse {
+  0%,
+  100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.5;
+  }
+}
+.skeleton {
+  background: var(--color-wash);
+  border-radius: 8px;
+  animation: skeleton-pulse 1.4s ease-in-out infinite;
+}
+
+@keyframes dot-pulse {
+  0%,
+  80%,
+  100% {
+    opacity: 0.25;
+  }
+  40% {
+    opacity: 1;
+  }
+}
+
+/* A chat message or summary value arriving. */
+@keyframes msg-in {
+  from {
+    opacity: 0;
+    transform: translateY(10px);
+  }
+}
+.msg-in {
+  animation: msg-in 0.4s var(--ease-out-quint) both;
+}
+
+/* The request bouncing between offices on the landing page. */
+@keyframes route-bounce {
+  0%,
+  100% {
+    left: 16.6%;
+  }
+  33% {
+    left: 50%;
+  }
+  66% {
+    left: 83.3%;
+  }
+}
+.route-dot {
+  animation: route-bounce 2.4s ease-in-out infinite;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .msg-in,
+  .route-dot,
+  .caret,
+  .skeleton {
+    animation: none;
+  }
+  *,
+  *::before,
+  *::after {
+    scroll-behavior: auto !important;
+  }
 }
