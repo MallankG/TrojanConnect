@@ -1,0 +1,236 @@
+[
+  {
+    "organization_id": "usc-undergraduate-student-government",
+    "title": "Graduate Student Government Diaper Bank",
+    "description": "Graduate Student Government Diaper Bank. Monday, 07 September 2026 At 8:00 AM, PDT (GMT-7). Trojan Pantry 1025 W 34th Street King Hall KOH STE 103 Los Angeles, CA 90089.",
+    "start_at": "2026-09-07T08:00:00-07:00",
+    "end_at": "2027-09-07T09:00:00-07:00",
+    "location": "Trojan Pantry 1025 W 34th Street King Hall KOH STE 103 Los Angeles, CA 90089",
+    "visibility": "public"
+  },
+  {
+    "organization_id": "usc-undergraduate-student-government",
+    "title": "GSG and HSC First-Gen College Student Day Celebration",
+    "description": "GSG and HSC First-Gen College Student Day Celebration. Tuesday, 17 November 2026 At 11:00 AM, PST (GMT-8). HSC Soto Courtyard.",
+    "start_at": "2026-08-24T13:00:00-07:00",
+    "end_at": "2026-12-19T13:00:00-07:00",
+    "location": "HSC Soto Courtyard",
+    "visibility": "public"
+  },
+  {
+    "organization_id": "usc-undergraduate-student-government",
+    "title": "GSG Bridges and Belonging Workshop led by OIS embedded counselor from Counseling and Mental Health",
+    "description": "GSG Bridges and Belonging Workshop led by OIS embedded counselor from Counseling and Mental Health. Wednesday, 18 November 2026 At 12:00 PM, PST (GMT-8). TCC 350.",
+    "start_at": "2026-08-24T13:00:00-07:00",
+    "end_at": "2026-12-19T13:00:00-07:00",
+    "location": "TCC 350",
+    "visibility": "public"
+  },
+  {
+    "organization_id": "usc-undergraduate-student-government",
+    "title": "Panel and Networking: Preparing for Industry vs. Academic Careers",
+    "description": "Panel and Networking: Preparing for Industry vs. Academic Careers. Wednesday, 18 November 2026 At 2:00 PM, PST (GMT-8). Private Location ( register to display ) .",
+    "start_at": "2026-08-24T13:00:00-07:00",
+    "end_at": "2026-12-19T13:00:00-07:00",
+    "location": "Private Location (register to display)",
+    "visibility": "public"
+  },
+  {
+    "organization_id": "usc-undergraduate-student-government",
+    "title": "GSG HSC Friendsgiving",
+    "description": "GSG HSC Friendsgiving. Wednesday, 18 November 2026 At 5:00 PM, PST (GMT-8). Keith Administration Building ( KAM ) Basement Hoyt Gallery.",
+    "start_at": "2026-08-24T13:00:00-07:00",
+    "end_at": "2026-12-19T13:00:00-07:00",
+    "location": "Keith Administration Building (KAM) Basement Hoyt Gallery",
+    "visibility": "public"
+  },
+  {
+    "organization_id": "usc-undergraduate-student-government",
+    "title": "GSG Senate Meeting #4",
+    "description": "GSG Senate Meeting number sign 4. Monday, 30 November 2026 At 5:25 PM, PST (GMT-8). NRT LG503 slash 4.",
+    "start_at": "2026-08-24T13:00:00-07:00",
+    "end_at": "2026-12-19T13:00:00-07:00",
+    "location": "NRT LG503/4",
+    "visibility": "public"
+  },
+  {
+    "organization_id": "usc-graduate-student-government",
+    "title": "Graduate Student Government Diaper Bank",
+    "description": "Graduate Student Government Diaper Bank. Monday, 07 September 2026 At 8:00 AM, PDT (GMT-7). Trojan Pantry 1025 W 34th Street King Hall KOH STE 103 Los Angeles, CA 90089.",
+    "start_at": "2026-09-07T08:00:00-07:00",
+    "end_at": "2027-09-07T09:00:00-07:00",
+    "location": "Trojan Pantry 1025 W 34th Street King Hall KOH STE 103 Los Angeles, CA 90089",
+    "visibility": "public"
+  },
+  {
+    "organization_id": "usc-graduate-student-government",
+    "title": "GSG and HSC First-Gen College Student Day Celebration",
+    "description": "GSG and HSC First-Gen College Student Day Celebration. Tuesday, 17 November 2026 At 11:00 AM, PST (GMT-8). HSC Soto Courtyard.",
+    "start_at": "2026-08-24T13:00:00-07:00",
+    "end_at": "2026-12-19T13:00:00-07:00",
+    "location": "HSC Soto Courtyard",
+    "visibility": "public"
+  },
+  {
+    "organization_id": "usc-graduate-student-government",
+    "title": "GSG Bridges and Belonging Workshop led by OIS embedded counselor from Counseling and Mental Health",
+    "description": "GSG Bridges and Belonging Workshop led by OIS embedded counselor from Counseling and Mental Health. Wednesday, 18 November 2026 At 12:00 PM, PST (GMT-8). TCC 350.",
+    "start_at": "2026-08-24T13:00:00-07:00",
+    "end_at": "2026-12-19T13:00:00-07:00",
+    "location": "TCC 350",
+    "visibility": "public"
+  },
+  {
+    "organization_id": "usc-graduate-student-government",
+    "title": "Panel and Networking: Preparing for Industry vs. Academic Careers",
+    "description": "Panel and Networking: Preparing for Industry vs. Academic Careers. Wednesday, 18 November 2026 At 2:00 PM, PST (GMT-8). Private Location ( register to display ) .",
+    "start_at": "2026-08-24T13:00:00-07:00",
+    "end_at": "2026-12-19T13:00:00-07:00",
+    "location": "Private Location (register to display)",
+    "visibility": "public"
+  },
+  {
+    "organization_id": "usc-graduate-student-government",
+    "title": "GSG HSC Friendsgiving",
+    "description": "GSG HSC Friendsgiving. Wednesday, 18 November 2026 At 5:00 PM, PST (GMT-8). Keith Administration Building ( KAM ) Basement Hoyt Gallery.",
+    "start_at": "2026-08-24T13:00:00-07:00",
+    "end_at": "2026-12-19T13:00:00-07:00",
+    "location": "Keith Administration Building (KAM) Basement Hoyt Gallery",
+    "visibility": "public"
+  },
+  {
+    "organization_id": "usc-graduate-student-government",
+    "title": "GSG Senate Meeting #4",
+    "description": "GSG Senate Meeting number sign 4. Monday, 30 November 2026 At 5:25 PM, PST (GMT-8). NRT LG503 slash 4.",
+    "start_at": "2026-08-24T13:00:00-07:00",
+    "end_at": "2026-12-19T13:00:00-07:00",
+    "location": "NRT LG503/4",
+    "visibility": "public"
+  },
+  {
+    "organization_id": "usc-environmental-student-assembly",
+    "title": "ESA Service Presents: Santa Monica Beach Clean Up",
+    "description": "ESA Service Presents: Santa Monica Beach Clean Up. Sunday, 15 November 2026 At 11:00 AM, PST (GMT-8). Santa Monica Pier.",
+    "start_at": "2026-08-24T13:00:00-07:00",
+    "end_at": "2026-12-19T13:00:00-07:00",
+    "location": "Santa Monica Pier",
+    "visibility": "public"
+  },
+  {
+    "organization_id": "usc-environmental-student-assembly",
+    "title": "ESA GM: Diet Coke, Cookies, and COP31 with the Gibson Climate Justice Lab",
+    "description": "ESA GM: Diet Coke, Cookies, and COP31 with the Gibson Climate Justice Lab. Monday, 16 November 2026 At 7:30 PM, PST (GMT-8). -",
+    "start_at": "2026-08-24T13:00:00-07:00",
+    "end_at": "2026-12-19T13:00:00-07:00",
+    "location": "-",
+    "visibility": "public"
+  },
+  {
+    "organization_id": "usc-environmental-student-assembly",
+    "title": "ESA Weekly General Meeting",
+    "description": "ESA Weekly General Meeting. Monday, 30 November 2026 At 7:30 PM, PST (GMT-8). -",
+    "start_at": "2026-08-24T13:00:00-07:00",
+    "end_at": "2026-12-19T13:00:00-07:00",
+    "location": "-",
+    "visibility": "public"
+  },
+  {
+    "organization_id": "usc-environmental-student-assembly",
+    "title": "VegFest",
+    "description": "VegFest. Tuesday, 01 December 2026 At 6:00 PM, PST (GMT-8). McCarthy Quad.",
+    "start_at": "2026-08-24T13:00:00-07:00",
+    "end_at": "2026-12-19T13:00:00-07:00",
+    "location": "McCarthy Quad",
+    "visibility": "public"
+  },
+  {
+    "organization_id": "usc-troy-camp",
+    "title": "Make Your Own Snackbox",
+    "description": "Make Your Own Snackbox. Sunday, 15 November 2026 At 5:00 PM, PST (GMT-8). Troy Conference Room.",
+    "start_at": "2026-08-24T13:00:00-07:00",
+    "end_at": "2026-12-19T13:00:00-07:00",
+    "location": "Troy Conference Room",
+    "visibility": "public"
+  },
+  {
+    "organization_id": "usc-troy-camp",
+    "title": "Troy Camp General Meeting",
+    "description": "Troy Camp General Meeting. Tuesday, 17 November 2026 At 7:30 PM, PST (GMT-8). Private Location ( register to display ) .",
+    "start_at": "2026-08-24T13:00:00-07:00",
+    "end_at": "2026-12-19T13:00:00-07:00",
+    "location": "Private Location (register to display)",
+    "visibility": "public"
+  },
+  {
+    "organization_id": "usc-troy-camp",
+    "title": "Karaoke Night",
+    "description": "Karaoke Night. Wednesday, 18 November 2026 At 6:00 PM, PST (GMT-8). Troy Hall Conference Room.",
+    "start_at": "2026-08-24T13:00:00-07:00",
+    "end_at": "2026-12-19T13:00:00-07:00",
+    "location": "Troy Hall Conference Room",
+    "visibility": "public"
+  },
+  {
+    "organization_id": "usc-troy-camp",
+    "title": "Fuel Your Morning",
+    "description": "Fuel Your Morning. Thursday, 19 November 2026 At 9:00 AM, PST (GMT-8). Private Location ( register to display ) .",
+    "start_at": "2026-08-24T13:00:00-07:00",
+    "end_at": "2026-12-19T13:00:00-07:00",
+    "location": "Private Location (register to display)",
+    "visibility": "public"
+  },
+  {
+    "organization_id": "usc-troy-camp",
+    "title": "Cheesy Cheetos & Nachos Night",
+    "description": "Cheesy Cheetos and Nachos Night. Thursday, 19 November 2026 At 7:00 PM, PST (GMT-8). Troy Conference Room.",
+    "start_at": "2026-08-24T13:00:00-07:00",
+    "end_at": "2026-12-19T13:00:00-07:00",
+    "location": "Troy Conference Room",
+    "visibility": "public"
+  },
+  {
+    "organization_id": "usc-troy-camp",
+    "title": "Last Day Energy!",
+    "description": "Last Day Energy! Friday, 04 December 2026 At 10:00 PM, PST (GMT-8). Troy Courtyard.",
+    "start_at": "2026-08-24T13:00:00-07:00",
+    "end_at": "2026-12-19T13:00:00-07:00",
+    "location": "Troy Courtyard",
+    "visibility": "public"
+  },
+  {
+    "organization_id": "usc-marshall-artificial-intelligence-association",
+    "title": "AI SUMMIT | MAIA Demo Day",
+    "description": "AI SUMMIT vertical bar MAIA Demo Day. Friday, 04 December 2026 At 2:00 PM, PST (GMT-8). HOH EDI.",
+    "start_at": "2026-08-24T13:00:00-07:00",
+    "end_at": "2026-12-19T13:00:00-07:00",
+    "location": "HOH EDI",
+    "visibility": "public"
+  },
+  {
+    "organization_id": "usc-entrepreneurship-and-innovation-student-association",
+    "title": "New Venture Seed Competition Information Sessions 2026-2027",
+    "description": "New Venture Seed Competition Information Sessions 2026-2027. Wednesday, 14 October 2026 At 4:00 PM, PDT (GMT-7). TBD.",
+    "start_at": "2026-10-14T16:00:00-07:00",
+    "end_at": "2026-12-01T17:00:00-07:00",
+    "location": "TBD",
+    "visibility": "public"
+  },
+  {
+    "organization_id": "usc-academic-culture-assembly",
+    "title": "Gameday Hats & Tats: FREE Custom USC Hats!",
+    "description": "Gameday Hats and Tats: FREE Custom USC Hats! Tuesday, 17 November 2026 At 12:00 PM, PST (GMT-8). Tommy Trojan ( Right by TCC! ) .",
+    "start_at": "2026-08-24T13:00:00-07:00",
+    "end_at": "2026-12-19T13:00:00-07:00",
+    "location": "Tommy Trojan (Right by TCC!)",
+    "visibility": "public"
+  },
+  {
+    "organization_id": "usc-academic-culture-assembly",
+    "title": "Grateful for Study Break: Free Ice Cream & Photo Booth!",
+    "description": "Grateful for Study Break: Free Ice Cream and Photo Booth! Monday, 30 November 2026 At 6:00 PM, PST (GMT-8). McCarthy Quad.",
+    "start_at": "2026-08-24T13:00:00-07:00",
+    "end_at": "2026-12-19T13:00:00-07:00",
+    "location": "McCarthy Quad",
+    "visibility": "public"
+  }
+]

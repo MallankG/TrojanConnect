@@ -1,0 +1,26 @@
+[
+  {
+    "user_id": "demo-student-1",
+    "display_name": "Alex Rivera",
+    "email": "alex.rivera@students.example.edu",
+    "preferences": {
+      "interest_tags": [
+        "artificial_intelligence",
+        "machine_learning",
+        "entrepreneurship",
+        "hackathons",
+        "startups"
+      ],
+      "goals": "I want to build real AI projects with a team, meet people interested in startups, and find one club I can commit to without it taking over my week.",
+      "year_level": "graduate",
+      "hours_per_week_available": 5,
+      "personalization_enabled": true
+    }
+  },
+  {
+    "user_id": "demo-student-2",
+    "display_name": "Jordan Kim",
+    "email": "jordan.kim@students.example.edu",
+    "preferences": null
+  }
+]
