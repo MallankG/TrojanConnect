@@ -9,6 +9,10 @@ import type { FieldDef } from "@/lib/pipeline/fields";
 import { Field } from "./ProfileForm";
 import { Pill, btn, btnPrimary, type Tone } from "./ui";
 
+/** The simulated portal is served through this app (/mock-engagesc is forwarded to the backend), so link by path:
+ *  the backend's own address (127.0.0.1:8000) isn't reachable from a visitor's browser once deployed. */
+const samePath = (url: string) => { try { return new URL(url).pathname; } catch { return url; } };
+
 // ---- shared state: every card refreshes when any card changes the tracker -----------------------
 const EVENT = "tc-rso-changed";
 export function announceRsoChange() { if (typeof window !== "undefined") window.dispatchEvent(new Event(EVENT)); }
@@ -227,8 +231,8 @@ export function RsoPortalCard() {
           </button>
         )}
         {app && <button type="button" className={btn} disabled={running} onClick={() => start(rsoApi.portalSync)}>{running && portal.kind === "sync" ? "Checking…" : "Check status now"}</button>}
-        <a className={btn} href={portal.base_url} target="_blank" rel="noopener noreferrer">Open simulated EngageSC ↗</a>
-        {app && <a className={btn} href={portal.admin_url} target="_blank" rel="noopener noreferrer">Simulated Campus Activities review ↗</a>}
+        <a className={btn} href={samePath(portal.base_url)} target="_blank" rel="noopener noreferrer">Open simulated EngageSC ↗</a>
+        {app && <a className={btn} href={samePath(portal.admin_url)} target="_blank" rel="noopener noreferrer">Simulated Campus Activities review ↗</a>}
       </div>
       {!rso?.ready_to_submit && !app && <p className="mt-2 mb-0 text-[13px] text-cardinal">Not ready yet: {rso?.submit_blockers.join("; ") || "the application window is closed"}</p>}
       {(error || portal.error) && <p role="alert" className="mt-2 mb-0 text-[13px] text-cardinal">{error || portal.error}</p>}

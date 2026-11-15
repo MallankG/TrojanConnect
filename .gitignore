@@ -8,3 +8,8 @@ __pycache__/
 graphify-out/cache/
 supabase/seed.real.sql
 dev-ui/
+
+# Replit
+.pythonlibs/
+.upm/
+.cache/
