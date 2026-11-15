@@ -18,7 +18,7 @@ The venue booking and the event permit are handled by **agents**, not USC web po
 | Booking workflow and agents | `backend/app/workflows/booking/` (`/api/v1/bookings/*`, `/api/v1/venue-review/*`, `/api/v1/reviews/*`) |
 | Local state (git-ignored) | `backend/data/event_pipeline.json`, `backend/data/bookings.json` |
 
-Storage is JSON files for the hackathon. Replace `event_pipeline/store.py` and `booking/store.py` when Supabase lands; `booking/inventory.py` maps onto the PRD §13 venue tables.
+Booking requests are stored in Supabase (`booking_requests`, `booking_idempotency`, from `supabase/migrations/0004_venue_booking.sql`) when it's configured and the migration is applied, and in `backend/data/bookings.json` otherwise (`BOOKING_STORE`). The event profile is still `event_pipeline.json`. Availability and the placing of a confirmed booking go through a venue adapter (`booking/adapters.py`, `BOOKING_ADAPTER`): `simulated` today, and the hook for an admin agent that books through the real venue systems later.
 
 ## Setup
 

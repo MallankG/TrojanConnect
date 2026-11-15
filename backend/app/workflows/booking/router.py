@@ -13,7 +13,8 @@ from fastapi import APIRouter, Depends, Query
 from app.schemas.common import AppError
 from app.security.client import require_client_header, reviewer_id
 
-from . import inventory, service
+from . import adapters, inventory, service
+from . import store as db_store
 from .schemas import (AcceptRequest, AlternativesRequest, CancelRequest, ConfirmRequest, DraftRequest, ReviewDecisionRequest,
                       SubmitRequest)
 
@@ -31,6 +32,13 @@ def _call(fn, *args: Any, **kwargs: Any) -> Any:
 def list_bookings(kind: Literal["venue_booking", "event_permit"] | None = Query(default=None)) -> list[dict[str, Any]]:
     """Requests for the current event, newest first. Each carries state, proposals, agent messages and audit timeline."""
     return service.list_for_event(kind)
+
+
+@router.get("/bookings/storage")
+def storage() -> dict[str, Any]:
+    """Where bookings are stored (Supabase or the local JSON file) and which venue adapter places them."""
+    a = adapters.get_adapter()
+    return {**db_store.status(), "adapter": a.name, "integration_mode": a.integration_mode}
 
 
 @router.get("/bookings/{request_id}")

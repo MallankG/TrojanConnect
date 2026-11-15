@@ -69,6 +69,8 @@ Settings in `backend/.env`:
 | `ASSISTANT_MODE` | `rules`: the built-in agent answers, with no model calls and no API cost. `gemini`: Gemini answers, and the built-in agent takes over automatically if Gemini fails (quota, outage). | `gemini` if a key is set, else `rules` |
 | `GEMINI_API_KEY`, `GEMINI_CHAT_MODEL`, `GEMINI_API_VERSION` | Gemini settings (only for `gemini` mode) | none, `gemini-3.5-flash`, SDK default |
 | `DEMO_AUTO_REVIEW` | `true`: a **simulated** venue or permits office approves accepted requests, so the waterfall continues without a person. `false`: a reviewer approves on `/pipeline/review`. | `false` |
+| `BOOKING_STORE` | Where booking requests are kept: `auto` uses Supabase when `SUPABASE_URL`/`SUPABASE_SERVICE_ROLE_KEY` are set and `supabase/migrations/0004_venue_booking.sql` has been applied, otherwise `backend/data/bookings.json`. `supabase` or `json` forces one. `GET /api/v1/bookings/storage` shows which is in use and why. | `auto` |
+| `BOOKING_ADAPTER` | Who supplies availability and places confirmed bookings (`backend/app/workflows/booking/adapters.py`). Only `simulated` exists today; an admin-agent adapter that books through the real venue systems can be registered later without changing the workflow. | `simulated` |
 | `FRONTEND_ORIGIN` | Browser origins allowed to call the API, comma-separated. **Add your host app's origin here.** | `http://localhost:3000` |
 
 ---
@@ -354,7 +356,7 @@ The cards above use these. You only need them directly for screens beyond the As
 ## 10. Current limits
 
 - **One event, no user accounts.** The club rep is a single local user, and reviewers are demo identities. Add Supabase Auth to the router dependencies before multi-user use.
-- **State is JSON files** (`backend/data/event_pipeline.json`, `backend/data/bookings.json`, git-ignored).
+- **Storage.** Booking requests go to Supabase (`booking_requests`, `booking_idempotency`) once migration `0004_venue_booking.sql` is applied, and to `backend/data/bookings.json` until then. The event profile and step progress are still `backend/data/event_pipeline.json`.
 - **Simulated inventory.** Rooms, most capacities and all availability are seeded demo data.
 - **The built-in agent understands booking-style phrasing** (section 4), not open questions. Use `gemini` mode for free-form chat; it falls back to the built-in agent when Gemini fails.
 - **The reference UI computes step status itself** (`lib/pipeline/plan.ts` mirrors `backend/app/workflows/event_pipeline/plan.py`). A new UI should read `GET /status` instead.
@@ -370,6 +372,7 @@ The cards above use these. You only need them directly for screens beyond the As
 | Gemini Club Agent | `backend/app/agents/event_agent.py`, `backend/app/integrations/gemini/` |
 | Agent tools (shared by both agents) | `backend/app/tools/event_plan.py` |
 | Booking workflow, Venue Agent, inventory, policy | `backend/app/workflows/booking/` |
+| Booking storage (Supabase / JSON) and the venue adapter hook | `backend/app/workflows/booking/store.py`, `adapters.py`, `supabase/migrations/0004_venue_booking.sql` |
 | Event plan rules and read models | `backend/app/workflows/event_pipeline/{plan,views,store}.py` |
 | Reference Assistant UI | `frontend/src/components/pipeline/AssistantPanel.tsx`, `BookingCard.tsx` |
 | Theme tokens | `frontend/src/app/globals.css` |

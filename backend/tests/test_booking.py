@@ -39,6 +39,7 @@ FOOD_DONE = {"food": {"checks": {"picked": True, "quote": True}, "data": {}}}
 def temp_store(tmp_path, monkeypatch):
     monkeypatch.setattr(store, "DATA_DIR", tmp_path)
     monkeypatch.setattr(store, "STATE_PATH", tmp_path / "event_pipeline.json")
+    monkeypatch.setenv("BOOKING_STORE", "json")  # never touch a real Supabase project from tests
     store.reset()
 
 
@@ -410,3 +411,91 @@ def test_http_flow_and_error_shape(busy):
     venue = next(s for s in status["steps"] if s["id"] == "venue")
     assert venue["status"] == "done" and venue["forms"][0]["agent"] and venue["forms"][0]["booking"]["state"] == "CONFIRMED"
     assert len(c.get("/api/v1/venue-review/reviewers", headers=HEADERS).json()) == len(inventory.REVIEWERS)
+
+
+# ---- storage and venue adapter -------------------------------------------------------------------
+class FakeSupabase:
+    """Just enough of the supabase-py query builder for booking/store.py."""
+
+    def __init__(self):
+        self.tables: dict[str, dict[str, dict]] = {"booking_requests": {}, "booking_idempotency": {}}
+        self.upserts = 0
+
+    def table(self, name):
+        fake, key = self, ("key" if name == "booking_idempotency" else "id")
+
+        class Q:
+            def __init__(self):
+                self._rows = None
+
+            def select(self, *_a, **_k):
+                self._rows = list(fake.tables[name].values())
+                return self
+
+            def limit(self, _n):
+                return self
+
+            def upsert(self, rows):
+                fake.upserts += 1
+                for r in rows:
+                    fake.tables[name][r[key]] = r
+                return self
+
+            def execute(self):
+                return type("R", (), {"data": self._rows or []})()
+        return Q()
+
+
+def test_bookings_persist_to_supabase_when_configured(busy, monkeypatch):
+    from app.workflows.booking import store as db_store
+    fake = FakeSupabase()
+    monkeypatch.setenv("BOOKING_STORE", "supabase")
+    monkeypatch.setattr(db_store, "_configured", lambda: True)
+    monkeypatch.setattr(db_store, "_supabase_client", lambda: fake)
+    v = submitted()
+    row = fake.tables["booking_requests"][v["id"]]
+    assert row["state"] == "NEGOTIATING" and row["authority_id"] == "tes" and row["doc"]["proposals"]
+    assert any(k["request_id"] == v["id"] for k in fake.tables["booking_idempotency"].values())
+    before = fake.upserts
+    service.list_for_event()  # reads don't write
+    assert fake.upserts == before
+    assert service.get(v["id"])["state"] == "NEGOTIATING"  # read back from the "database"
+    assert db_store.status()["store"] == "supabase"
+
+
+def test_missing_supabase_table_falls_back_to_json(monkeypatch):
+    from app.workflows.booking import store as db_store
+
+    class Broken:
+        def table(self, _n):
+            raise RuntimeError("Could not find the table 'public.booking_requests'")
+    monkeypatch.setenv("BOOKING_STORE", "auto")
+    monkeypatch.setattr(db_store, "_configured", lambda: True)
+    monkeypatch.setattr(db_store, "_supabase_client", lambda: Broken())
+    db_store.reset_backend_cache()
+    try:
+        st = db_store.status()
+        assert st["store"] == "json" and "0004_venue_booking.sql" in st["detail"]
+    finally:
+        db_store.reset_backend_cache()
+
+
+def test_venue_adapter_places_the_booking_or_leaves_it_approved(busy, monkeypatch):
+    from app.workflows.booking import adapters
+
+    class Pending(adapters.SimulatedVenueAdapter):
+        name, integration_mode = "admin_agent_test", "live"
+
+        def place_booking(self, request, reference):
+            return {"status": "pending", "note": "Form filled; waiting for a person to press Submit"}
+    adapters.register("admin_agent_test", Pending)
+    monkeypatch.setenv("BOOKING_ADAPTER", "admin_agent_test")
+    r = accepted()
+    r = service.view(service.decide(r["review"]["task_id"], "rev-tes", "APPROVE", "", "482913", key(), now=NOW), NOW)
+    assert r["state"] == "APPROVED" and r["external_booking"]["status"] == "pending"  # not confirmed until placed
+    assert r["timeline"][-1]["action"] == "external_booking_pending"
+
+    monkeypatch.setenv("BOOKING_ADAPTER", "simulated")
+    r = service.view(service.confirm(r["review"]["task_id"], "rev-tes", "482913", key(), now=NOW), NOW)
+    assert r["state"] == "CONFIRMED" and r["external_booking"]["status"] == "placed"
+    assert r["confirmation"]["integration_mode"] == "simulated"

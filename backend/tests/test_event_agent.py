@@ -41,6 +41,7 @@ PROFILE = {
 def temp_store(tmp_path, monkeypatch):
     monkeypatch.setattr(store, "DATA_DIR", tmp_path)
     monkeypatch.setattr(store, "STATE_PATH", tmp_path / "event_pipeline.json")
+    monkeypatch.setenv("BOOKING_STORE", "json")  # never touch a real Supabase project from tests
     monkeypatch.setattr(inventory, "seeded_busy", lambda vid, day: [])
     store.reset()
 

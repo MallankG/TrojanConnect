@@ -27,7 +27,7 @@ from typing import Any, Callable
 from app.workflows.event_pipeline import plan
 from app.workflows.event_pipeline import store as pipeline_store
 
-from . import inventory, negotiation, policy, states
+from . import adapters, inventory, negotiation, policy, states
 from . import store as db_store
 from .schemas import AgentMessage, AgentRef, MessageType, NotePayload, ProposalPayload, TimeWindow
 
@@ -818,8 +818,20 @@ def _confirm(db: dict[str, Any], req: dict[str, Any], rev: dict[str, Any], refer
         assert p is not None
         if negotiation.option_problems(req["payload"], _option_from(req, p), holds(db, exclude_request=req["id"])):
             raise BookingError(409, "AVAILABILITY_CHANGED", "The slot is no longer free in the inventory. Request changes instead.")
+    # Place the booking with the venue side (simulated today; the admin agent's adapter later).
+    adapter = adapters.get_adapter()
+    try:
+        placed = adapter.place_booking(req, ref)
+    except adapters.AdapterError as e:
+        raise BookingError(409, "VENUE_REFUSED", f"The venue system refused the booking: {e}") from e
+    req["external_booking"] = {**placed, "at": now.isoformat()}
+    if placed.get("status") != "placed":
+        states.audit(req, action="external_booking_pending", actor=f"adapter:{adapter.name}", role="backend",
+                     reason=placed.get("note") or "waiting for the venue system", now=now)
+        return  # stays APPROVED until the adapter reports the booking as placed
+    ref = str(placed.get("reference") or ref)
     req["confirmation"] = {"reference": ref, "confirmed_at": now.isoformat(), "approval_event_id": ev["id"], "recorded_by": rev["id"],
-                           "contact_name": rev["name"], "contact_email": rev["email"]}
+                           "contact_name": rev["name"], "contact_email": rev["email"], "integration_mode": adapter.integration_mode}
     _t(req, "CONFIRMED", BACKEND, f"approval {ev['id'][:8]} verified; reference {ref} recorded", now)
     req["review"]["status"] = "confirmed"
     _send(req, "BOOKING_STATUS", "workflow", "club", f"Confirmed. Reference {ref}.", now, data={"reference": ref})
@@ -954,6 +966,7 @@ def view(req: dict[str, Any] | None, now: datetime | None = None, *, for_reviewe
                       "proposal_id": m["payload"].get("proposal_id")} for m in req["messages"]],
         "review": None if not req.get("review") else {k: v for k, v in req["review"].items() if for_reviewer or k != "packet"},
         "confirmation": req.get("confirmation"), "escalation": req.get("escalation"),
+        "external_booking": req.get("external_booking"), "integration_mode": adapters.get_adapter().integration_mode,
         "timeline": req["timeline"], "next_action": next_action,
         "can": {
             "prepare": st in states.DRAFTING or st in states.CLOSED,

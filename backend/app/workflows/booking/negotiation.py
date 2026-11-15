@@ -19,7 +19,7 @@ from dataclasses import dataclass
 from datetime import date, datetime, timedelta
 from typing import Any, Callable
 
-from . import inventory, policy
+from . import adapters, inventory, policy
 from .inventory import Venue
 
 MAX_ROUNDS = 5  # offers per request (PRD §6.6 default)
@@ -69,7 +69,8 @@ def shifts(max_shift: int) -> list[int]:
 
 
 def busy_blocks(venue: Venue, day: date, holds: list[Hold], exclude_request: str | None) -> list[tuple[datetime, datetime]]:
-    blocks = [(datetime.combine(day, a, inventory.TZ), datetime.combine(day, b, inventory.TZ)) for a, b in inventory.seeded_busy(venue.id, day)]
+    taken = adapters.get_adapter().busy_blocks(venue.id, day)  # simulated today; the admin agent's adapter later
+    blocks = [(datetime.combine(day, a, inventory.TZ), datetime.combine(day, b, inventory.TZ)) for a, b in taken]
     blocks += [(s, e) for vid, s, e, rid in holds if vid == venue.id and rid != exclude_request]
     return blocks
 
