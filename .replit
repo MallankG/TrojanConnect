@@ -1,0 +1,16 @@
+modules = ["nodejs-20", "python-3.12"]
+
+# Workspace "Run" button: backend + Next.js dev server.
+run = "bash scripts/replit.sh dev"
+
+[deployment]
+# Reserved VM, not Autoscale: the planning assistant, RSO tracker, Slack previews and delivery
+# dedupe keep state in this one process / its disk. Several autoscaled copies would split it.
+deploymentTarget = "vm"
+build = ["bash", "scripts/replit.sh", "build"]
+run = ["bash", "scripts/replit.sh", "start"]
+
+# One public port: Next.js. It forwards /api/* and /mock-engagesc/* to FastAPI on 127.0.0.1:8000.
+[[ports]]
+localPort = 3000
+externalPort = 80
