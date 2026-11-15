@@ -199,29 +199,10 @@ but not wired into the UI.
 
 ## Deploy on Replit
 
-The repo includes `.replit` and `scripts/replit.sh`. Import the GitHub repo into Replit, add the secrets
-below, and deploy as a **Reserved VM**. Don't use Autoscale: the planning assistant, RSO tracker and Slack
-previews keep some state in one process.
-
-How it runs: Replit exposes one port, served by Next.js. Next.js forwards `/api/*` and `/mock-engagesc/*`
-to FastAPI on `127.0.0.1:8000` (`frontend/next.config.ts`), so the app has a single URL and needs no CORS.
-The frontend is built with an empty `NEXT_PUBLIC_API_URL`, meaning it calls the API on its own host.
-The workspace **Run** button starts both in dev mode.
-
-Secrets (Replit → Secrets; they apply to the deployment too):
-
-| Secret | Value |
-|---|---|
-| `ENVIRONMENT`, `ALLOW_DEMO_AUTH` | `development`, `true`: turns on the demo sign-in the UI uses. Anyone with the link can act as any demo user, and their actions write to the database |
-| `SUPABASE_URL`, `SUPABASE_SERVICE_ROLE_KEY`, `SUPABASE_JWT_SECRET` | Your Supabase project |
-| `BOOKING_STORE`, `CAMPUS_STORE` | `supabase`, so bookings, feedback and posts survive redeploys (the VM's disk does not) |
-| `ASSISTANT_MODE` | `rules`, or `gemini` with `GEMINI_API_KEY` |
-| `DEMO_CLUB_ID` | `usc-hacksc` |
-| `APP_BASE_URL`, `FRONTEND_ORIGIN` | `https://<your-app>.replit.app` |
-| `SLACK_*` | Optional; the slash command URL becomes `https://<your-app>.replit.app/api/v1/webhooks/slack/commands` |
-| `RSO_PORTAL` | `mock`. The build tries to install Chromium for the portal agent; if Chromium doesn't start on Replit, set `off` and the RSO agent still hands off to EngageSC |
-
-Event-planning and RSO tracker state is kept in `backend/data/*.json`, which resets on each redeploy.
+The repo includes `.replit` and `scripts/replit.sh`. Deploy as a **Reserved VM**. Replit exposes one port,
+served by Next.js, which forwards `/api/*` and `/mock-engagesc/*` to FastAPI on the same machine.
+**[REPLIT.md](REPLIT.md)** lists every secret to add (with dummy Slack values) and how to fix Replit's Git
+panel after the first import. It also covers what to check once the app is live.
 
 ## Configuration (`backend/.env`)
 
