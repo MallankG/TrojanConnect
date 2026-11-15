@@ -41,8 +41,8 @@ app.
 | `SUPABASE_JWT_SECRET` | copy from `backend/.env` | Supabase → Project Settings → API → JWT Secret |
 | `BOOKING_STORE` | `supabase` | Bookings are kept in the database, so they survive redeploys |
 | `CAMPUS_STORE` | `supabase` | Feedback, announcements and club posts, same reason |
-| `APP_BASE_URL` | `https://<your-app>.replit.app` | Your published URL; links sent from Slack point here |
-| `FRONTEND_ORIGIN` | `https://<your-app>.replit.app` | Same URL |
+| `APP_BASE_URL` | `https://trojan-connect.replit.app` | The published URL; links sent from Slack point here |
+| `FRONTEND_ORIGIN` | `https://trojan-connect.replit.app` | Same URL |
 
 Without the three Supabase secrets the app still runs, on its small built-in demo dataset instead of the
 1,998 live clubs.
@@ -76,12 +76,14 @@ sign requests with a dummy secret, so `/api/v1/webhooks/slack/*` rejects everyth
 | `SLACK_USER_MAP` | `U00000000:demo-rep-1` | `SlackMemberID:demo-identity` pairs, comma-separated (`demo-rep-1` is Maya, `demo-student-1` Priya) |
 
 When you set up the real bot, the slash command's Request URL is
-`https://<your-app>.replit.app/api/v1/webhooks/slack/commands`. See "Slack bot" in [README.md](README.md).
+`https://trojan-connect.replit.app/api/v1/webhooks/slack/commands`. See "Slack bot" in [README.md](README.md).
 
 ## 3. Run and publish
 
 - **Run** (workspace): `scripts/replit.sh dev` starts FastAPI and the Next.js dev server; open port 3000.
-- **Publish**: choose **Reserved VM**, not Autoscale. The build command (`scripts/replit.sh build`)
+- **Publish**: Autoscale, with **max machines set to 1** in the publish settings. Some state lives in
+  the running process (the planning assistant's current event, the RSO tracker, Slack post previews), so a
+  second copy would see different data. The build command (`scripts/replit.sh build`)
   installs Python and Node dependencies, tries to install Chromium for the RSO portal agent, and builds the
   frontend. The run command (`scripts/replit.sh start`) starts both servers.
 
@@ -91,18 +93,19 @@ URL and needs no CORS.
 
 ## 4. Check it works
 
-Replace `<app>` with your published URL:
+Published at **https://trojan-connect.replit.app**:
 
 | Open | Expect |
 |---|---|
-| `https://<app>/demo` | The demo role picker (Priya, Marcus, Sofia, Maya, Daniel, Jordan) |
-| `https://<app>/discover` as Priya | Clubs: 1,998 with Supabase, the demo set without |
-| `https://<app>/government` | "What is USG" answered with a usg.usc.edu link |
-| `https://<app>/plan` as Maya | The planning assistant and the RSO recognition tab |
-| `https://<app>/mock-engagesc/login` | The simulated EngageSC sign-in, labelled "not a USC system" |
+| `https://trojan-connect.replit.app/demo` | The demo role picker (Priya, Marcus, Sofia, Maya, Daniel, Jordan) |
+| `https://trojan-connect.replit.app/discover` as Priya | Clubs: 1,998 with Supabase, the demo set without |
+| `https://trojan-connect.replit.app/government` | "What is USG" answered with a usg.usc.edu link |
+| `https://trojan-connect.replit.app/plan` as Maya | The planning assistant and the RSO recognition tab |
+| `https://trojan-connect.replit.app/mock-engagesc/login` | The simulated EngageSC sign-in, labelled "not a USC system" |
 
 ## What resets on redeploy
 
 The event-planning assistant's current event and the RSO tracker are stored in `backend/data/*.json` on
-the VM's disk, which is wiped on each redeploy. Clubs, bookings, feedback, posts and student preferences
+the machine's disk. Autoscale wipes that disk on each redeploy, and also when the app scales to zero after
+sitting idle. Clubs, bookings, feedback, posts and student preferences
 are in Supabase and stay.
