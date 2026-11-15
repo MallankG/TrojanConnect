@@ -1,69 +1,111 @@
-import Image from "next/image";
+"use client";
+
+import { FormEvent, useState } from "react";
+
+type Message = { sender_type: "user" | "agent" | "system"; content: string };
+type Turn = { message: Message; pending_confirmation?: { summary: string } | null };
+
+const api = process.env.NEXT_PUBLIC_STUDENT_AGENT_API_URL ?? "http://localhost:8000";
+const user = process.env.NEXT_PUBLIC_DEMO_USER ?? "demo-student-1";
 
 export default function Home() {
+  const [messages, setMessages] = useState<Message[]>([]);
+  const [conversationId, setConversationId] = useState("");
+  const [pending, setPending] = useState(false);
+  const [busy, setBusy] = useState(false);
+  const [error, setError] = useState("");
+
+  async function request(path: string, body: unknown) {
+    const response = await fetch(`${api}/api/v1${path}`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json", "X-Demo-User": user },
+      body: JSON.stringify(body),
+    });
+    const result = await response.json();
+    if (!response.ok || !result.ok) throw new Error(result.error?.message ?? "The student agent could not respond.");
+    return result.data;
+  }
+
+  async function send(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    const form = event.currentTarget;
+    const input = new FormData(form).get("message");
+    const content = typeof input === "string" ? input.trim() : "";
+    if (!content || busy) return;
+    form.reset();
+    setMessages((items) => [...items, { sender_type: "user", content }]);
+    setBusy(true);
+    setError("");
+    try {
+      const data = conversationId
+        ? await request(`/conversations/${conversationId}/messages`, { content })
+        : await request("/conversations", { agent_type: "student", channel: "web", message: content });
+      const turn: Turn = data.turn ?? data;
+      if (!conversationId && data.conversation?.id) setConversationId(data.conversation.id);
+      setMessages((items) => [...items, turn.message]);
+      setPending(Boolean(turn.pending_confirmation));
+    } catch (reason) {
+      setError(reason instanceof Error ? reason.message : "Could not reach the student agent.");
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  async function confirm(confirmed: boolean) {
+    if (!conversationId || busy) return;
+    setBusy(true);
+    setError("");
+    try {
+      const data = await request(`/conversations/${conversationId}/confirm`, { confirmed });
+      const turn: Turn = data.turn ?? data;
+      setMessages((items) => [...items, turn.message]);
+      setPending(Boolean(turn.pending_confirmation));
+    } catch (reason) {
+      setError(reason instanceof Error ? reason.message : "Could not submit your choice.");
+    } finally {
+      setBusy(false);
+    }
+  }
+
   return (
-    <div className="flex flex-col flex-1 items-center justify-center bg-zinc-50 font-sans dark:bg-black">
-      <main className="flex flex-1 w-full max-w-3xl flex-col items-center justify-between py-32 px-16 bg-white dark:bg-black sm:items-start">
-        <Image
-          className="dark:invert h-5 w-[100px]"
-          src="/next.svg"
-          alt="Next.js logo"
-          width={100}
-          height={20}
-          priority
-        />
-        <div className="flex flex-col items-center gap-6 text-center sm:items-start sm:text-left">
-          <h1 className="max-w-xs text-3xl font-semibold leading-10 tracking-tight text-black dark:text-zinc-50">
-            To get started, edit the{" "}
-            <code className="rounded bg-black/[.06] px-1.5 py-0.5 font-mono text-[0.9em] dark:bg-white/[.08]">
-              page.tsx
-            </code>{" "}
-            file.
-          </h1>
-          <p className="max-w-md text-lg leading-8 text-zinc-600 dark:text-zinc-400">
-            Looking for a starting point or more instructions? Head over to{" "}
-            <a
-              href="https://vercel.com/templates?framework=next.js&utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-              className="font-medium text-zinc-950 dark:text-zinc-50"
-            >
-              Templates
-            </a>{" "}
-            or the{" "}
-            <a
-              href="https://nextjs.org/learn?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-              className="font-medium text-zinc-950 dark:text-zinc-50"
-            >
-              Learning
-            </a>{" "}
-            center.
-          </p>
+    <main className="chat-shell">
+      <header className="topbar">
+        <a className="brand" href="#"><span className="brand-mark">T</span> TrojanConnect</a>
+        <span className="environment"><span /> Student agent preview</span>
+      </header>
+      <section className="chat-panel" aria-label="Student agent chat">
+        <div className="intro">
+          <p className="eyebrow">YOUR USC COMMUNITY, MADE EASIER</p>
+          <h1>Find your people.</h1>
+          <p className="subhead">Ask about student organizations, events, and ways to get involved at USC.</p>
         </div>
-        <div className="flex flex-col gap-4 text-base font-medium sm:flex-row">
-          <a
-            className="flex h-12 w-full items-center justify-center gap-2 rounded-full bg-foreground px-5 text-background transition-colors hover:bg-[#383838] dark:hover:bg-[#ccc] md:w-[158px]"
-            href="https://vercel.com/new?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            <Image
-              className="dark:invert h-[14px] w-4"
-              src="/vercel.svg"
-              alt="Vercel logomark"
-              width={16}
-              height={14}
-            />
-            Deploy Now
-          </a>
-          <a
-            className="flex h-12 w-full items-center justify-center rounded-full border border-solid border-black/[.08] px-5 transition-colors hover:border-transparent hover:bg-black/[.04] dark:border-white/[.145] dark:hover:bg-[#1a1a1a] md:w-[158px]"
-            href="https://nextjs.org/docs?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            Documentation
-          </a>
+        <div className="messages" aria-live="polite">
+          {messages.length === 0 ? (
+            <div className="suggestions">
+              <p>Try asking</p>
+              {["What clubs work on AI and robotics?", "How can I get involved in student government?", "Find service events this month"].map((text) => (
+                <button key={text} type="button" onClick={() => {
+                  const input = document.querySelector<HTMLInputElement>("#chat-message");
+                  if (input) { input.value = text; input.form?.requestSubmit(); }
+                }}>{text}<span>↗</span></button>
+              ))}
+            </div>
+          ) : messages.map((message, index) => (
+            <article className={`message ${message.sender_type === "user" ? "from-user" : "from-agent"}`} key={`${index}-${message.content.slice(0, 12)}`}>
+              {message.sender_type !== "user" && <span className="avatar">T</span>}
+              <p>{message.content}</p>
+            </article>
+          ))}
+          {busy && <p className="status">Thinking…</p>}
+          {pending && <div className="confirmation"><span>Ready to submit this request?</span><button disabled={busy} onClick={() => confirm(true)}>Confirm</button><button className="secondary" disabled={busy} onClick={() => confirm(false)}>Cancel</button></div>}
+          {error && <p className="error" role="alert">{error}</p>}
         </div>
-      </main>
-    </div>
+        <form className="composer" onSubmit={send}>
+          <input id="chat-message" name="message" aria-label="Message the student agent" placeholder="Ask anything about USC student life…" autoComplete="off" />
+          <button aria-label="Send message" disabled={busy}>↑</button>
+        </form>
+        <p className="privacy-note">A local demo session. Your messages are sent to the configured student-agent API.</p>
+      </section>
+    </main>
   );
 }
