@@ -20,10 +20,12 @@ from app.tools import event_plan as tools
 from app.workflows.booking import inventory
 from app.workflows.event_pipeline import plan, store
 
+pytestmark = pytest.mark.usefixtures("demo_rep_auth")
+
 router = importlib.import_module("app.workflows.event_pipeline.router")  # the package re-exports the APIRouter under this name
 
 TODAY = date(2026, 11, 14)
-HEADERS = {"X-TrojanConnect-Client": "web"}
+HEADERS = {"X-TrojanConnect-Client": "web", "X-Demo-User": "demo-rep-1"}
 
 PROFILE = {
     "attendance": "30", "audience": ["Students"], "food": True, "amplifiedSound": False, "filmed": False, "acceptAlternate": True,

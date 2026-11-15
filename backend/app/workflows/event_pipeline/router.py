@@ -18,13 +18,14 @@ from pydantic import BaseModel, ConfigDict, Field
 from app.agents import event_agent, rso_agent, rules_agent
 from app.agents.model import ModelError
 from app.integrations.gemini import provider as gemini
+from app.security.auth import require_club_rep
 from app.security.client import require_client_header
 from app.tools import event_plan as agent_tools
 from app.workflows.booking import service as booking
 
 from . import plan, store, views
 
-router = APIRouter(prefix="/api/v1/pipeline", tags=["event-pipeline"], dependencies=[Depends(require_client_header)])
+router = APIRouter(prefix="/api/v1/pipeline", tags=["event-pipeline"], dependencies=[Depends(require_client_header), Depends(require_club_rep)])
 
 STEP_IDS = {"venue", "food", "permit", "funding", "engage", "access", "publicity"}
 

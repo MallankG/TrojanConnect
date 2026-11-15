@@ -11,6 +11,7 @@ from typing import Any, Literal
 from fastapi import APIRouter, Depends, Query
 
 from app.schemas.common import AppError
+from app.security.auth import require_club_rep
 from app.security.client import require_client_header, reviewer_id
 
 from . import adapters, inventory, service
@@ -46,30 +47,30 @@ def get_booking(request_id: str) -> dict[str, Any]:
     return _call(service.get, request_id)
 
 
-@router.post("/bookings/drafts")
+@router.post("/bookings/drafts", dependencies=[Depends(require_club_rep)])
 def create_draft(body: DraftRequest) -> dict[str, Any]:
     """Build (or refresh) the draft from the event profile. Returns the summary and `summary_hash` the rep confirms. Submits nothing."""
     return service.view(_call(service.prepare, body.kind)) or {}
 
 
-@router.post("/bookings/{request_id}/submit")
+@router.post("/bookings/{request_id}/submit", dependencies=[Depends(require_club_rep)])
 def submit_booking(request_id: str, body: SubmitRequest) -> dict[str, Any]:
     """The rep confirms the summary they saw. Routes, checks simulated availability and runs the agent negotiation."""
     return service.view(_call(service.submit, request_id, body.summary_hash, body.idempotency_key)) or {}
 
 
-@router.post("/bookings/{request_id}/proposals/{proposal_id}/accept")
+@router.post("/bookings/{request_id}/proposals/{proposal_id}/accept", dependencies=[Depends(require_club_rep)])
 def accept(request_id: str, proposal_id: str, body: AcceptRequest) -> dict[str, Any]:
     """Accept the active proposal for human review. The result is PENDING_HUMAN_REVIEW, never CONFIRMED."""
     return service.view(_call(service.accept_proposal, request_id, proposal_id, body.proposal_version, body.idempotency_key)) or {}
 
 
-@router.post("/bookings/{request_id}/alternatives")
+@router.post("/bookings/{request_id}/alternatives", dependencies=[Depends(require_club_rep)])
 def alternatives(request_id: str, body: AlternativesRequest) -> dict[str, Any]:
     return service.view(_call(service.request_alternatives, request_id, body.reason, body.idempotency_key)) or {}
 
 
-@router.post("/bookings/{request_id}/cancel")
+@router.post("/bookings/{request_id}/cancel", dependencies=[Depends(require_club_rep)])
 def cancel(request_id: str, body: CancelRequest) -> dict[str, Any]:
     return service.view(_call(service.cancel, request_id, body.reason, body.idempotency_key)) or {}
 

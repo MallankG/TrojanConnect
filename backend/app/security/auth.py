@@ -69,3 +69,10 @@ async def get_actor(
         return actor
 
     raise _unauthenticated("Sign in required.")
+
+
+async def require_club_rep(actor: Actor = Depends(get_actor)) -> Actor:
+    """Event planning, bookings and RSO recognition act for a club: only a club representative may use them."""
+    if "club_rep" not in actor.roles:
+        raise AppError("PERMISSION_DENIED", "Only a verified club representative can do this.", status_code=403)
+    return actor

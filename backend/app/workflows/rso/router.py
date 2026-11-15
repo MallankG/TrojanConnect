@@ -13,11 +13,12 @@ from pydantic import BaseModel, ConfigDict, Field
 
 from app.agents import rso_agent
 from app.schemas.common import AppError
+from app.security.auth import require_club_rep
 from app.security.client import require_client_header
 
 from . import portal_agent, service
 
-router = APIRouter(prefix="/api/v1/rso", tags=["rso-recognition"], dependencies=[Depends(require_client_header)])
+router = APIRouter(prefix="/api/v1/rso", tags=["rso-recognition"], dependencies=[Depends(require_client_header), Depends(require_club_rep)])
 
 
 class Strict(BaseModel):

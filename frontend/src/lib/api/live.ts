@@ -112,14 +112,19 @@ const toEvent = (e: ClubEvent): CampusEvent => ({
 
 // ---- Transport --------------------------------------------------------------
 
-async function call<T>(path: string, init?: { method?: string; json?: unknown }): Promise<T> {
+/** Dev demo sign-in: which backend identity the signed-in demo user acts as. Roles stay server-side. */
+export function demoUserHeader(): Record<string, string> {
   const user = currentUser();
+  return user ? { "X-Demo-User": DEMO_BACKEND_USER[user.id] ?? user.id } : {};
+}
+
+async function call<T>(path: string, init?: { method?: string; json?: unknown }): Promise<T> {
   const res = await fetch(`${API}/api/v1${path}`, {
     method: init?.method ?? "GET",
     headers: {
       "content-type": "application/json",
       "X-TrojanConnect-Client": "web",
-      ...(user ? { "X-Demo-User": DEMO_BACKEND_USER[user.id] ?? user.id } : {}),
+      ...demoUserHeader(),
     },
     body: init?.json === undefined ? undefined : JSON.stringify(init.json),
     cache: "no-store",

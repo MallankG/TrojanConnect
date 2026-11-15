@@ -47,7 +47,8 @@ def handles(message: str) -> bool:
 
 
 class Ctx:
-    def __init__(self) -> None:
+    def __init__(self, now: datetime | None = None) -> None:
+        self.now = now  # one clock for the whole turn (tests pin it)
         self.actions: list[dict[str, Any]] = []
         self.trace: list[dict[str, Any]] = []
 
@@ -99,7 +100,7 @@ def _pathway_options(ctx: Ctx) -> None:
 def _start(ctx: Ctx, pathway: str, listed: bool | None = None) -> str:
     rso.set_pathway(pathway, listed, actor="rso_agent")
     ctx.did("set_pathway")
-    v = rso.view()
+    v = rso.view(now=ctx.now)
     pw = P.PATHWAYS[pathway]
     if not pw["flow"]:
         if pathway == "fall_applicant":
@@ -121,7 +122,7 @@ def _start(ctx: Ctx, pathway: str, listed: bool | None = None) -> str:
 
 
 def _step_reply(ctx: Ctx, step_id: str) -> str:
-    v = rso.view()
+    v = rso.view(now=ctx.now)
     step = next((s for s in v["steps"] if s["id"] == step_id), None)
     if not step:
         _pathway_options(ctx)
@@ -159,7 +160,7 @@ def _step_reply(ctx: Ctx, step_id: str) -> str:
 
 
 def _officer_docs(ctx: Ctx) -> str:
-    v = rso.view()
+    v = rso.view(now=ctx.now)
     ctx.add({"type": "rso_checklist", "section": "officers"})
     out = [f"Each officer completes these {P.TRAINING_WINDOW} and sends them to the submitting officer, who uploads them:",
            _lines([d[1] for d in P.OFFICER_DOCS])]
@@ -176,7 +177,7 @@ def _officer_docs(ctx: Ctx) -> str:
 
 
 def _advisor(ctx: Ctx) -> str:
-    v = rso.view()
+    v = rso.view(now=ctx.now)
     ctx.add({"type": "rso_checklist", "section": "advisor"})
     ctx.add({"type": "rso_email", "target": "advisor"})
     missing = [i["label"] for i in v["advisor"]["items"] if not i["done"]]
@@ -287,6 +288,7 @@ def respond(ctx: Ctx, message: str, now: datetime | None = None) -> str:
 
 
 def run_turn(message: str, history: list[dict[str, Any]] | None = None, now: datetime | None = None) -> dict[str, Any]:
-    ctx = Ctx()
-    reply = respond(ctx, message[:4000], now or datetime.now(timezone.utc))
+    now = now or datetime.now(timezone.utc)
+    ctx = Ctx(now)
+    reply = respond(ctx, message[:4000], now)
     return {"reply": reply, "actions": ctx.actions, "tools": ctx.trace, "rso": rso.view(now=now), "model": LABEL}

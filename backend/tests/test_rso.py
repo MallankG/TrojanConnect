@@ -13,8 +13,10 @@ from app.workflows.event_pipeline import store
 from app.workflows.rso import process as P
 from app.workflows.rso import service as rso
 
+pytestmark = pytest.mark.usefixtures("demo_rep_auth")
+
 NOW = datetime.fromisoformat("2026-11-14T10:00:00-08:00")
-H = {"X-TrojanConnect-Client": "web"}
+H = {"X-TrojanConnect-Client": "web", "X-Demo-User": "demo-rep-1"}
 ROSTER = {**{f"{r}Name": f"Test {r}" for r, _ in P.OFFICER_ROLES}, **{f"{r}Email": f"{r.lower()}@usc.edu" for r, _ in P.OFFICER_ROLES},
           "facultyAdvisorName": "Test Advisor", "facultyAdvisorEmail": "advisor@usc.edu", "facultyAdvisorFullTime": True, "memberCount": "6"}
 
@@ -269,3 +271,13 @@ def test_review_fixes_hold():
         assert not rso_agent.handles(m), m
     for m in ("start a new RSO", "Renew our existing RSO", "how do we get recognized", "renew our club"):
         assert rso_agent.handles(m), m
+
+
+def test_only_club_reps_use_planning_rso_and_booking_writes():
+    c = TestClient(main.app)
+    student = {"X-TrojanConnect-Client": "web", "X-Demo-User": "demo-student-1"}
+    assert c.get("/api/v1/rso/state", headers=student).status_code == 403
+    assert c.put("/api/v1/rso/status", json={"status": "recognized"}, headers=student).status_code == 403
+    assert c.get("/api/v1/pipeline/state", headers=student).status_code == 403
+    assert c.post("/api/v1/bookings/drafts", json={"kind": "venue_booking"}, headers=student).status_code == 403
+    assert c.get("/api/v1/rso/state", headers=H).status_code == 200

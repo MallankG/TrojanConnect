@@ -1,12 +1,6 @@
-import type { Metadata } from "next";
-import { Page } from "@/components/layout/AppShell";
-import { PipelineApp } from "@/components/pipeline/PipelineApp";
+import { redirect } from "next/navigation";
 
-export const metadata: Metadata = {
-  title: "Event Pipeline · TrojanConnect",
-  description: "Track every step of planning a club event, from venue to publicity, with the venue and permit booked through the Club and Venue agents.",
-};
-
+// The planner lives at /plan, behind the club-representative sign-in.
 export default function PipelinePage() {
-  return <Page wide><PipelineApp /></Page>;
+  redirect("/plan");
 }

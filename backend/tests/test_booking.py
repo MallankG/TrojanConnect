@@ -20,8 +20,10 @@ from app.tools import event_plan as tools
 from app.workflows.booking import inventory, negotiation, schemas, service, states
 from app.workflows.event_pipeline import plan, store
 
+pytestmark = pytest.mark.usefixtures("demo_rep_auth")
+
 NOW = datetime.fromisoformat("2026-11-14T10:00:00-08:00")
-HEADERS = {"X-TrojanConnect-Client": "web"}
+HEADERS = {"X-TrojanConnect-Client": "web", "X-Demo-User": "demo-rep-1"}
 
 PROFILE = {
     "attendance": "30", "audience": ["Students"], "food": True, "amplifiedSound": False, "filmed": False, "acceptAlternate": True,

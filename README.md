@@ -47,12 +47,12 @@ agent, because the Gemini key was over quota that day). The script is reproducib
 | Rooms offered for the sample request (35 people, 20 Dec, 7–8 PM) | 7 rooms from the simulated inventory, plus the venue types ruled out and why |
 | Club Agent ⇄ Venue Agent messages per booking | 9 structured messages; audit trail of 11 entries, each with actor, role, time and reason |
 | Event details understood from one sentence | 40 of 40 fields (attendance, date, start, end) across 10 hand-written requests. 4 attendances over 60 were understood but **not saved**: the walkthrough permit rule caps attendance at 60, and the agent says so |
-| Unauthorised confirmations | **0**. A reviewer from the wrong venue gets 403; no agent tool can submit, accept, approve or confirm (backend tests) |
+| Unauthorised confirmations | **0**. A reviewer from the wrong venue gets 403; no agent tool can submit, accept, approve or confirm; event planning, booking requests and RSO recognition answer 403 to anyone but a club representative (backend tests and the demo run) |
 | Government questions answered from an approved source | 17 of 20 (85%). The other 3 were correctly refused ("Can USG approve my room booking?", parking prices, GSG travel grants): no approved page covers them, so the assistant says it can't verify and offers to route the question |
 | Club directory | 1,999 clubs (1,998 public + 1 sample) and the clubs' published events |
 | Latency | search 0.8 s, recommendations 1.2 s, full directory 1.5 s, assistant turn 1.5 s median |
 | RSO recognition | 13 steps tracked for a new or renewing RSO, with 6 pathways (new, renew, religious, club sport, fall applicant, fraternity/sorority); every step links its USC form or page |
-| Backend tests | 162 passing, no network or keys needed |
+| Backend tests | 164 passing, no network or keys needed |
 
 ## How the agents work
 
