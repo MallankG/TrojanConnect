@@ -13,6 +13,7 @@ import { Hero } from "./Hero";
 import { ChaosStage } from "./ChaosStage";
 import { Solution } from "./Solution";
 import { Network, Principle, Start } from "./Closing";
+import { Campus } from "./Campus";
 
 gsap.registerPlugin(ScrollTrigger, useGSAP);
 
@@ -116,6 +117,7 @@ export function Landing() {
         <Solution reduced={reduced} />
         <Principle />
         <Network reduced={reduced} />
+        <Campus reduced={reduced} />
         <Start />
       </main>
     </div>
