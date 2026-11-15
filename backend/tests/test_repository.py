@@ -314,7 +314,6 @@ def test_active_repository_never_serves_an_event_for_an_unknown_club():
     repo = InMemoryRepository()
     club_ids = set(repo._clubs)
     assert {e.organization_id for e in repo._events} <= club_ids
-    assert repo._events or True  # an empty event list is acceptable; a mismatched one is not
 
 
 def test_naive_event_datetimes_get_campus_timezone():
