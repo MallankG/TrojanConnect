@@ -7,7 +7,8 @@ from pydantic_settings import BaseSettings, SettingsConfigDict
 
 
 class Settings(BaseSettings):
-    model_config = SettingsConfigDict(env_file=".env", env_file_encoding="utf-8", extra="ignore")
+    # str_strip_whitespace: a pasted secret with a stray space (" https://…") must not break the connection.
+    model_config = SettingsConfigDict(env_file=".env", env_file_encoding="utf-8", extra="ignore", str_strip_whitespace=True)
 
     # Defaults are the safe ones: a deployment that sets nothing is treated as production,
     # where the X-Demo-User header is refused. Local dev opts in via .env (see .env.example).

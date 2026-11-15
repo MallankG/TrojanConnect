@@ -3,7 +3,7 @@ import hashlib
 import logging
 
 from app.schemas.student import ClubProfile, ClubSearchHit
-from app.services.text import clamp01, cosine, keywords, normalize_tags
+from app.services.text import clamp01, cosine, keywords, normalize_tags, tokens
 
 log = logging.getLogger(__name__)
 
@@ -66,6 +66,8 @@ async def club_similarities(repo, embedder, query: str, clubs: list[ClubProfile]
             query_vec = (await embedder.embed([query]))[0]
             if _space(embedder) != space:
                 continue
+            if getattr(embedder, "is_fallback", False):
+                return zero  # placeholder vectors carry no meaning; rank by words and tags instead
 
             if not getattr(embedder, "is_fallback", False):
                 matched = await repo.match_clubs(query_vec, len(clubs))
@@ -94,6 +96,32 @@ def matched_tags(club: ClubProfile, interest_tags: list[str]) -> list[str]:
     return [t for t in normalize_tags(interest_tags) if t in club_tags]
 
 
+# Words that say "a club" rather than what it's about; they match nearly every club.
+_GENERIC = frozenset("club org organization group student anything something stuff thing interested interest join".split())
+
+
+def _root(word: str) -> str:
+    """Short prefix so "robots" finds "robotics" and "entrepreneurship" finds "entrepreneurial"."""
+    return word[:5] if len(word) > 5 else word
+
+
+def lexical_score(club: ClubProfile, q_words: set[str]) -> float:
+    """0..1: how strongly the query words describe this club. A word in the name counts most, then in the
+    tags, then how often it appears in the description. This ranks well on its own, which matters when
+    no embedding service is reachable (similarity is then 0 for every club and would leave ties)."""
+    words = [w for w in q_words if w not in _GENERIC]
+    if not words:
+        return 0.0
+    name, tags = tokens(club.name), [w for t in club.tags for w in t.split("_")]
+    body = tokens(" ".join([club.public_description, " ".join(club.activities), club.who_thrives_here]))
+    total = 0.0
+    for w in words:
+        r = _root(w)
+        hit = lambda toks: sum(1 for t in toks if t.startswith(r))  # noqa: E731
+        total += min(1.0, 0.6 * bool(hit(name)) + 0.3 * bool(hit(tags)) + 0.25 * min(hit(body), 4) / 4)
+    return total / len(words)
+
+
 async def search_clubs(repo, embedder, query: str, interest_tags: list[str], limit: int = 10) -> list[ClubSearchHit]:
     clubs = await repo.list_clubs()
     tags = normalize_tags(interest_tags or [])
@@ -104,6 +132,7 @@ async def search_clubs(repo, embedder, query: str, interest_tags: list[str], lim
 
     sims = await club_similarities(repo, embedder, " ".join([query, " ".join(t.replace("_", " ") for t in tags)]), clubs)
     q_words = keywords(query) | {w for t in tags for w in t.split("_")}
+    semantic = any(sims.values())  # False when no embedding service answered
     hits: list[ClubSearchHit] = []
     for club in clubs:
         matched = matched_tags(club, tags)
@@ -112,8 +141,8 @@ async def search_clubs(repo, embedder, query: str, interest_tags: list[str], lim
             if tag not in matched and set(tag.split("_")) <= q_words:
                 matched.append(tag)
         tag_score = min(1.0, len(matched) / max(1, min(len(tags) or 1, 3)))
-        kw_score = len(q_words & keywords(club_text(club))) / len(q_words) if q_words else 0.0
-        score = clamp01(0.45 * sims[club.organization_id] + 0.35 * tag_score + 0.20 * kw_score)
+        lex = lexical_score(club, q_words)
+        score = clamp01(0.45 * (sims[club.organization_id] if semantic else lex) + 0.35 * tag_score + 0.20 * lex)
         if score > 0.05:
             hits.append(ClubSearchHit(club=club, score=round(score, 4), matched_tags=matched))
     hits.sort(key=lambda h: (-h.score, h.club.name))

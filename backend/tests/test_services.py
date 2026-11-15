@@ -230,3 +230,16 @@ async def test_search_tool_activity_summary(repo, embedder):
     args = {"query": "AI, startups", "interest_tags": []}
     res = await execute_tool("search_clubs", args, actor=ALICE, repo=repo, embedder=embedder)
     assert res.ok and summarize_activity("search_clubs", args, res).summary.startswith("Searched clubs for 'AI, startups'")
+
+
+async def test_search_ranks_by_words_when_embeddings_are_unavailable(repo):
+    """Gemini rate-limited / Ollama down: the embedder is on its placeholder, so ranking must come from
+    the club's name, tags and description, not from meaningless placeholder vectors or alphabetical ties."""
+    class Degraded(HashEmbedder):
+        is_fallback = True
+    hits = await search_clubs(repo, Degraded(), "consulting", [], limit=3)
+    assert hits[0].club.organization_id == "org-consult"   # name + tag beat a mere mention
+    hits = await search_clubs(repo, Degraded(), "hikes outdoors", [], limit=3)
+    assert hits[0].club.organization_id == "org-hike"      # "hikes" finds "hiking" by its stem
+    hits = await search_clubs(repo, Degraded(), "clubs about startups", [], limit=3)
+    assert {h.club.organization_id for h in hits[:2]} == {"org-ai", "org-consult"}  # "clubs" doesn't match everything

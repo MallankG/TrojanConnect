@@ -18,6 +18,7 @@ from __future__ import annotations
 
 import argparse
 import asyncio
+import re
 import sys
 from pathlib import Path
 from typing import Any
@@ -30,7 +31,9 @@ from app.integrations.gemini.client import build_embedder  # noqa: E402
 from app.repositories.memory import load_seed_clubs, resolve_dataset  # noqa: E402
 from app.services.clubs import club_text  # noqa: E402
 
-BATCH = 50
+BATCH = 25  # small enough for the free tier's per-minute quota
+PACE = 20  # seconds between calls
+RATE_LIMIT_WAIT = 65  # seconds; free-tier quotas are per minute
 PAGE_SIZE = 1000
 
 
@@ -46,11 +49,21 @@ def _fetch_embedding_rows(client: Any) -> list[dict[str, Any]]:
         offset += len(page)
 
 
-async def _embed_batch(embedder: Any, texts: list[str]) -> list[list[float]]:
-    vectors = await embedder.embed(texts)
-    if getattr(embedder, "is_fallback", False):
-        raise RuntimeError("Embedding provider fell back; refusing to store fallback vectors.")
-    return vectors
+async def _embed_batch(embedder: Any, texts: list[str], attempts: int = 8) -> list[list[float]]:
+    """Embed one batch, waiting out per-minute rate limits. Never returns fallback (placeholder) vectors."""
+    for attempt in range(attempts):
+        try:
+            vectors = await embedder.embed(texts)
+        except Exception as e:  # show which quota was hit (per minute or per day)
+            detail = re.sub(r"\s+", " ", str(e))
+            print("  quota:", detail[detail.find("Quota exceeded"):][:300] if "Quota exceeded" in detail else detail[:200], flush=True)
+        else:
+            if getattr(embedder, "is_fallback", False):
+                raise RuntimeError("Embedding provider fell back; refusing to store fallback vectors.")
+            return vectors
+        print(f"  rate-limited; waiting {RATE_LIMIT_WAIT} s (attempt {attempt + 1}/{attempts})", flush=True)
+        await asyncio.sleep(RATE_LIMIT_WAIT)
+    raise RuntimeError("Embedding provider kept failing; refusing to store fallback vectors.")
 
 
 async def main() -> int:
@@ -59,6 +72,7 @@ async def main() -> int:
     parser.add_argument("--limit", type=int, default=0, help="stop after this many clubs")
     parser.add_argument("--dataset", default="auto", choices=["auto", "demo", "real"])
     parser.add_argument("--dry-run", action="store_true")
+    parser.add_argument("--start", type=int, default=0, help="skip the first N clubs (resume a stopped run)")
     args = parser.parse_args()
 
     settings = get_settings()
@@ -72,6 +86,10 @@ async def main() -> int:
         print("WARNING: no GEMINI_API_KEY, so this would store offline placeholder vectors.\n"
               "Set GEMINI_API_KEY (the backend must query with the same model) and re-run.")
         return 1
+
+    # The provider itself, not the app's wrapper: the wrapper would quietly switch to placeholder vectors
+    # on a rate limit, while the provider raises and _embed_batch waits and retries.
+    embedder = getattr(embedder, "primary", embedder)
 
     from supabase import create_client
     client = create_client(settings.supabase_url, settings.supabase_service_role_key)
@@ -88,6 +106,7 @@ async def main() -> int:
     if missing_rows:
         print(f"{len(missing_rows)} clubs have no club_profiles row yet "
               f"(apply supabase/seed.sql for the {dataset} dataset first); skipping them.")
+    todo = todo[args.start:]
     if args.limit:
         todo = todo[:args.limit]
     print(f"dataset={dataset} clubs={len(clubs)} with_vector={len(have_vector)} to_embed={len(todo)}")
@@ -102,7 +121,8 @@ async def main() -> int:
             client.table("club_profiles").update({"embedding": [float(x) for x in vector]}) \
                   .eq("organization_id", club.organization_id).execute()
         done += len(batch)
-        print(f"  {done}/{len(todo)} embedded", flush=True)
+        print(f"  {args.start + done}/{args.start + len(todo)} embedded", flush=True)
+        await asyncio.sleep(PACE)
     print(f"done: {done} club embeddings stored ({getattr(embedder, 'dimensions', '?')} dims)")
     return 0
 
