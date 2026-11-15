@@ -249,10 +249,8 @@ create policy "student_agent_messages_own_select" on messages
     using (exists (select 1 from conversations c
                    where c.id = messages.conversation_id and c.owner_user_id = (select auth.uid())::text));
 
--- Own interests: students may read and create, never edit or delete (consent record).
+-- Own interests: students may read; writes pass through the backend's confirmation path.
 drop policy if exists "student_agent_interests_own_select" on club_interests;
 create policy "student_agent_interests_own_select" on club_interests
     for select to authenticated using (student_id = (select auth.uid())::text);
 drop policy if exists "student_agent_interests_own_insert" on club_interests;
-create policy "student_agent_interests_own_insert" on club_interests
-    for insert to authenticated with check (student_id = (select auth.uid())::text);

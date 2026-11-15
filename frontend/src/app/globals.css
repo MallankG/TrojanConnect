@@ -40,5 +40,6 @@ h1 { margin: 0; font-family: Georgia, 'Times New Roman', serif; font-size: clamp
 .composer input { width: 100%; min-width: 0; padding: 10px 11px; border: 0; outline: none; color: var(--ink); background: transparent; font-size: 14px; }
 .composer input::placeholder { color: #9b9f9b; }
 .composer button { width: 40px; height: 40px; flex: 0 0 40px; font-size: 22px; }
+.suggestions button:focus-visible, .confirmation button:focus-visible, .composer button:focus-visible, .composer input:focus-visible { outline: 2px solid #8b6d00; outline-offset: 3px; }
 .privacy-note { margin: 12px 0 0; color: #999e9a; text-align: center; font-size: 10px; }
 @media (max-width: 520px) { .environment { font-size: 10px; } .chat-panel { min-height: calc(100svh - 72px); padding-top: 54px; } .subhead { font-size: 14px; } .suggestions button { font-size: 13px; } }
