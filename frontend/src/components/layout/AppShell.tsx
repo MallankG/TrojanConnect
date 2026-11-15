@@ -14,8 +14,8 @@ import {
   Landmark,
   Library,
   MessageCircle,
+  MessagesSquare,
   Plus,
-  Sparkles,
   Ticket,
   Users,
   Volume2,
@@ -28,13 +28,14 @@ import { useSound } from "@/lib/sound/SoundProvider";
 import { sound } from "@/lib/sound/engine";
 import { fmtRelative } from "@/lib/time";
 import { Avatar, ListSkeleton, ToastProvider, buttonClass } from "@/components/ui/kit";
+import { Mark, Wordmark } from "@/components/brand/Logo";
 
 type NavItem = { href: string; label: string; icon: LucideIcon };
 
 export const NAV: Record<Role, NavItem[]> = {
   club_rep: [
     { href: "/dashboard", label: "Home", icon: House },
-    { href: "/plan", label: "Assistant", icon: Sparkles },
+    { href: "/plan", label: "Assistant", icon: MessagesSquare },
     { href: "/bookings", label: "Bookings", icon: Ticket },
     { href: "/club-profile", label: "Club", icon: Users },
   ],
@@ -119,8 +120,9 @@ function TopBar({ user }: { user: DemoUser }) {
   return (
     <header className="sticky top-0 z-40 border-b border-line bg-paper/90 backdrop-blur">
       <div className="mx-auto grid h-16 max-w-6xl grid-cols-[auto_1fr_auto] items-center gap-4 px-5">
-        <Link href={HOME[user.role]} className="text-lg font-semibold tracking-[-0.01em]">
-          TrojanConnect
+        <Link href={HOME[user.role]} aria-label="TrojanConnect, home">
+          <Wordmark tone="light" height={36} priority className="hidden sm:grid" />
+          <Mark tone="light" size={40} priority className="sm:hidden" />
         </Link>
 
         <nav aria-label="Sections" className="hidden justify-center gap-1 md:flex">
@@ -313,7 +315,7 @@ export function Only({ roles, children }: { roles: Role[]; children: React.React
   if (roles.includes(user.role)) return <>{children}</>;
   return (
     <Page>
-      <div className="rounded-2xl border border-dashed border-gray-30 px-6 py-12 text-center">
+      <div className="rounded-3xl border border-line bg-wash px-6 py-12 text-center">
         <p className="text-lg font-semibold">This page is for {roles.map((r) => ROLE_LABEL[r].toLowerCase()).join(" and ")} accounts</p>
         <p className="mx-auto mt-1 max-w-sm text-[15px] text-gray-70">
           You are signed in to the demo as {ROLE_LABEL[user.role].toLowerCase()}, which has no access here.

@@ -8,6 +8,8 @@ import { useGSAP } from "@gsap/react";
 import { ArrowRight } from "lucide-react";
 import { sound } from "@/lib/sound/engine";
 import { Poster } from "@/components/ui/Poster";
+import { Wordmark } from "@/components/brand/Logo";
+import { Texture } from "./Texture";
 
 gsap.registerPlugin(ScrollTrigger, useGSAP);
 
@@ -195,9 +197,10 @@ export function Start() {
     <>
       <section
         data-header="cardinal"
-        className="on-cardinal bg-cardinal px-6 py-32 text-gold md:px-14 md:py-44"
+        className="on-cardinal relative overflow-hidden bg-cardinal px-6 py-32 text-gold md:px-14 md:py-44"
       >
-        <div className="mx-auto max-w-6xl">
+        <Texture variant="grain" />
+        <div className="relative z-10 mx-auto max-w-6xl">
           <h2
             className="max-w-[14ch] text-[clamp(3rem,10vw,9rem)] font-bold leading-[0.88] tracking-[-0.04em]"
             style={{ fontVariationSettings: '"wdth" 80' }}
@@ -220,9 +223,10 @@ export function Start() {
           </div>
         </div>
       </section>
-      <footer data-header="dark" className="on-dark bg-ink px-6 py-10 text-gray-30 md:px-14">
-        <div className="mx-auto flex max-w-6xl flex-wrap items-start justify-between gap-6 text-sm leading-relaxed">
-          <p className="text-base font-semibold text-paper">TrojanConnect</p>
+      <footer data-header="dark" className="on-dark relative overflow-hidden bg-ink px-6 py-10 text-gray-30 md:px-14">
+        <Texture variant="quiet" seam />
+        <div className="relative z-10 mx-auto flex max-w-6xl flex-wrap items-start justify-between gap-6 text-sm leading-relaxed">
+          <Wordmark tone="dark" height={36} />
           <p className="max-w-2xl">
             A hackathon project built by USC students. It is not affiliated with or endorsed by the
             University of Southern California. Venues, availability and approvals in this demo are

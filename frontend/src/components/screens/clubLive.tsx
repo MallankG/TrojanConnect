@@ -6,7 +6,7 @@
 import { useCallback, useEffect, useState } from "react";
 import Link from "next/link";
 import { useParams, useRouter } from "next/navigation";
-import { CalendarPlus, Megaphone, Sparkles, UserPlus } from "lucide-react";
+import { ArrowRight, CalendarPlus, Megaphone, UserPlus } from "lucide-react";
 import { campus, live, useUser } from "@/lib/api/client";
 import { bookingApi, pipelineApi, type Booking } from "@/lib/api-client";
 import type { PipelineState } from "@/lib/pipeline/plan";
@@ -106,8 +106,8 @@ export function ClubDashboard() {
           permit, and walks you through food, funding and publicity.
         </p>
         <Link href="/plan" className="mt-4 inline-flex h-11 items-center gap-2 rounded-full bg-paper px-5 text-[15px] font-semibold text-cardinal hover:bg-gold-25">
-          <Sparkles aria-hidden className="size-4" />
           Open the assistant
+          <ArrowRight aria-hidden className="size-4" />
         </Link>
       </div>
 

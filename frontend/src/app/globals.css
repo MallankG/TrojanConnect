@@ -33,6 +33,8 @@
   --color-mark-lime: #dae343;
 
   --ease-out-quint: cubic-bezier(0.22, 1, 0.36, 1);
+  /* Slight overshoot, for anything that should feel physical rather than timed. */
+  --ease-spring: cubic-bezier(0.34, 1.42, 0.64, 1);
 }
 
 @theme inline {
@@ -60,7 +62,6 @@ body {
 :focus-visible {
   outline: 2px solid var(--color-cardinal);
   outline-offset: 2px;
-  border-radius: 4px;
 }
 
 .on-dark :focus-visible,
@@ -182,5 +183,231 @@ html.lenis body {
   *::before,
   *::after {
     scroll-behavior: auto !important;
+  }
+}
+/* ---------------------------------------------------------------------------
+ * Texture for the black scenes.
+ *
+ * Flat #000 reads as an unfinished canvas on a large display. These layers give
+ * it depth without putting anything on screen a reader has to account for:
+ * every layer is decorative, non-interactive, and sits behind the content.
+ *
+ * Composed back to front:
+ *   .tex-aurora  two slow cardinal/gold washes, so black has a temperature
+ *   .tex-grid    a faint rule grid, faded out toward the edges by a mask
+ *   .tex-grain   fixed-film noise, which kills gradient banding on OLED
+ *   .tex-vignette  edge falloff that pulls the eye to the centre column
+ * ------------------------------------------------------------------------- */
+
+.tex {
+  position: absolute;
+  inset: 0;
+  overflow: hidden;
+  pointer-events: none;
+  z-index: 0;
+}
+
+.tex-aurora::before,
+.tex-aurora::after {
+  content: "";
+  position: absolute;
+  border-radius: 9999px;
+  filter: blur(80px);
+  will-change: transform;
+}
+
+.tex-aurora::before {
+  width: 85vw;
+  height: 85vw;
+  max-width: 1100px;
+  max-height: 1100px;
+  top: -28%;
+  left: -18%;
+  background: radial-gradient(circle, rgba(153, 0, 0, 0.34) 0%, rgba(153, 0, 0, 0.1) 45%, transparent 70%);
+  animation: aurora-a 26s var(--ease-out-quint) infinite alternate;
+}
+
+.tex-aurora::after {
+  width: 65vw;
+  height: 65vw;
+  max-width: 820px;
+  max-height: 820px;
+  right: -22%;
+  bottom: -32%;
+  background: radial-gradient(circle, rgba(255, 204, 0, 0.11) 0%, rgba(255, 204, 0, 0.04) 42%, transparent 68%);
+  animation: aurora-b 32s var(--ease-out-quint) infinite alternate;
+}
+
+@keyframes aurora-a {
+  to {
+    transform: translate3d(9%, 7%, 0) scale(1.14);
+  }
+}
+
+@keyframes aurora-b {
+  to {
+    transform: translate3d(-11%, -8%, 0) scale(1.09);
+  }
+}
+
+.tex-grid {
+  position: absolute;
+  inset: -1px;
+  background-image:
+    linear-gradient(to right, rgba(255, 255, 255, 0.055) 1px, transparent 1px),
+    linear-gradient(to bottom, rgba(255, 255, 255, 0.055) 1px, transparent 1px);
+  background-size: 72px 72px;
+  mask-image: radial-gradient(ellipse 85% 70% at 50% 42%, #000 20%, transparent 78%);
+  -webkit-mask-image: radial-gradient(ellipse 85% 70% at 50% 42%, #000 20%, transparent 78%);
+}
+
+.tex-grain {
+  position: absolute;
+  inset: -50%;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='180' height='180'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='3' stitchTiles='stitch'/%3E%3CfeColorMatrix type='saturate' values='0'/%3E%3C/filter%3E%3Crect width='180' height='180' filter='url(%23n)' opacity='0.42'/%3E%3C/svg%3E");
+  opacity: 0.34;
+  mix-blend-mode: overlay;
+  animation: grain-drift 0.7s steps(1) infinite;
+}
+
+/* Eight stills, as hand-drawn animation does it: the eye reads motion, not a loop. */
+@keyframes grain-drift {
+  0% { transform: translate(0, 0); }
+  12.5% { transform: translate(-3%, 2%); }
+  25% { transform: translate(2%, -4%); }
+  37.5% { transform: translate(-4%, -2%); }
+  50% { transform: translate(3%, 3%); }
+  62.5% { transform: translate(-2%, 4%); }
+  75% { transform: translate(4%, -3%); }
+  87.5% { transform: translate(-3%, -4%); }
+}
+
+.tex-vignette {
+  position: absolute;
+  inset: 0;
+  background: radial-gradient(ellipse 74% 58% at 50% 45%, transparent 28%, rgba(0, 0, 0, 0.72) 100%);
+}
+
+/* A single hairline of gold where the scene meets the one above it. */
+.tex-seam {
+  position: absolute;
+  inset-inline: 0;
+  top: 0;
+  height: 1px;
+  background: linear-gradient(to right, transparent, rgba(255, 204, 0, 0.45), transparent);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .tex-aurora::before,
+  .tex-aurora::after,
+  .tex-grain {
+    animation: none;
+  }
+}
+
+/* ---------------------------------------------------------------------------
+ * Chat
+ * ------------------------------------------------------------------------- */
+
+/* A bubble arriving. Settles with a little overshoot, and grows from the
+ * corner it is anchored to, so it reads as coming from its sender. */
+@keyframes bubble-in {
+  from {
+    opacity: 0;
+    transform: translateY(12px) scale(0.94);
+  }
+}
+.bubble-in {
+  animation: bubble-in 0.42s var(--ease-spring) both;
+  transform-origin: var(--bubble-origin, bottom left);
+}
+
+/* Day rules, the typing row, and other furniture: no overshoot, just a fade up. */
+@keyframes rise-in {
+  from {
+    opacity: 0;
+    transform: translateY(6px);
+  }
+}
+.rise-in {
+  animation: rise-in 0.32s var(--ease-out-quint) both;
+}
+
+/* The jump-to-latest pill. */
+@keyframes pop-in {
+  from {
+    opacity: 0;
+    transform: translateY(8px) scale(0.8);
+  }
+}
+.pop-in {
+  animation: pop-in 0.26s var(--ease-spring) both;
+}
+
+/* Suggestion chips deal themselves out left to right. */
+.chip-in {
+  animation: rise-in 0.4s var(--ease-spring) both;
+}
+
+/* The agent is working: a soft cardinal halo breathing around its avatar. */
+@keyframes thinking-halo {
+  0%,
+  100% {
+    box-shadow: 0 0 0 0 rgba(153, 0, 0, 0.35);
+  }
+  50% {
+    box-shadow: 0 0 0 5px rgba(153, 0, 0, 0);
+  }
+}
+.thinking-halo {
+  animation: thinking-halo 1.8s var(--ease-out-quint) infinite;
+}
+
+/* The composer lifts very slightly as you focus it. */
+.composer {
+  transition:
+    box-shadow 0.22s var(--ease-out-quint),
+    background-color 0.22s var(--ease-out-quint),
+    transform 0.22s var(--ease-out-quint);
+}
+.composer:focus-within {
+  background-color: var(--color-paper);
+  box-shadow:
+    0 0 0 2px var(--color-cardinal),
+    0 6px 22px -10px rgba(0, 0, 0, 0.3);
+}
+
+.composer textarea:focus-visible {
+  outline: none;
+}
+
+/* The send key. Dormant until there is something to send. */
+.send-key {
+  transition:
+    transform 0.24s var(--ease-spring),
+    background-color 0.2s ease,
+    opacity 0.2s ease;
+}
+.send-key:disabled {
+  transform: scale(0.82);
+}
+.send-key:not(:disabled):active {
+  transform: scale(0.9);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .bubble-in,
+  .rise-in,
+  .pop-in,
+  .chip-in,
+  .thinking-halo {
+    animation: none;
+  }
+  .composer,
+  .send-key {
+    transition: none;
+  }
+  .send-key:disabled {
+    transform: none;
   }
 }

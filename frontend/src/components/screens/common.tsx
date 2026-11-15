@@ -13,6 +13,7 @@ import { useSound } from "@/lib/sound/SoundProvider";
 import { sound } from "@/lib/sound/engine";
 import { HOME, Page, ROLE_LABEL } from "@/components/layout/AppShell";
 import { Chat } from "@/components/chat/Chat";
+import { Wordmark } from "@/components/brand/Logo";
 import { Avatar, Button, EmptyState, ErrorNote, Field, ListSkeleton, PageHeader, Row, Rows, Tabs, buttonClass, inputClass, useToast } from "@/components/ui/kit";
 import { BookingStepper, RequestSummary, StatusCard } from "@/components/booking/parts";
 import { Section } from "./club";
@@ -51,7 +52,7 @@ export function RolePicker() {
   return (
     <div className="min-h-dvh bg-paper">
       <header className="mx-auto flex h-16 max-w-5xl items-center justify-between px-5">
-        <Link href="/" className="text-lg font-semibold tracking-[-0.01em]">TrojanConnect</Link>
+        <Link href="/" aria-label="TrojanConnect, back to the story"><Wordmark tone="light" height={36} priority /></Link>
         <nav className="flex gap-5 text-sm text-gray-70">
           <Link href="/sign-in" className="hover:text-ink">Sign in</Link>
           <Link href="/" className="hover:text-ink">Back to the story</Link>
@@ -317,7 +318,7 @@ export function Settings() {
             </span>
           </Row>
           <Row label="Role">{user ? ROLE_LABEL[user.role] : ""}{user?.scopeName ? `, ${user.scopeName}` : ""}</Row>
-          <Row label="Sign-in">Demo account. Real sign-in arrives with the backend.</Row>
+          <Row label="Sign-in">Demo account. USC single sign-on is on the way.</Row>
         </Rows>
         <Link href="/demo" className={`${buttonClass("secondary")} mt-3`}>Switch role</Link>
       </Section>

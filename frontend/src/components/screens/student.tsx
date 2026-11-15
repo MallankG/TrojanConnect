@@ -250,11 +250,14 @@ export function StudentDashboard() {
         )}
       </Section>
 
-      <Section title="Coming later">
-        <Link href="/alumni" className="block rounded-2xl border border-dashed border-gray-30 p-4 hover:border-gray-70">
-          <span className="block text-[17px] font-semibold">Alumni mentorship</span>
+      <Section title="On the roadmap">
+        <Link href="/alumni" className="block rounded-2xl border border-line p-4 transition-colors hover:border-ink">
+          <span className="flex items-center gap-2">
+            <span className="text-[17px] font-semibold">Alumni mentorship</span>
+            <span className="rounded-full bg-wash px-2 py-0.5 text-[11px] font-medium text-gray-70">Not open yet</span>
+          </span>
           <span className="block text-[15px] text-gray-70">
-            Opt-in conversations with alumni. Not built yet; see what is planned.
+            Agent-made introductions to alumni, with consent on both sides. See how it will work.
           </span>
         </Link>
       </Section>
