@@ -80,6 +80,10 @@ def create_app() -> FastAPI:
     from app.workflows.rso.router import router as rso_router
 
     app.include_router(rso_router)
+    # Simulated EngageSC portal for demos (/mock-engagesc; RSO_PORTAL=off disables it). Not a USC system.
+    from app.workflows.rso.mock_portal import router as mock_portal_router
+
+    app.include_router(mock_portal_router)
     # =============================================================================
 
     return app

@@ -153,11 +153,12 @@ def set_check(key: str, done: bool, actor: str = "club_rep") -> dict[str, Any]:
 
 
 def record_status(status: str, note: str = "", actor: str = "club_rep") -> dict[str, Any]:
-    """Record what EngageSC shows. Only a person reports this; the agent never claims a submission or a decision."""
+    """Record what EngageSC shows: reported by the club rep, or read from the portal itself by the portal agent
+    (actor "portal:…"). The RSO chat agent can never record a submission or a decision."""
     if status not in P.RECORDABLE:
         raise RsoError(400, "UNKNOWN_STATUS", f"Record one of: {', '.join(P.RECORDABLE)}")
-    if actor != "club_rep":
-        raise RsoError(403, "PERMISSION_DENIED", "Only the club rep records the EngageSC status.")
+    if actor != "club_rep" and not actor.startswith("portal:"):
+        raise RsoError(403, "PERMISSION_DENIED", "Only the club rep, or a status read from the portal, can record the EngageSC status.")
     return update(lambda s: (s.update(status=status, status_note=note[:500]), _log(s, f"EngageSC status recorded: {P.STATUSES[status]}", actor)), actor)
 
 
@@ -260,7 +261,7 @@ def view(state: dict[str, Any] | None = None, now: datetime | None = None) -> di
         "steps_done": sum(1 for s in steps if s["done"]), "steps_total": len(steps),
         "next_step": nxt, "ready_to_submit": bool(steps) and not blockers and not closed, "submit_blockers": blockers,
         "application_closed": closed, "dates": dates, "officers": officers, "advisor": advisor, "roster_gaps": roster_gaps(state),
-        "members": _members(state), "min_members": P.MIN_ADDITIONAL_MEMBERS, "handoff": handoff,
+        "members": _members(state), "min_members": P.MIN_ADDITIONAL_MEMBERS, "handoff": handoff, "portal": state.get("portal"),
         "log": state.get("log", [])[:30],
     }
 

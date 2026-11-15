@@ -40,6 +40,7 @@ export type AgentAction =
   | { type: "handoff"; title: string; url: string; label: string; steps: string[] }
   | { type: "rso_email"; target: string }
   | { type: "rso_status" }
+  | { type: "rso_portal" }
   | { type: "suggestions"; items: { label: string; message: string }[] };
 export interface AgentInfo { configured: boolean; mode?: "gemini" | "rules"; model: string }
 export interface AgentReply { reply: string; actions: AgentAction[]; tools: { tool: string; ok: boolean; error: string | null }[]; state: PipelineState; model: string }
@@ -139,6 +140,11 @@ export interface RsoSchema {
   sessions: { kind: string; when: string }[]; denial_reasons: string[]; open_membership_rules: string[]; discrepancies: string[];
   links: RsoLink[];
 }
+export interface RsoPortal {
+  enabled: boolean; mode: "simulated" | "live" | null; base_url: string; admin_url: string;
+  running: boolean; kind: "submit" | "sync" | null; error: string | null; lines: string[];
+  application: { application_id: string; portal_status: string; note?: string; submitted_at?: string; last_checked?: string } | null;
+}
 export interface RsoEmail { target: string; to: string; subject: string; body: string; mailto: string; ready: boolean }
 
 export const rsoApi = {
@@ -150,4 +156,7 @@ export const rsoApi = {
   recordStatus: (status: Exclude<RsoStatus, "not_started" | "in_progress">, note = "") => call<RsoState>("/api/v1/rso/status", { method: "PUT", json: { status, note } }),
   email: (target: string) => call<RsoEmail>(`/api/v1/rso/emails/${target}`),
   reset: () => call<RsoState>("/api/v1/rso/reset", { method: "POST" }),
+  portal: () => call<RsoPortal>("/api/v1/rso/portal"),
+  portalSubmit: () => call<RsoPortal>("/api/v1/rso/portal/submit", { method: "POST" }),
+  portalSync: () => call<RsoPortal>("/api/v1/rso/portal/sync", { method: "POST" }),
 };

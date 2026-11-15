@@ -15,7 +15,7 @@ from app.agents import rso_agent
 from app.schemas.common import AppError
 from app.security.client import require_client_header
 
-from . import service
+from . import portal_agent, service
 
 router = APIRouter(prefix="/api/v1/rso", tags=["rso-recognition"], dependencies=[Depends(require_client_header)])
 
@@ -91,6 +91,24 @@ def put_status(body: StatusBody) -> dict[str, Any]:
 def get_email(target: str) -> dict[str, Any]:
     """Reminder draft for an officer (by role) or the advisor: {to, subject, body, mailto, ready}. Nothing is sent."""
     return _call(service.email, target)
+
+
+@router.get("/portal")
+def portal() -> dict[str, Any]:
+    """The portal agent: whether it's on, the live log of the current run, and the submitted application (ID, portal status)."""
+    return portal_agent.run_status()
+
+
+@router.post("/portal/submit")
+def portal_submit() -> dict[str, Any]:
+    """The club rep's click: the portal agent submits the application through the simulated EngageSC. 409 unless ready."""
+    return _call(portal_agent.start_submit)
+
+
+@router.post("/portal/sync")
+def portal_sync() -> dict[str, Any]:
+    """Read the application's status from the portal's My Activity and update the tracker."""
+    return _call(portal_agent.start_sync)
 
 
 @router.post("/reset")

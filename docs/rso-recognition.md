@@ -62,9 +62,38 @@ Not read: PDFs (the templates' contents), Google Docs/Drive items, Docusign, Rea
 - **Recognition period:** the process page says both "August 1–June 30" and "approval through June 30, 2027".
 - **Out of date:** the FAQ still mentions the 2025–26 templates and the fall cycle.
 
+## Simulated EngageSC and the portal agent
+
+The real EngageSC needs a USC login and has no way for other apps to connect, so for demos the backend serves a **simulated EngageSC** at `http://localhost:8000/mock-engagesc`. It's labelled as not a USC system and has no USC branding.
+
+**Pages:**
+
+| Page | URL |
+|---|---|
+| Sign in (any username and password) | `/login` |
+| Directory, with the register buttons | `/directory` |
+| Group page, with "Begin re-registration" | `/groups/<slug>` |
+| Application form | `/register` |
+| Status list | `/my-activity` |
+| Simulated Campus Activities review | `/admin` |
+
+Seeded existing groups for renewals: Demo Chess Collective, Demo Film Society, Demo Debate Union. Approved groups join the Directory.
+
+The **portal agent** (`backend/app/workflows/rso/portal_agent.py`, Playwright with the installed Google Chrome) does what the submitting officer would do there:
+- signs in and searches the Directory
+- registers (new) or re-registers (renewal)
+- fills in the roster, advisor and members from the tracker
+- uploads placeholder PDFs for the constitution, the Accountability Document and the 15 officer documents
+- answers the questions with demo text
+- submits and reads the application ID
+
+"Check status now" reads My Activity and updates the tracker. Set `RSO_PORTAL_SHOW_BROWSER=true` to watch it work. `RSO_PORTAL=off` turns the portal off, and the flow ends with the EngageSC hand-off instead.
+
+**Demo script:** Assistant → "Start a new RSO" → fill in the checklist → "Submit our RSO on EngageSC" → **Submit through the portal** → open the **Simulated Campus Activities review** link → Approved → **Check status now** → Recognized → "Plan an event".
+
 ## How it was tested
 
-- **Unit and API tests** (`backend/tests/test_rso.py`, 9 tests; the full backend suite is 148): dates and links, the readiness rules, validation (USC emails only, member minimum), that only a person can record the EngageSC status, both pathways, reminder emails, the chat routing, the API and the error envelope.
+- **Unit and API tests** (`backend/tests/test_rso.py`, 11 tests; the full backend suite is 150), including the simulated portal over HTTP and the portal agent's submit and status logic: dates and links, the readiness rules, validation (USC emails only, member minimum), that only a person can record the EngageSC status, both pathways, reminder emails, the chat routing, the API and the error envelope.
 - **End to end in Chrome** (14 Nov 2026, built-in assistant, isolated test data):
   1. **New RSO:** "Start a new RSO", fill in the organization form, tick "check the directory", get the EngageSC Directory hand-off.
   2. **Roster and documents:** enter the five officers, the advisor and six members; tick all 15 officer documents and acceptances.
@@ -73,6 +102,11 @@ Not read: PDFs (the templates' contents), Google Docs/Drive items, Docusign, Rea
   5. **Hand-off to events:** "Plan an event" opens room options in the event planner. The EngageSC event answer stops pointing to recognition.
   6. **Renewal for an officer who isn't listed:** starts at "Get officer access" with the officer-access and re-establish forms.
   7. **Phone width (390 px):** layout checked.
+
+  Then, through the simulated portal:
+  - **New RSO:** the portal agent registered "Demo Robotics Society", APP-949090 Pending Approval. It was approved on the review page, "Check status now" moved the tracker to Recognized, and "Plan an event" opened room options.
+  - **Renewal:** the agent re-registered the seeded "Demo Chess Collective" from its group page.
+  - **Guards:** the agent refuses to submit before the checklist is ready, and won't register a group that already exists.
 
   The run found two bugs, both fixed and covered by tests:
   - The chat router matched "rso" inside "person", which sent event requests to the RSO agent.

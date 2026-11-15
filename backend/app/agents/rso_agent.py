@@ -35,6 +35,11 @@ STEP_WORDS = [("constitution", ("constitution",)), ("accountability", ("accounta
               ("start_application", ("start the application", "start on engagesc")), ("acceptances", ("accept", "acceptance"))]
 
 
+def _portal_on() -> bool:
+    from app.workflows.rso import mock_portal
+    return mock_portal.enabled()
+
+
 def handles(message: str) -> bool:
     return bool(TRIGGERS.search(message))
 
@@ -133,6 +138,12 @@ def _step_reply(ctx: Ctx, step_id: str) -> str:
         if sid == "submit" and not v["ready_to_submit"]:
             ctx.add({"type": "rso_checklist", "section": "steps"})
             return "Not ready to submit yet. Still to do:\n" + _lines(v["submit_blockers"]) + ("\n" + _deadline_line(v))
+        if sid == "submit" and _portal_on():
+            ctx.add({"type": "rso_portal"})
+            ctx.add({"type": "handoff", **v["handoff"]})
+            return ("Everything on the checklist is done. Press \"Submit through the portal\" and the portal agent fills in and submits the "
+                    "application on the simulated EngageSC (demo data), then reads back the application ID. On the real EngageSC, the submitting "
+                    "officer submits before Nov 22, 11:59 PM (link below).")
         ctx.add({"type": "handoff", **v["handoff"]})
         if sid == "submit":
             ctx.add({"type": "rso_status"})
@@ -224,6 +235,9 @@ def respond(ctx: Ctx, message: str, now: datetime | None = None) -> str:
                 + "\nNote: " + P.DISCREPANCIES[0])
     if _has(t, "roster", "members", "officers"):
         return _step_reply(ctx, "roster")
+    if _has(t, "check status", "check our rso status", "check the portal", "portal status") and v.get("portal"):
+        ctx.add({"type": "rso_portal"})
+        return f"Application {v['portal']['application_id']} was last seen as {v['portal']['portal_status']}. Press \"Check status now\" to read it from the portal again."
     if _has(t, "record", "pending approval", "requires modification", "were denied", "recognized now", "got recognized", "status on engagesc"):
         ctx.add({"type": "rso_status"})
         return "Record what EngageSC shows with the buttons below. Only you can record this; I never assume a submission or decision."
@@ -243,13 +257,15 @@ def respond(ctx: Ctx, message: str, now: datetime | None = None) -> str:
         return ("Your RSO is recognized through June 30, 2027, so it can now create events on EngageSC (the event pipeline's EngageSC "
                 "step). Want to plan one? Renew again next cycle.")
     if v["status"] == "requires_modifications":
+        if v.get("portal"):
+            ctx.add({"type": "rso_portal"})
         if v["handoff"]:
             ctx.add({"type": "handoff", **v["handoff"]})
         ctx.add({"type": "rso_status"})
         return ("Campus Activities asked for modifications. Only the submitting officer can edit, from EngageSC > My Activity > My Surveys/Forms. "
                 "Reply in EngageSC Chat, then record the new status.")
     if v["status"] == "pending_approval":
-        ctx.add({"type": "rso_status"})
+        ctx.add({"type": "rso_portal"} if v.get("portal") else {"type": "rso_status"})
         return ("Submitted and pending approval. Campus Activities reviews in the order received; watch your email and EngageSC Chat. "
                 + ("Advisor requirements are still due by Dec 1." if not next((s for s in v["steps"] if s["id"] == "advisor"), {}).get("done") else ""))
     if v["status"] == "denied":

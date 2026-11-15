@@ -77,6 +77,9 @@ Settings in `backend/.env`:
 | `DEMO_AUTO_REVIEW` | `true`: a **simulated** venue or permits office approves accepted requests, so the waterfall continues without a person. `false`: a reviewer approves on `/pipeline/review`. | `false` |
 | `BOOKING_STORE` | Where booking requests are kept: `auto` uses Supabase when `SUPABASE_URL`/`SUPABASE_SERVICE_ROLE_KEY` are set and `supabase/migrations/0004_venue_booking.sql` has been applied, otherwise `backend/data/bookings.json`. `supabase` or `json` forces one. `GET /api/v1/bookings/storage` shows which is in use and why. | `auto` |
 | `BOOKING_ADAPTER` | Who supplies availability and places confirmed bookings (`backend/app/workflows/booking/adapters.py`). Only `simulated` exists today; an admin-agent adapter that books through the real venue systems can be registered later without changing the workflow. | `simulated` |
+| `RSO_PORTAL` | `mock`: serve the **simulated EngageSC** at `/mock-engagesc` and let the RSO portal agent submit there with demo data. `off`: no portal, the user submits on EngageSC themselves | `mock` |
+| `RSO_PORTAL_BASE_URL` | Where the portal agent's browser opens the simulated portal | `http://localhost:8000/mock-engagesc` |
+| `RSO_PORTAL_SHOW_BROWSER` | `true` opens a visible Chrome window while the portal agent works (for demos) | `false` (headless) |
 | `FRONTEND_ORIGIN` | Browser origins allowed to call the API, comma-separated. **Add your host app's origin here.** | `http://localhost:3000` |
 
 ---
@@ -199,6 +202,7 @@ Every card is plain JSON, so you can style it any way you like. Where a card has
 | `handoff` | `{title, url, label, steps: string[]}` | A "continue on EngageSC" card: the steps, then a button to `url` | Open `url` in a new tab (USC login). Nothing is submitted by the app |
 | `rso_email` | `{target: "advisor" \| <officer role>}` | A reminder draft: `GET /rso/emails/{target}` returns `{to, subject, body, mailto, ready}` listing only what's still owed | Link to `mailto` |
 | `rso_status` | `{}` | Buttons: Pending Approval, Requires Modifications, Denied, Recognized | Confirm, then `PUT /rso/status {status}`. Only the user records this |
+| `rso_portal` | `{}` | The portal agent: from `GET /rso/portal`, the submitted application (ID, portal status, staff note), the live log of the current run, and links to the simulated portal and its review page | "Submit through the portal" → `POST /rso/portal/submit` (enabled when `ready_to_submit`); "Check status now" → `POST /rso/portal/sync`. Poll `GET /rso/portal` while `running`, then refresh RSO cards |
 
 Rules for cards:
 - **Only the newest `booking` card per `kind`, and the newest `rso_checklist` per section, needs to be live.** Older ones can collapse to a line like "see the latest card below", because they show the same data. After any chat turn, refresh RSO cards from `GET /rso/state`.
@@ -286,6 +290,13 @@ USC requires every recognized student organization (RSO) to apply on EngageSC ea
 
 `ready_to_submit` is true when every step before `submit` is done (except acceptances and the advisor's items) and the deadline hasn't passed. `submit_blockers` lists what's left. `status` is `not_started`, `in_progress`, `pending_approval`, `requires_modifications`, `denied` or `recognized`; only the last four are recorded, and only by the user.
 
+**Portal agent (simulated EngageSC).** To show the whole journey with demo data, the backend also serves a **simulated EngageSC** at `/mock-engagesc`. It's labelled "not a USC system" and follows the flow the process page describes: sign in → Directory → "+Register a new Recognized Student Organization" (or group page → "Begin re-registration") → application form → My Activity, plus a simulated Campus Activities review page at `/mock-engagesc/admin`. When the checklist is ready and the user presses **Submit through the portal**, the **portal agent** (`backend/app/workflows/rso/portal_agent.py`) drives Chrome through those pages like a person:
+- signs in and searches the Directory (refusing to register a group that already exists, or to renew one that doesn't)
+- fills the form from the tracker and uploads placeholder documents
+- submits and reads back the application ID
+
+**Check status now** opens My Activity and maps the portal's status onto the tracker: Pending Approval, Requires Modifications, Denied, or Approved → Recognized. Statuses read from the portal are recorded with the actor `portal:simulated-engagesc`. The chat agent still can't record or submit anything. Pointing the portal agent at the real EngageSC would need USC's authorization; `PortalAdapter` is where that connection would go.
+
 **Connection to events:** only a recognized RSO can create EngageSC events. `GET /pipeline/status` includes `rso: {status, status_label, recognized}`, and the event agent's EngageSC answer points to RSO recognition until the status is Recognized. Once recognized, the RSO agent suggests planning an event.
 
 ### An RSO conversation
@@ -294,7 +305,11 @@ USC requires every recognized student organization (RSO) to apply on EngageSC ea
 2. **User fills the form → Continue** (sends "RSO next step"). **Reply:** next step, "Check the group isn't already on EngageSC", with Directory links.
 3. **User ticks it, sends "RSO next step".** **Cards:** `handoff` ("Open the EngageSC Directory" → `https://engage.usc.edu/club_signup`, click "+Register a new Recognized Student Organization").
 4. **"Officer documents" suggestion.** **Cards:** officer checklist and five `rso_email` reminders.
-5. **…roster, constitution, Accountability Document, questions…** then "Submit our RSO on EngageSC". **Cards:** `handoff` and `rso_status`. The user submits on EngageSC and records "Pending Approval", later "Recognized".
+5. **…roster, constitution, Accountability Document, questions…** then "Submit our RSO on EngageSC". **Cards:** `rso_portal` and `handoff`.
+6. **Submit through the portal.** The log shows the agent signing in, clicking "+Register a new Recognized Student Organization", filling and uploading, and submitting: "Application APP-949090: Pending Approval". The tracker becomes Pending Approval.
+7. **On `/mock-engagesc/admin`, approve it, then "Check status now".** The agent reads "Approved" from My Activity, and the tracker becomes **Recognized**. "Plan an event" opens the event planner.
+
+With `RSO_PORTAL=off`, step 5 shows `handoff` and `rso_status` instead: the user submits on the real EngageSC and records the outcome.
 
 The reference UI also has an **RSO recognition** tab (`RsoPanel`) with the same checklist on one screen; its "Ask the assistant" button sends the next step to the chat.
 
@@ -425,6 +440,9 @@ The cards above use these. You only need them directly for screens beyond the As
 | `PUT /checks` | `{key, done}` |
 | `PUT /status` | `{status, note?}`: record what EngageSC shows |
 | `GET /emails/{target}` | Reminder draft for an officer role or `advisor` |
+| `GET /portal` | Portal agent: `enabled`, `mode`, `base_url`, `admin_url`, `running`, `kind`, `lines` (live log), `error`, `application` |
+| `POST /portal/submit` | Submit through the simulated EngageSC (409 `NOT_READY`, `ALREADY_SUBMITTED` or `PORTAL_BUSY`) |
+| `POST /portal/sync` | Read the application's status from the portal and update the tracker |
 | `POST /agent/chat` | Standalone RSO agent turn (the main chat routes RSO messages here too) |
 | `POST /reset` | Clear the RSO tracker |
 
@@ -448,6 +466,7 @@ The cards above use these. You only need them directly for screens beyond the As
 | Chat endpoint and mode switch | `backend/app/workflows/event_pipeline/router.py` (`/agent`, `/agent/chat`) |
 | RSO agent, process data, tracker and API | `backend/app/agents/rso_agent.py`, `backend/app/workflows/rso/{process,service,router}.py` |
 | Reference RSO cards and tab | `frontend/src/components/pipeline/RsoCards.tsx` |
+| Simulated EngageSC and the portal agent | `backend/app/workflows/rso/{mock_portal,portal_agent}.py` |
 | Built-in Club Agent (parsing, room options, waterfall) | `backend/app/agents/rules_agent.py` |
 | Gemini Club Agent | `backend/app/agents/event_agent.py`, `backend/app/integrations/gemini/` |
 | Agent tools (shared by both agents) | `backend/app/tools/event_plan.py` |

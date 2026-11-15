@@ -8,7 +8,7 @@ import { FIELD_BY_KEY, fieldApplies, type Profile } from "@/lib/pipeline/fields"
 import { AGENT_FORMS, FORMS, VENUE_FORM, type Derived, type PipelineState } from "@/lib/pipeline/plan";
 import { BookingCard } from "./BookingCard";
 import { Field } from "./ProfileForm";
-import { HandoffCard, RsoChecklistCard, RsoEmailCard, RsoFieldsCard, RsoStatusCard, announceRsoChange } from "./RsoCards";
+import { HandoffCard, RsoChecklistCard, RsoEmailCard, RsoFieldsCard, RsoPortalCard, RsoStatusCard, announceRsoChange } from "./RsoCards";
 import { DraftButton, FormCard } from "./StepDetail";
 import { btn, btnPrimary } from "./ui";
 
@@ -176,6 +176,7 @@ function ActionCard({ action: a, d, profile, onState, onReload, onJumpToField, o
   if (a.type === "handoff") return <HandoffCard title={a.title} url={a.url} label={a.label} steps={a.steps} />;
   if (a.type === "rso_email") return <RsoEmailCard target={a.target} />;
   if (a.type === "rso_status") return <RsoStatusCard />;
+  if (a.type === "rso_portal") return <RsoPortalCard />;
   if (a.type === "fields" && a.scope === "rso") return <RsoFieldsCard keys={a.keys} title={a.title} then={a.then} onSend={onSend} disabled={busy || !latest} />;
   if (a.type === "fields") {
     const save = async (patch: Record<string, unknown>) => {

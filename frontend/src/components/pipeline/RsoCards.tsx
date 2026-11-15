@@ -4,7 +4,7 @@
 // and the RSO recognition tab. Built from the same tokens and pieces as the booking card. TrojanConnect tracks
 // progress and hands off to EngageSC; it never signs in to or submits anything on USC systems.
 import { useCallback, useEffect, useState } from "react";
-import { rsoApi, type RsoSchema, type RsoState, type RsoStatus, type RsoStep } from "@/lib/api-client";
+import { rsoApi, type RsoPortal, type RsoSchema, type RsoState, type RsoStatus, type RsoStep } from "@/lib/api-client";
 import type { FieldDef } from "@/lib/pipeline/fields";
 import { Field } from "./ProfileForm";
 import { Pill, btn, btnPrimary, type Tone } from "./ui";
@@ -171,6 +171,74 @@ export function HandoffCard({ title, url, label, steps }: { title: string; url: 
   );
 }
 
+/** Assistant card: {type: "rso_portal"}. The portal agent submits through the simulated EngageSC and reads the status back. */
+export function RsoPortalCard() {
+  const { rso } = useRso();
+  const [portal, setPortal] = useState<RsoPortal | null>(null);
+  const [error, setError] = useState<string | null>(null);
+  const running = portal?.running ?? false;
+  useEffect(() => {
+    let alive = true;
+    const load = () => rsoApi.portal().then(p => { if (alive) setPortal(p); }, e => { if (alive) setError((e as Error).message); });
+    load();
+    window.addEventListener(EVENT, load);
+    return () => { alive = false; window.removeEventListener(EVENT, load); };
+  }, []);
+  // Follow a run's live log; when it finishes, refresh every RSO card (the status may have changed).
+  useEffect(() => {
+    if (!running) return;
+    const t = setInterval(async () => {
+      const p = await rsoApi.portal().catch(() => null);
+      if (!p) return;
+      setPortal(p);
+      if (!p.running) { clearInterval(t); announceRsoChange(); }
+    }, 900);
+    return () => clearInterval(t);
+  }, [running]);
+  const start = async (fn: () => Promise<RsoPortal>) => {
+    setError(null);
+    try { setPortal(await fn()); } catch (e) { setError((e as Error).message); }
+  };
+  if (!portal) return null;
+  if (!portal.enabled) return <p className="text-[13px] text-muted">The simulated portal is turned off. Submit on EngageSC yourself.</p>;
+  const app = portal.application;
+  const canResubmit = rso?.status === "requires_modifications";
+  return (
+    <div className={card}>
+      <div className="flex flex-wrap items-center justify-between gap-2">
+        <strong className="text-sm">Portal agent</strong>
+        <Pill tone="waiting">Simulated EngageSC · demo data</Pill>
+      </div>
+      <p className="mt-1 mb-2 text-[13px] text-muted">
+        Drives a browser through the simulated EngageSC like a person: signs in, opens the Directory, fills in the form from this checklist,
+        uploads placeholder documents, submits, and reads the status from My Activity. Nothing reaches USC.
+      </p>
+      {app && (
+        <p className="m-0 mb-2 text-[13px]">
+          Application <b>{app.application_id}</b> · portal status <b>{app.portal_status}</b>{app.note ? ` · “${app.note}”` : ""}
+          {app.last_checked && <span className="text-muted"> · checked {new Date(app.last_checked).toLocaleTimeString()}</span>}
+        </p>
+      )}
+      <div className="flex flex-wrap gap-2">
+        {(!app || canResubmit) && (
+          <button type="button" className={btnPrimary} disabled={running || !rso?.ready_to_submit} onClick={() => start(rsoApi.portalSubmit)}
+            title={rso?.ready_to_submit ? undefined : "Finish the checklist first"}>
+            {running && portal.kind === "submit" ? "Submitting…" : app ? "Resubmit through the portal" : "Submit through the portal"}
+          </button>
+        )}
+        {app && <button type="button" className={btn} disabled={running} onClick={() => start(rsoApi.portalSync)}>{running && portal.kind === "sync" ? "Checking…" : "Check status now"}</button>}
+        <a className={btn} href={portal.base_url} target="_blank" rel="noopener noreferrer">Open simulated EngageSC ↗</a>
+        {app && <a className={btn} href={portal.admin_url} target="_blank" rel="noopener noreferrer">Simulated Campus Activities review ↗</a>}
+      </div>
+      {!rso?.ready_to_submit && !app && <p className="mt-2 mb-0 text-[13px] text-late">Not ready yet: {rso?.submit_blockers.join("; ") || "the application window is closed"}</p>}
+      {(error || portal.error) && <p role="alert" className="mt-2 mb-0 text-[13px] text-late">{error || portal.error}</p>}
+      {portal.lines.length > 0 && (
+        <pre className="mt-2.5 max-h-56 overflow-auto whitespace-pre-wrap rounded-lg bg-paper p-2.5 text-xs" aria-live="polite">{portal.lines.join("\n")}</pre>
+      )}
+    </div>
+  );
+}
+
 /** Assistant card: {type: "rso_email", target}. */
 export function RsoEmailCard({ target }: { target: string }) {
   const [draft, setDraft] = useState<{ to: string; subject: string; mailto: string; ready: boolean } | null>(null);
@@ -298,6 +366,7 @@ export function RsoPanel({ onAsk }: { onAsk: (message: string) => void }) {
             <p className={sectionTitle}>Advisor requirements (due Dec 1)</p>
             <Advisor rso={rso} act={act} />
           </div>
+          <RsoPortalCard />
           <RsoStatusCard />
         </>
       )}
