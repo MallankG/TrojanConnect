@@ -132,7 +132,7 @@ export async function api<T>(path: string, init?: { method?: string; json?: unkn
 | `GET /activity?limit=50` | `[{at, msg}]`, newest first | Activity feed |
 | `GET /run/{form_id}` | `{running, lines}` | Live log of a pre-fill |
 | `GET /agent` | `{configured, model, tools}` | Whether to enable the chat box |
-| `GET /state` | Raw `{profile, progress, log}` | Debugging; the reference UI uses it |
+| `GET /state` | Raw `{profile, progress, recognition, log}` | Debugging; the reference UI uses it |
 
 ### Write (user actions)
 
@@ -143,7 +143,13 @@ export async function api<T>(path: string, init?: { method?: string; json?: unkn
 | `PUT /progress` | `{"step", "dataKey", "dataValue"}` | Records a reply detail, e.g. the reservation number |
 | `POST /run/{form_id}` | none | Opens Chrome and pre-fills the form. `form_id` is `tcc`, `outdoor`, `classroom`, `eeRoom` or `permit` |
 | `POST /agent/chat` | `{"message", "history"}` | One assistant turn (section 6) |
-| `POST /reset` | none | Erases the event. Ask the user to confirm first |
+| `POST /reset` | none | Erases the event (RSO recognition progress is kept). Ask the user to confirm first |
+| `PUT /recognition/setup` | `{"pathway", "engageGroupUrl", "additionalMemberCount", "acceptedPositionCount"}`, any subset | RSO recognition: pathway, EngageSC group page, roster counts |
+| `PUT /recognition/progress` | `{"check", "value"}` | RSO recognition: ticks a checklist item |
+| `PUT /recognition/officer-progress` | `{"role", "requirement", "value"}` | RSO recognition: one officer's requirement |
+| `PUT /recognition/status` | `{"status"}` | RSO recognition: the application status the user reports |
+
+The four recognition endpoints belong to the separate RSO recognition checklist, which is saved alongside the event under `recognition` in `GET /state`; its contract is in [docs/event-pipeline-integration.md](docs/event-pipeline-integration.md). The assistant does not read or change it.
 
 After any write, re-fetch `GET /status` (and `GET /profile` if the profile form is on screen). Statuses, blockers and readiness all change together.
 

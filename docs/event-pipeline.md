@@ -1,6 +1,6 @@
 # Event Pipeline
 
-Automates the club event walkthrough (venue → food → permit → funding → EngageSC → accessibility → publicity). A club rep enters the event **once**. The `/pipeline` page then shows where they are in the waterfall, what each step is waiting on, and the deadlines counted back from the event date. Each USC web form is pre-filled in a visible browser window.
+Tracks the club event walkthrough (venue → food → permit → funding → EngageSC → accessibility → publicity) and the separate annual RSO recognition process. A club rep enters the event **once**. The `/pipeline` page shows the event waterfall and a parallel RSO recognition checklist, with each workflow's own progress. Event USC web forms can be pre-filled in a visible browser window.
 
 **Nothing is submitted automatically.** Every pre-filler stops on the final page so a human reviews the form and presses Submit. This is in line with the PRD's non-goals: no live integration claims, no automatic confirmation.
 
@@ -30,9 +30,13 @@ Full reference and a guide to building a UI on these endpoints: [event-planning-
 
 | Method | Path | Purpose |
 |---|---|---|
-| GET | `/api/v1/pipeline/state` | profile, step progress and activity log |
+| GET | `/api/v1/pipeline/state` | profile, event and recognition progress, and activity log |
 | PUT | `/api/v1/pipeline/profile` | merge profile fields |
 | PUT | `/api/v1/pipeline/progress` | `{step, check, value}` or `{step, dataKey, dataValue}` |
+| PUT | `/api/v1/pipeline/recognition/setup` | update application pathway, EngageSC group URL, and roster counts |
+| PUT | `/api/v1/pipeline/recognition/progress` | `{check, value}` for a known recognition checklist item |
+| PUT | `/api/v1/pipeline/recognition/officer-progress` | update a requirement receipt for one of the five officer roles |
+| PUT | `/api/v1/pipeline/recognition/status` | save the user-reported EngageSC application status |
 | POST | `/api/v1/pipeline/run/{tcc\|outdoor\|classroom\|eeRoom\|permit}` | open a browser and pre-fill (the permit returns 409 until a 6-digit reservation # is recorded) |
 | GET | `/api/v1/pipeline/run/{form}` | live log of a pre-fill run |
 | GET | `/api/v1/pipeline/ee-availability` | read the public EEB/PHE calendars for the event date |
@@ -71,6 +75,14 @@ Limits enforced in code:
 Code: `backend/app/agents/` (loop, model interface), `backend/app/tools/event_plan.py` (tools), `backend/app/integrations/gemini/` (provider), `backend/app/workflows/event_pipeline/plan.py` (status logic), `frontend/src/components/pipeline/AssistantPanel.tsx`. Tests: `cd backend && .venv/bin/python -m pytest`.
 
 `plan.py` mirrors `frontend/src/lib/pipeline/{fields,plan}.ts`. Until the frontend reads status from the API, a change to steps, forms or fields must be made in both.
+
+## RSO recognition workflow
+
+The **RSO recognition** tab is a parallel checklist. It has pathway selection, live deadline countdowns, a "Next up" action, roster counts, and a per-officer document matrix with copyable reminders. It also has a separate advisor lane with a copyable instruction packet, an EngageSC portal handoff, and a manually reported application status. That status also shows on the event pipeline's EngageSC event step. It does not submit materials or read portal status. Sign-in, document upload, and application submission stay in EngageSC. The app does not collect USC passwords or certificates.
+
+The checklist reflects the 2026–27 cycle published on USC's [live recognition page](https://campusactivities.usc.edu/programs/recognized-student-organizations/rso-recognition-process/): application deadline November 22 at 11:59 PM and separate advisor deadline December 1. This is cycle-specific guidance, not a live deadline feed. Verify current requirements with USC.
+
+The full UI/data contract, manual handoff boundary, authorized-integration prerequisites, and verification plan are in [event-pipeline-integration.md](event-pipeline-integration.md).
 
 ## How each step is automated
 

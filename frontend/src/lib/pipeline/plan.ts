@@ -155,7 +155,38 @@ export function buildSteps(profile: Profile): StepDef[] {
 }
 
 export interface StepProgress { checks: Record<string, boolean>; data: Record<string, string> }
-export interface PipelineState { profile: Profile; progress: Partial<Record<StepId, StepProgress>>; log: { at: string; msg: string }[] }
+export type RecognitionPathway =
+  | "undecided"
+  | "new"
+  | "reestablishing"
+  | "fall_application"
+  | "religious_spiritual"
+  | "fraternity_sorority";
+export type RecognitionApplicationStatus =
+  | "not_started"
+  | "draft"
+  | "pending_approval"
+  | "requires_modifications"
+  | "denied"
+  | "recognized";
+export type RecognitionOfficer = "president" | "vicePresident" | "secretary" | "treasurer" | "programmingChair";
+export type RecognitionRequirement = "commitment" | "hazingTraining" | "learningPath";
+export interface RecognitionProgress {
+  cycle: string;
+  pathway: RecognitionPathway;
+  engageGroupUrl: string;
+  additionalMemberCount: number;
+  acceptedPositionCount: number;
+  applicationStatus: RecognitionApplicationStatus;
+  checks: Record<string, boolean>;
+  officers: Record<RecognitionOfficer, Record<RecognitionRequirement, boolean>>;
+}
+export interface PipelineState {
+  profile: Profile;
+  progress: Partial<Record<StepId, StepProgress>>;
+  recognition?: RecognitionProgress;
+  log: { at: string; msg: string }[];
+}
 
 export interface DerivedStep extends StepDef {
   checks: Record<string, boolean>;
