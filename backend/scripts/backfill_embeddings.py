@@ -57,6 +57,8 @@ async def _embed_batch(embedder: Any, texts: list[str], attempts: int = 8) -> li
         except Exception as e:  # show which quota was hit (per minute or per day)
             detail = re.sub(r"\s+", " ", str(e))
             print("  quota:", detail[detail.find("Quota exceeded"):][:300] if "Quota exceeded" in detail else detail[:200], flush=True)
+            if "per day" in detail:  # waiting won't help until the daily reset (midnight Pacific)
+                raise RuntimeError("Daily embedding quota used up; resume tomorrow or with another key.") from e
         else:
             if getattr(embedder, "is_fallback", False):
                 raise RuntimeError("Embedding provider fell back; refusing to store fallback vectors.")
@@ -116,7 +118,11 @@ async def main() -> int:
     done = 0
     for start in range(0, len(todo), BATCH):
         batch = todo[start:start + BATCH]
-        vectors = await _embed_batch(embedder, [club_text(c) for c in batch])
+        try:
+            vectors = await _embed_batch(embedder, [club_text(c) for c in batch])
+        except RuntimeError:
+            print(f"stopped: clubs {args.start + 1}-{args.start + done} stored; resume with --start {args.start + done}", flush=True)
+            raise
         for club, vector in zip(batch, vectors):
             client.table("club_profiles").update({"embedding": [float(x) for x in vector]}) \
                   .eq("organization_id", club.organization_id).execute()
