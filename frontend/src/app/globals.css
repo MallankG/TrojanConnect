@@ -159,8 +159,20 @@ html.lenis body {
   animation: route-bounce 2.4s ease-in-out infinite;
 }
 
+/* Side panel on desktop, bottom sheet on phones. */
+@keyframes sheet-in {
+  from {
+    opacity: 0;
+    transform: translateY(24px);
+  }
+}
+.sheet-in {
+  animation: sheet-in 0.3s var(--ease-out-quint) both;
+}
+
 @media (prefers-reduced-motion: reduce) {
   .msg-in,
+  .sheet-in,
   .route-dot,
   .caret,
   .skeleton {

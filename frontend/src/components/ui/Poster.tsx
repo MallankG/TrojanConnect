@@ -59,8 +59,8 @@ export function Poster({ seed, name, className = "" }: Props) {
       viewBox="0 0 100 100"
       role="img"
       aria-label={`Poster for ${name}`}
-      className={`block aspect-square rounded-xl ${className}`}
-      preserveAspectRatio="xMidYMid slice"
+      className={`block rounded-xl ${className}`}
+      preserveAspectRatio="xMinYMax slice"
     >
       <rect width="100" height="100" fill={palette.bg} />
       {layout === 0 && <circle cx="74" cy="26" r="34" fill={palette.shape} />}

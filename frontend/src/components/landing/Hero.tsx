@@ -55,10 +55,9 @@ export function Hero({ entered, reduced, onEnter }: Props) {
           {SENTENCE.slice(0, count)}
           {!done && <span className="caret" />}
           {/* The untyped remainder holds its space so nothing below jumps. */}
-          <span
-            data-rest={SENTENCE.slice(count)}
-            className="after:invisible after:content-[attr(data-rest)]"
-          />
+          <span className="invisible" aria-hidden="true">
+            {SENTENCE.slice(count)}
+          </span>
         </p>
 
         <div className="mt-10 min-h-24">

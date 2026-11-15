@@ -197,6 +197,10 @@ export type StudentPrefs = {
   goals: string;
   personalization: boolean;
   savedClubIds: string[];
+  /** Asked to be told when alumni mentorship opens. */
+  alumniInterest?: boolean;
+  /** Opted in to booking updates on WhatsApp (PRD 8.5: explicit opt-in). */
+  whatsappOptIn?: boolean;
 };
 
 export type Recommendation = {
