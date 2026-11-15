@@ -12,6 +12,7 @@
 import { useEffect, useState, useSyncExternalStore } from "react";
 import type { CampusEvent, Club, Conversation, Result } from "./types";
 import { currentUser, getDb, mutate, uid } from "./mock/store";
+import { isStream, readStream } from "./sse";
 
 const API = process.env.NEXT_PUBLIC_API_URL ?? process.env.NEXT_PUBLIC_API_BASE_URL ?? "http://localhost:8000";
 
@@ -118,8 +119,8 @@ export function demoUserHeader(): Record<string, string> {
   return user ? { "X-Demo-User": DEMO_BACKEND_USER[user.id] ?? user.id } : {};
 }
 
-async function call<T>(path: string, init?: { method?: string; json?: unknown }): Promise<T> {
-  const res = await fetch(`${API}/api/v1${path}`, {
+function request(path: string, init?: { method?: string; json?: unknown }) {
+  return fetch(`${API}/api/v1${path}`, {
     method: init?.method ?? "GET",
     headers: {
       "content-type": "application/json",
@@ -129,12 +130,49 @@ async function call<T>(path: string, init?: { method?: string; json?: unknown })
     body: init?.json === undefined ? undefined : JSON.stringify(init.json),
     cache: "no-store",
   });
-  const body = await res.json().catch(() => ({}));
+}
+
+/** The envelope's data, or an Error carrying the backend's message. */
+function unwrap<T>(res: Response, body: { ok?: boolean; data?: unknown; error?: unknown; detail?: unknown } | null): T {
   if (!res.ok || body?.ok === false) {
-    const err = body?.error ?? body?.detail;
+    const err = (body?.error ?? body?.detail) as string | { message?: string } | undefined;
     throw new Error(typeof err === "string" ? err : err?.message ?? `The club service answered ${res.status}.`);
   }
   return (body?.data ?? body) as T;
+}
+
+async function call<T>(path: string, init?: { method?: string; json?: unknown }): Promise<T> {
+  const res = await request(path, init);
+  return unwrap<T>(res, await res.json().catch(() => ({})));
+}
+
+/** POST to a `/stream` endpoint: `onText` sees the reply as it arrives; resolves with the normal response. */
+async function streamCall<T>(path: string, json: unknown, onText: (soFar: string) => void): Promise<T> {
+  const res = await request(path, { method: "POST", json });
+  if (!isStream(res)) return unwrap<T>(res, await res.json().catch(() => ({})));
+  return unwrap<T>(res, await readStream(res, onText));
+}
+
+/** Shows a reply while it streams in, as an agent message that the finished turn then replaces. */
+function streamingMessage(conversationId: string, agentName: string) {
+  const id = uid("m");
+  return {
+    show(text: string) {
+      edit(conversationId, (c) => {
+        let m = c.messages.find((x) => x.id === id);
+        if (!m) {
+          c.activity = null;
+          m = { id, at: new Date().toISOString(), sender: "agent", name: agentName, text: "" };
+          c.messages.push(m);
+        }
+        m.text = text;
+      });
+    },
+    remove() {
+      if (getDb().conversations.some((c) => c.messages.some((m) => m.id === id)))
+        edit(conversationId, (c) => (c.messages = c.messages.filter((m) => m.id !== id)));
+    },
+  };
 }
 
 const message = (e: unknown) =>
@@ -279,8 +317,15 @@ export const live = {
         remoteId = started.conversation.id;
         edit(conversationId, (c) => (c.remoteId = remoteId));
       }
-      const turn = await call<AgentTurn>(`/conversations/${remoteId}/messages`, { method: "POST", json: { content: text } });
-      postTurn(conversationId, local.agentName, turn);
+      const streaming = streamingMessage(conversationId, local.agentName);
+      try {
+        const turn = await streamCall<AgentTurn>(`/conversations/${remoteId}/messages/stream`, { content: text }, streaming.show);
+        streaming.remove();
+        postTurn(conversationId, local.agentName, turn);
+      } catch (e) {
+        streaming.remove();
+        throw e;
+      }
       return { ok: true, data: null };
     } catch (e) {
       edit(conversationId, (c) => (c.activity = null));
@@ -412,8 +457,15 @@ export const campus = {
       c.messages.push({ id: uid("m"), at: new Date().toISOString(), sender: "user", text });
       c.activity = `Searching ${scope}'s approved sources`;
     });
-    const r = await write<AskResult>("/government/ask", "POST", { scope, question: text });
     const local = getDb().conversations.find((c) => c.id === conversationId);
+    const streaming = streamingMessage(conversationId, local?.agentName ?? scope);
+    let r: Result<AskResult>;
+    try {
+      r = { ok: true, data: await streamCall<AskResult>("/government/ask/stream", { scope, question: text }, streaming.show) };
+    } catch (e) {
+      r = failure(e);
+    }
+    streaming.remove();
     if (!r.ok) {
       edit(conversationId, (c) => (c.activity = null));
       return r;

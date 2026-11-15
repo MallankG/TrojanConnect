@@ -1,6 +1,7 @@
 // Thin client for the FastAPI backend. Base URL is configurable for deploys.
 import type { BookingKind, PipelineState, StepId } from "./pipeline/plan";
 import { demoUserHeader } from "./api/live";
+import { isStream, readStream } from "./api/sse";
 
 const API = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:8000";
 
@@ -114,6 +115,17 @@ export const pipelineApi = {
   agentInfo: () => call<AgentInfo>("/api/v1/pipeline/agent"),
   agentChat: (message: string, history: { role: "user" | "assistant"; text: string }[]) =>
     call<AgentReply>("/api/v1/pipeline/agent/chat", { method: "POST", json: { message, history } }),
+  /** Same turn, streamed: `onText` sees the reply as it arrives; resolves with the full reply and cards. */
+  async agentChatStream(message: string, history: { role: "user" | "assistant"; text: string }[], onText: (soFar: string) => void): Promise<AgentReply> {
+    const res = await fetch(`${API}/api/v1/pipeline/agent/chat/stream`, {
+      method: "POST",
+      headers: { "content-type": "application/json", "X-TrojanConnect-Client": "web", ...demoUserHeader() },
+      body: JSON.stringify({ message, history }),
+      cache: "no-store",
+    });
+    if (isStream(res)) return readStream<AgentReply>(res, onText);
+    return call<AgentReply>("/api/v1/pipeline/agent/chat", { method: "POST", json: { message, history } });
+  },
 };
 
 // ---- RSO recognition (/api/v1/rso) -----------------------------------------------------------

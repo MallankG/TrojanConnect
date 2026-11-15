@@ -198,7 +198,7 @@ server-side in `backend/app/security/demo_roles.py`. The backend also accepts Su
 
 ## Deploy on Replit
 
-The repo includes `.replit` and `scripts/replit.sh`. It's published at https://trojan-connect.replit.app (Autoscale, max 1 machine). Replit exposes one port,
+The repo includes `.replit` and `scripts/replit.sh`. It's published at https://trojan-connect.replit.app (Reserved VM). Replit exposes one port,
 served by Next.js, which forwards `/api/*` and `/mock-engagesc/*` to FastAPI on the same machine.
 **[REPLIT.md](REPLIT.md)** lists every secret to add (with dummy Slack values) and how to fix Replit's Git
 panel after the first import. It also covers what to check once the app is live.

@@ -4,9 +4,9 @@ modules = ["nodejs-20", "python-3.12"]
 run = "bash scripts/replit.sh dev"
 
 [deployment]
-# Autoscale with max machines = 1 (set in the Publish settings): the planning assistant, RSO tracker,
-# Slack previews and delivery dedupe keep state in one process and its disk; several copies would split it.
-deploymentTarget = "autoscale"
+# Reserved VM: the planning assistant, RSO tracker, Slack previews and delivery dedupe keep state in
+# one process and its disk; several autoscaled copies would split it.
+deploymentTarget = "vm"
 build = ["bash", "scripts/replit.sh", "build"]
 run = ["bash", "scripts/replit.sh", "start"]
 
