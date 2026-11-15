@@ -194,8 +194,7 @@ booking go from request to confirmed.
 Tests: `cd backend && .venv/bin/python -m pytest -q`; `cd frontend && npx tsc --noEmit && npm run lint`.
 
 Sign-in uses demo identities (`X-Demo-User`, enabled with `ALLOW_DEMO_AUTH`). Their roles are defined
-server-side in `backend/app/security/demo_roles.py`. Supabase Auth sign-in is supported by the backend
-but not wired into the UI.
+server-side in `backend/app/security/demo_roles.py`. The backend also accepts Supabase Auth tokens.
 
 ## Deploy on Replit
 
@@ -231,16 +230,6 @@ The table in "What it does" comes from a script that runs these steps against th
 
 Human think-time is not included in the 4.5 s. It measures the system's part of a chain that today runs
 over email.
-
-## Not built
-
-- Alumni (P2).
-- Streaming replies.
-- Realtime push: screens poll every 8–30 seconds.
-- Supabase Auth sign-in in the UI.
-- A real USC venue-system integration (the adapter is a stub by design).
-- Submitting to the real EngageSC: that needs USC's authorization. The portal agent only drives the
-  simulated portal (`PortalAdapter` is the seam).
 
 ## Docs
 
