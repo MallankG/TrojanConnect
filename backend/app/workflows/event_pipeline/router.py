@@ -15,7 +15,7 @@ from typing import Any, Literal
 from fastapi import APIRouter, Depends, HTTPException, Query
 from pydantic import BaseModel, ConfigDict, Field
 
-from app.agents import event_agent, rules_agent
+from app.agents import event_agent, rso_agent, rules_agent
 from app.agents.model import ModelError
 from app.integrations.gemini import provider as gemini
 from app.security.client import require_client_header
@@ -169,6 +169,8 @@ def agent_info() -> dict[str, Any]:
 def agent_chat(req: ChatRequest, provider: gemini.GeminiProvider | None = Depends(get_model_provider)) -> dict[str, Any]:
     """One chat turn. Gemini when configured; otherwise, or if Gemini fails, the rule-based agent. Both act only through validated tools."""
     history = [m.model_dump() for m in req.history]
+    if rso_agent.handles(req.message):  # RSO recognition goes to the RSO agent in either assistant mode
+        return {**rso_agent.run_turn(req.message, history), "state": store.load()}
     if provider is None:
         return rules_agent.run_turn(req.message, history)
     try:

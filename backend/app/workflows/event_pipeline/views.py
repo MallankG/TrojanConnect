@@ -121,9 +121,18 @@ def status_view(state: dict[str, Any], today: date | None = None) -> dict[str, A
         "steps_done": d["complete"], "steps_total": d["total"], "percent_done": round(100 * d["complete"] / d["total"]),
         "do_now": by_status("ready", "active"), "waiting_on_reply": by_status("waiting"),
         "late": [s["id"] for s in steps if s["late"]],
+        "rso": _rso_summary(),
         "missing_field_count": len({m["key"] for s in steps if not s["done"] and not s["skipped"] for m in s["missing_fields"]}),
         "steps": steps,
     }
+
+
+def _rso_summary() -> dict[str, Any] | None:
+    try:
+        from app.workflows.rso.service import summary_for_pipeline
+        return summary_for_pipeline()
+    except Exception:  # the RSO tracker is optional for the event plan
+        return None
 
 
 def profile_view(state: dict[str, Any]) -> dict[str, Any]:

@@ -76,6 +76,10 @@ def create_app() -> FastAPI:
 
     app.include_router(event_pipeline_router)
     app.include_router(booking_router)
+    # RSO recognition (/api/v1/rso): the RSO agent for new and renewing organizations, handing off to EngageSC.
+    from app.workflows.rso.router import router as rso_router
+
+    app.include_router(rso_router)
     # =============================================================================
 
     return app

@@ -377,9 +377,13 @@ def respond(ctx: tools.ToolContext, message: str, today: date | None) -> str:
         return "This email needs a few details first. Fill them in below and press Continue."
 
     if "engage" in t:
-        _suggest(ctx, today)
+        from app.workflows.rso.service import summary_for_pipeline
+        rso = summary_for_pipeline()
+        _suggest(ctx, today, [] if rso["recognized"] else [("RSO recognition", "What's next for our RSO?")])
+        note = ("" if rso["recognized"] else f"\nYour RSO recognition is: {rso['status_label']}. Only recognized RSOs can create EngageSC events, "
+                "so finish recognition first.")
         return ("EngageSC needs a USC login, so it stays manual: create the event on engage.usc.edu, enter your permit code, sign and submit for "
-                "approval. Then tick the EngageSC checklist on the Pipeline tab.")
+                "approval. Then tick the EngageSC checklist on the Pipeline tab." + note)
 
     if "permit" in t and not _has(t, "status", "where", "blocking", "blocked"):
         return _prepare(ctx, "event_permit", today)
