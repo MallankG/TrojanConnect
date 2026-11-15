@@ -57,6 +57,34 @@ class ProgressUpdate(BaseModel):
     dataValue: str | None = None
 
 
+class RecognitionProgressUpdate(BaseModel):
+    check: str
+    value: bool
+
+
+RECOGNITION_CHECKS = {
+    "eligibility",
+    "access",
+    "group-details",
+    "roster",
+    "position-acceptance",
+    "constitution",
+    "accountability",
+    "organization-details",
+    "officer-commitments",
+    "officer-hazing-training",
+    "officer-learning-path",
+    "advisor-eligibility",
+    "advisor-position",
+    "advisor-training",
+    "advisor-commitment",
+    "clery-training",
+    "application",
+    "submitted",
+    "follow-up",
+}
+
+
 def _node() -> str:
     node = shutil.which("node")
     if not node:
@@ -89,6 +117,19 @@ def put_progress(u: ProgressUpdate) -> dict[str, Any]:
         if u.dataKey:
             p["data"][u.dataKey] = (u.dataValue or "").strip()
             store.add_log(s, f"{u.step}: {u.dataKey} = {u.dataValue}")
+
+    return store.update(apply)
+
+
+@router.put("/recognition/progress")
+def put_recognition_progress(u: RecognitionProgressUpdate) -> dict[str, Any]:
+    if u.check not in RECOGNITION_CHECKS:
+        raise HTTPException(400, f"Unknown recognition check '{u.check}'")
+
+    def apply(s: dict[str, Any]) -> None:
+        recognition = s.setdefault("recognition", {"checks": {}})
+        recognition.setdefault("checks", {})[u.check] = u.value
+        store.add_log(s, f"recognition: {'✓' if u.value else '✗'} {u.check}")
 
     return store.update(apply)
 

@@ -3,7 +3,7 @@ import { PipelineApp } from "@/components/pipeline/PipelineApp";
 
 export const metadata: Metadata = {
   title: "Event Pipeline · TrojanConnect",
-  description: "Track every step of planning a club event, from venue to publicity, with forms pre-filled from one event profile.",
+  description: "Track club event planning and the annual USC RSO recognition process in one workflow.",
 };
 
 export default function PipelinePage() {

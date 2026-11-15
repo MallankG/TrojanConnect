@@ -24,6 +24,7 @@ export const pipelineApi = {
   updateProfile: (patch: Record<string, unknown>) => call<PipelineState>("/api/v1/pipeline/profile", { method: "PUT", json: patch }),
   setCheck: (step: StepId, check: string, value: boolean) => call<PipelineState>("/api/v1/pipeline/progress", { method: "PUT", json: { step, check, value } }),
   setData: (step: StepId, dataKey: string, dataValue: string) => call<PipelineState>("/api/v1/pipeline/progress", { method: "PUT", json: { step, dataKey, dataValue } }),
+  setRecognitionCheck: (check: string, value: boolean) => call<PipelineState>("/api/v1/pipeline/recognition/progress", { method: "PUT", json: { check, value } }),
   startRun: (form: RunnableForm) => call<{ ok: boolean }>(`/api/v1/pipeline/run/${form}`, { method: "POST" }),
   runStatus: (form: RunnableForm) => call<RunStatus>(`/api/v1/pipeline/run/${form}`),
   eeAvailability: () => call<RoomAvailability[]>("/api/v1/pipeline/ee-availability"),

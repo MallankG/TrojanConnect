@@ -6,12 +6,13 @@ import { VENUE_KINDS, to12h } from "@/lib/pipeline/fields";
 import { deriveState, type PipelineState, type StepId } from "@/lib/pipeline/plan";
 import { FieldMatrix } from "./FieldMatrix";
 import { ProfileForm } from "./ProfileForm";
+import { RecognitionWorkflow } from "./RecognitionWorkflow";
 import { StepDetail } from "./StepDetail";
 import { StepList } from "./StepList";
 import { Pill, fmtDate } from "./ui";
 
-type Tab = "pipeline" | "profile" | "fields" | "log";
-const TABS: [Tab, string][] = [["pipeline", "Pipeline"], ["profile", "Event profile"], ["fields", "Field map"], ["log", "Activity"]];
+type Tab = "pipeline" | "recognition" | "profile" | "fields" | "log";
+const TABS: [Tab, string][] = [["pipeline", "Event pipeline"], ["recognition", "RSO recognition"], ["profile", "Event profile"], ["fields", "Field map"], ["log", "Activity"]];
 
 export function PipelineApp() {
   const [state, setState] = useState<PipelineState | null>(null);
@@ -42,6 +43,11 @@ export function PipelineApp() {
 
   const saveProfile = async (patch: Record<string, unknown>) => {
     try { setState(await pipelineApi.updateProfile(patch)); } catch (e) { setError((e as Error).message); }
+  };
+
+  const saveRecognitionCheck = async (check: string, value: boolean) => {
+    try { setState(await pipelineApi.setRecognitionCheck(check, value)); setError(null); }
+    catch (e) { setError((e as Error).message); }
   };
 
   const jumpToField = (key: string) => {
@@ -136,6 +142,9 @@ export function PipelineApp() {
             <StepList d={d} selected={sel.id} onSelect={setSelected} />
             <StepDetail key={sel.id} d={d} step={sel} profile={P} onState={setState} onJumpToField={jumpToField} />
           </div>
+        )}
+        {tab === "recognition" && (
+          <RecognitionWorkflow checks={state.recognition?.checks ?? {}} onCheck={saveRecognitionCheck} />
         )}
         {tab === "profile" && <ProfileForm profile={P} onSave={saveProfile} />}
         {tab === "fields" && <FieldMatrix profile={P} />}

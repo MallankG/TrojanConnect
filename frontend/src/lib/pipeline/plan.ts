@@ -155,7 +155,12 @@ export function buildSteps(profile: Profile): StepDef[] {
 }
 
 export interface StepProgress { checks: Record<string, boolean>; data: Record<string, string> }
-export interface PipelineState { profile: Profile; progress: Partial<Record<StepId, StepProgress>>; log: { at: string; msg: string }[] }
+export interface PipelineState {
+  profile: Profile;
+  progress: Partial<Record<StepId, StepProgress>>;
+  recognition?: { checks: Record<string, boolean> };
+  log: { at: string; msg: string }[];
+}
 
 export interface DerivedStep extends StepDef {
   checks: Record<string, boolean>;

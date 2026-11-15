@@ -14,4 +14,4 @@ Open http://localhost:3000/pipeline to track a club event from venue to publicit
 ```bash
 cd backend/app/integrations/usc_forms && npm run setup
 ```
-See [docs/event-pipeline.md](docs/event-pipeline.md).
+The same page includes a separate, saved checklist for the annual USC RSO recognition process. See [docs/event-pipeline.md](docs/event-pipeline.md).

@@ -1,8 +1,9 @@
 """Persistence for the event pipeline.
 
 Hackathon storage: a single JSON document at backend/data/event_pipeline.json. The shape
-({profile, progress, log}) maps directly onto future Supabase tables (event_profiles,
-event_step_progress, audit_log) — swap this module when the database lands.
+({profile, progress, recognition, log}) maps directly onto future Supabase tables
+(event_profiles, event_step_progress, recognition_progress, audit_log) — swap this module when
+the database lands.
 """
 
 from __future__ import annotations
@@ -31,6 +32,7 @@ EMPTY_STATE: dict[str, Any] = {
         "paymentType": "PO",
     },
     "progress": {},
+    "recognition": {"checks": {}},
     "log": [],
 }
 
@@ -39,9 +41,11 @@ _lock = threading.Lock()
 
 def load() -> dict[str, Any]:
     try:
-        return json.loads(STATE_PATH.read_text())
+        state = json.loads(STATE_PATH.read_text())
     except (FileNotFoundError, json.JSONDecodeError):
         return copy.deepcopy(EMPTY_STATE)
+    state.setdefault("recognition", copy.deepcopy(EMPTY_STATE["recognition"]))
+    return state
 
 
 def save(state: dict[str, Any]) -> None:
@@ -68,5 +72,6 @@ def update(mutator) -> dict[str, Any]:
 def reset() -> dict[str, Any]:
     with _lock:
         state = copy.deepcopy(EMPTY_STATE)
+        state["recognition"] = load().get("recognition", copy.deepcopy(EMPTY_STATE["recognition"]))
         save(state)
         return state
