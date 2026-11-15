@@ -19,6 +19,7 @@ import { Section } from "./club";
 import { ClubDashboard } from "./clubLive";
 import { StudentDashboard } from "./student";
 import { WhatsAppPreview } from "./extras";
+import { Brand } from "@/components/layout/Brand";
 
 // ---- Role picker -----------------------------------------------------------
 
@@ -51,7 +52,7 @@ export function RolePicker() {
   return (
     <div className="min-h-dvh bg-paper">
       <header className="mx-auto flex h-16 max-w-5xl items-center justify-between px-5">
-        <Link href="/" className="text-lg font-semibold tracking-[-0.01em]">TrojanConnect</Link>
+        <Brand />
         <nav className="flex gap-5 text-sm text-gray-70">
           <Link href="/sign-in" className="hover:text-ink">Sign in</Link>
           <Link href="/" className="hover:text-ink">Back to the story</Link>

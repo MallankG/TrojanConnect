@@ -222,7 +222,7 @@ export function Start() {
       </section>
       <footer data-header="dark" className="on-dark bg-ink px-6 py-10 text-gray-30 md:px-14">
         <div className="mx-auto flex max-w-6xl flex-wrap items-start justify-between gap-6 text-sm leading-relaxed">
-          <p className="text-base font-semibold text-paper">TrojanConnect</p>
+          <p className="text-base font-semibold text-paper">Trojan Connect</p>
           <p className="max-w-2xl">
             A hackathon project built by USC students. It is not affiliated with or endorsed by the
             University of Southern California. Venues, availability and approvals in this demo are

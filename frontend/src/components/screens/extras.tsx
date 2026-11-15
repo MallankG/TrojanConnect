@@ -16,6 +16,7 @@ import { Poster } from "@/components/ui/Poster";
 import { Avatar, Button, EmptyState, ListSkeleton, PageHeader, SimulatedTag, buttonClass, useToast } from "@/components/ui/kit";
 import { Section } from "./club";
 import { EventList, InterestSheet } from "./student";
+import { Brand } from "@/components/layout/Brand";
 
 // ---- Event page ------------------------------------------------------------
 
@@ -161,7 +162,7 @@ export function AlumniPreview() {
     <Page>
       <PageHeader
         title="Alumni mentorship"
-        lead="Opt-in conversations between students and alumni. This part of TrojanConnect is planned and not built yet."
+        lead="Opt-in conversations between students and alumni. This part of Trojan Connect is planned and not built yet."
       />
       <p className="mt-5 flex items-start gap-2.5 rounded-2xl border border-line px-4 py-3 text-[15px]">
         <span aria-hidden className="mt-1.5 size-2 shrink-0 rounded-full bg-mark-orange" />
@@ -217,7 +218,7 @@ export function SignIn() {
   return (
     <div className="grid min-h-dvh bg-paper md:grid-cols-2">
       <div className="on-cardinal hidden flex-col justify-between bg-cardinal p-10 text-gold md:flex">
-        <Link href="/" className="text-lg font-semibold">TrojanConnect</Link>
+        <Link href="/" className="text-lg font-semibold">Trojan Connect</Link>
         <p className="max-w-[12ch] text-[clamp(2.5rem,5vw,4.5rem)] font-bold leading-[0.92] tracking-[-0.035em]" style={{ fontVariationSettings: '"wdth" 82' }}>
           Agents prepare. People decide.
         </p>
@@ -227,7 +228,7 @@ export function SignIn() {
       </div>
       <main className="flex min-w-0 flex-col justify-center px-6 py-14 md:px-14">
         <div className="mx-auto w-full max-w-md">
-          <Link href="/" className="text-lg font-semibold md:hidden">TrojanConnect</Link>
+          <Brand className="md:hidden" />
           <h1 className="mt-6 text-4xl font-semibold tracking-[-0.025em] md:mt-0">Sign in</h1>
           <p className="mt-2 text-[15px] text-gray-70">
             Sign-in with a USC account arrives with the backend. Until then, continue as one of
@@ -331,7 +332,7 @@ export function WhatsAppPreview({ conversation }: { conversation: Conversation }
           <div className="flex items-center gap-2.5 bg-paper px-4 py-3">
             <span aria-hidden className="grid size-9 place-items-center rounded-full bg-cardinal text-sm font-bold text-gold">T</span>
             <div>
-              <p className="text-[15px] font-semibold leading-tight">TrojanConnect</p>
+              <p className="text-[15px] font-semibold leading-tight">Trojan Connect</p>
               <p className="text-xs text-gray-70">{conversation.agentName} · business account</p>
             </div>
           </div>

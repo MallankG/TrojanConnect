@@ -1,4 +1,4 @@
-# Deploying TrojanConnect on Replit
+# Deploying Trojan Connect on Replit
 
 How Replit runs this repo, which secrets to add, and how to fix Replit's Git panel.
 
