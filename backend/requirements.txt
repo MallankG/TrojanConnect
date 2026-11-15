@@ -10,3 +10,7 @@ pytest
 playwright>=1.47  # RSO portal agent: drives the installed Google Chrome (or `playwright install chromium`)
 python-multipart  # file uploads on the simulated EngageSC portal
 pytest-asyncio
+# Security floors for transitive dependencies (pip-audit): installs that resolved older copies must upgrade.
+certifi>=2026.10.18  # PYSEC-2026-4320 (via httpx, requests)
+httpx2>=2.12.0  # PYSEC-2026-3845..3849 (via google-genai)
+httpcore2>=2.10.0  # PYSEC-2026-3844 (via httpx2)
