@@ -1,8 +1,10 @@
-"""Tools the event agent may call: one per feature in docs/event-pipeline.md.
+"""Tools the event agent (the Club Agent) may call: one per feature in docs/event-pipeline.md.
 
 What holds no matter what the model asks for:
-- Nothing is submitted automatically. `start_prefill` opens a visible browser and the filler stops
-  on the final page; a human reviews and presses Submit. `draft_email` opens a draft, never sends.
+- Nothing reaches a USC system. Venue bookings and the event permit go through the booking workflow
+  (app/workflows/booking): the agent can prepare a draft and ask the Venue Scheduling Agent for
+  alternatives, but submitting, accepting a proposal and cancelling are buttons the user presses, and
+  only an authorized human reviewer can approve. `draft_email` opens a draft, never sends.
 - Clearing the event is a button the user presses, not something the model can do.
 - The USC ID never passes through the model, in either direction.
 
@@ -11,14 +13,19 @@ Each tool returns the standard result `{ok, data, error}`.
 
 from __future__ import annotations
 
+import uuid
 from dataclasses import dataclass, field
 from datetime import date
 from typing import Any, Callable
 
-from app.workflows.event_pipeline import plan, runs, store, views
-from app.workflows.event_pipeline.availability import PipelineError, read_ee_availability
+from app.workflows.booking import inventory, negotiation, policy
+from app.workflows.booking import service as booking
+from app.workflows.booking import store as booking_store
+from app.workflows.event_pipeline import plan, store, views
 
 PRIVATE_FIELDS = views.PRIVATE_FIELDS  # never sent to or accepted from the model
+CLUB_AGENT = ("club_agent:assistant", "club_agent")
+KINDS = list(booking.KIND_LABEL)
 
 
 @dataclass
@@ -49,9 +56,35 @@ def fail(code: str, message: str, **extra: Any) -> dict[str, Any]:
     return {"ok": False, "data": extra or None, "error": {"code": code, "message": message}}
 
 
-def _form_action(ctx: ToolContext, form_id: str, profile: plan.Profile, running: bool = False) -> None:
-    ctx.actions[:] = [a for a in ctx.actions if not (a["type"] == "form" and a["formId"] == form_id)]
-    ctx.actions.append({"type": "form", "formId": form_id, "step": views.step_of_form(form_id, profile), "running": running})
+def _form_action(ctx: ToolContext, form_id: str, profile: plan.Profile) -> None:
+    ctx.add_action({"type": "form", "formId": form_id, "step": views.step_of_form(form_id, profile)})
+
+
+def _booking_action(ctx: ToolContext, kind: str) -> None:
+    ctx.add_action({"type": "booking", "kind": kind})
+
+
+def booking_brief(v: dict[str, Any] | None) -> dict[str, Any] | None:
+    """What the model may know about a booking request: no IDs it could misuse, no USC ID (payloads never hold one)."""
+    if not v:
+        return None
+    active = v["active_proposal"]
+    return {
+        "kind": v["kind"], "state": v["state"], "state_label": v["state_label"], "next_action": v["next_action"],
+        "missing_keys": [m["key"] for m in v["missing_fields"]],
+        "authority": (v["authority"] or {}).get("name"),
+        "summary_for_user": v["summary"], "missing_fields": [m["label"] for m in v["missing_fields"]], "blockers": v["blockers"],
+        "policy_warnings": [w["message"] for w in v["warnings"]],
+        "active_proposal": None if not active else {
+            "venue": active["venue_name"], "start": active["time"]["start"], "end": active["time"]["end"], "capacity": active["capacity"],
+            "differences_from_request": active["differences"] or ["exactly as requested"], "expires_at": active["expires_at"]},
+        "rounds_used": f'{v["rounds"]}/{v["max_rounds"]}',
+        "review_status": (v["review"] or {}).get("status"),
+        "confirmation_reference": (v["confirmation"] or {}).get("reference"),
+        "escalation": (v["escalation"] or {}).get("reason"),
+        "recent_agent_messages": [f'{m["type"]} {m["from"].split(":")[0]}: {m["note"]}' for m in v["messages"][-6:]],
+        "availability_source": v["source_label"],
+    }
 
 
 def safe_profile(profile: plan.Profile) -> dict[str, Any]:
@@ -91,6 +124,7 @@ def status_summary(state: dict[str, Any], today: date | None = None) -> dict[str
         "late": [s["id"] for s in d["steps"] if s["late"]],
         "steps": steps,
         "profile": safe_profile(profile),
+        "bookings": {k: booking_brief(booking.latest_view(k)) for k in KINDS},
         "recent_activity": [f'{e["at"][:16]} {e["msg"]}' for e in (state.get("log") or [])[:10]],
     }
 
@@ -136,7 +170,7 @@ def get_form_details(ctx: ToolContext, form_id: str = "") -> dict[str, Any]:
     profile = store.load().get("profile") or {}
     data = {
         "id": form_id, "name": form["name"], "url": form.get("url"),
-        "how": {"prefill": "auto pre-fill in a visible browser; the human reviews and submits",
+        "how": {"agent": "handled by the booking agent workflow (prepare_booking_request); the user confirms and a human reviewer decides",
                 "email": "email draft the human sends", "manual": "manual (needs a USC login)"}[form["auto"]],
         "rules": form["rules"],
         "required_fields": [{"key": k, "label": plan.short_label(k)} for k in form["requires"] if plan.field_applies(profile, k)],
@@ -161,15 +195,80 @@ def check_caterer(ctx: ToolContext, name: str = "") -> dict[str, Any]:
     })
 
 
-def check_room_availability(ctx: ToolContext) -> dict[str, Any]:
+def find_venue_options(profile: plan.Profile, kinds: list[str] | None = None, limit: int = 8) -> dict[str, Any]:
+    """Read-only search of every venue office's simulated inventory for the profile's date, time and attendance.
+
+    Rooms are listed by venue type. Exact-time options come first; shifted ones (within timeFlexMinutes) only
+    when a venue type has nothing at the exact time. Venue types whose rules rule the date out are reported, not offered.
+    """
+    kinds = kinds or list(plan.VENUE_KINDS)
+    options: list[dict[str, Any]] = []
+    excluded: list[str] = []
+    now = booking.utcnow()
+    for kind in kinds:
+        trial = {**profile, "venueKind": kind, "venueChoice1": "", "venueChoice2": "", "acceptAlternate": True}
+        payload, _missing, blockers = booking.build_payload("venue_booking", trial, booking_store.load(), "")
+        if blockers or not payload["requested_time"]["start"] or not payload["event"]["expected_attendance"]:
+            return {"ok": False, "reasons": blockers or ["Need the date, start and end time, and attendance."]}
+        rule = inventory.route(kind)
+        start = negotiation.parse_requested(payload)["start"]
+        issues = policy.request_issues(kind, start.date(), start.time(), now)
+        if issues:
+            excluded.append(f"{plan.VENUE_KINDS[kind].split(' (')[0]}: {' '.join(i.message for i in issues)}")
+            continue
+        club = negotiation.ClubNegotiator(payload, rule["authority_id"])
+        held = booking.holds(booking_store.load())
+        found = []
+        for flex in (0, club.flex):
+            for v in sorted(club.acceptable_venues(), key=lambda v: v.capacity):
+                for sh in negotiation.shifts(flex):
+                    o = negotiation.make_option(payload, v, sh)
+                    if o.key not in {f["key"] for f in found} and not negotiation.option_problems(payload, o, held):
+                        found.append({"key": o.key, "venue": v.name, "venue_id": v.id, "venue_kind": kind,
+                                      "authority": inventory.AUTHORITIES[rule["authority_id"]]["name"], "capacity": v.capacity,
+                                      "features": list(v.features), "start": o.start.strftime("%H:%M"), "end": o.end.strftime("%H:%M"),
+                                      "start_label": negotiation.fmt_time(o.start), "end_label": negotiation.fmt_time(o.end),
+                                      "time": negotiation.describe_shift(sh), "shift": sh})
+            if found:
+                break
+        options += found[:3]  # the best-fitting few per venue type
+    options.sort(key=lambda o: (abs(o["shift"]), o["capacity"]))
+    for o in options:
+        o.pop("key")
+    return {"ok": True, "options": options[:limit], "options_total": len(options), "excluded": excluded,
+            "source": inventory.SOURCE_LABEL, "checked_at": now.isoformat(timespec="seconds")}
+
+
+def check_venue_availability(ctx: ToolContext) -> dict[str, Any]:
+    """Read-only look at what the Venue Scheduling Agent could offer. Creates nothing and holds nothing."""
     profile = store.load().get("profile") or {}
-    if profile.get("venueKind") != "eeb_phe":
-        return fail("not_available", "Availability can only be read for EEB / PHE conference rooms (venue type eeb_phe). "
-                                     "Other venues have no public calendar; the venue office answers after the request.")
-    try:
-        return ok(read_ee_availability(profile))
-    except PipelineError as e:
-        return fail("availability_unavailable", e.message)
+    payload, missing, blockers = booking.build_payload("venue_booking", profile, booking_store.load(), "")
+    needed = {"venueKind", "date", "startTime", "endTime", "attendance"}
+    gaps = [m["label"] for m in missing if m["key"] in needed]
+    if gaps or blockers:
+        return fail("not_ready", "Availability needs the venue type, date, times and attendance.", reasons=gaps + blockers)
+    rule = inventory.route(payload["requested_space"]["venue_kind"])
+    if not rule:
+        return fail("routing_unresolved", "No configured venue authority for this venue type.")
+    club = negotiation.ClubNegotiator(payload, rule["authority_id"])
+    agent = negotiation.VenueSchedulingAgent(rule["authority_id"], payload, booking.holds(booking_store.load()), club)
+    options = []
+    for v in club.acceptable_venues():
+        for sh in negotiation.shifts(club.flex):
+            o = negotiation.make_option(payload, v, sh)
+            if not negotiation.option_problems(payload, o, agent.holds):
+                options.append({"venue": v.name, "capacity": v.capacity, "start": negotiation.fmt_time(o.start), "end": negotiation.fmt_time(o.end),
+                                "time": negotiation.describe_shift(sh), "club_preference_rank": club.rank(o)})
+    options.sort(key=lambda x: x["club_preference_rank"])
+    start = negotiation.parse_requested(payload)["start"]
+    return ok({
+        "source": inventory.SOURCE_LABEL, "inventory_version": inventory.INVENTORY_VERSION, "checked_at": booking.utcnow().isoformat(timespec="seconds"),
+        "authority": inventory.AUTHORITIES[rule["authority_id"]]["name"],
+        "first_choice_in_inventory": club.choice1.name if club.choice1 else None,
+        "options": options[:6], "options_total": len(options),
+        "policy_issues": [i.message for i in policy.request_issues(payload["requested_space"]["venue_kind"], start.date(), start.time(), booking.utcnow())],
+        "note": "Nothing is reserved. To book, call prepare_booking_request; the user confirms and the venue agent negotiates.",
+    })
 
 
 def record_step_progress(ctx: ToolContext, step: str = "", check: str | None = None, done: bool | None = None,
@@ -185,6 +284,9 @@ def record_step_progress(ctx: ToolContext, step: str = "", check: str | None = N
             return fail("unknown_check", f"Valid checks for {step}: {', '.join(k for k, _ in s['substeps'])}")
         if not isinstance(done, bool):
             return fail("invalid_arguments", "`done` must be true or false.")
+    owned = booking.WORKFLOW_OWNED.get(step, {})
+    if (check and check in owned.get("checks", ())) or (data_key and data_key in owned.get("data", ())):
+        return fail("workflow_owned", "Set by the booking workflow when a reviewer decides; it can't be recorded from chat. Call get_booking_status.")
     if data_key:
         if data_key not in {k for k, _ in s["needsData"]}:
             return fail("unknown_data_key", f"Valid data keys for {step}: {', '.join(k for k, _ in s['needsData']) or 'none'}")
@@ -207,26 +309,44 @@ def record_step_progress(ctx: ToolContext, step: str = "", check: str | None = N
                "now_unblocked": [x["id"] for x in d["steps"] if x["status"] == "ready"]})
 
 
-def start_prefill(ctx: ToolContext, form_id: str = "") -> dict[str, Any]:
-    if form_id not in plan.RUNNABLE_FORMS:
-        return fail("not_prefillable", f"Only these forms can be pre-filled: {', '.join(plan.RUNNABLE_FORMS)}")
-    state = store.load()
-    profile = state.get("profile") or {}
-    step, reasons = views.readiness(form_id, state, ctx.today)
-    if step:
-        _form_action(ctx, form_id, profile)
-    if reasons:
-        return fail("not_ready", "The pre-fill can't start yet.", reasons=reasons)
+def prepare_booking_request(ctx: ToolContext, kind: str = "") -> dict[str, Any]:
+    if kind not in KINDS:
+        return fail("invalid_arguments", f"kind is one of: {', '.join(KINDS)}")
     try:
-        runs.start(form_id, started_by="assistant: ")
-    except PipelineError as e:
-        return fail("could_not_start", e.message)
-    _form_action(ctx, form_id, profile, running=True)
-    return ok({
-        "form": plan.FORMS[form_id]["name"], "started": True,
-        "next": "A visible browser window is opening on the user's computer and filling the form; its log shows on the card in the chat. "
-                "It stops on the final page and has NOT been submitted. The user reviews every answer, ticks the attestations and presses Submit.",
-    })
+        v = booking.view(booking.prepare(kind, actor=CLUB_AGENT))
+    except booking.BookingError as e:
+        _booking_action(ctx, kind)
+        return fail(e.code.lower(), e.message, current=booking_brief(booking.latest_view(kind)))
+    _booking_action(ctx, kind)
+    brief = booking_brief(v)
+    if v and v["state"] == "READY_FOR_SUBMISSION":
+        return ok({**(brief or {}), "next": "A card with this summary and a 'Confirm & send' button is shown. Nothing is submitted until the user "
+                                            "presses it. Read the summary to the user and point out any policy warnings."})
+    return fail("needs_information", "The request can't be sent yet.", **(brief or {}))
+
+
+def get_booking_status(ctx: ToolContext, kind: str = "") -> dict[str, Any]:
+    if kind not in KINDS:
+        return fail("invalid_arguments", f"kind is one of: {', '.join(KINDS)}")
+    v = booking.latest_view(kind)
+    if not v:
+        return ok({"kind": kind, "state": None, "next": "No request yet. Call prepare_booking_request when the user wants to start."})
+    _booking_action(ctx, kind)
+    return ok(booking_brief(v))
+
+
+def request_alternatives(ctx: ToolContext, kind: str = "venue_booking", reason: str = "") -> dict[str, Any]:
+    if kind != "venue_booking":
+        return fail("invalid_arguments", "Only venue bookings have alternatives.")
+    v = booking.latest_view(kind)
+    if not v:
+        return fail("no_request", "There is no venue booking request yet.")
+    try:
+        nv = booking.view(booking.request_alternatives(v["id"], str(reason)[:500], f"assistant:{uuid.uuid4()}", actor=CLUB_AGENT))
+    except booking.BookingError as e:
+        return fail(e.code.lower(), e.message)
+    _booking_action(ctx, kind)
+    return ok({**(booking_brief(nv) or {}), "next": "The new proposal (if any) is on the card. Only the user can accept it."})
 
 
 def offer_reset(ctx: ToolContext) -> dict[str, Any]:
@@ -273,10 +393,10 @@ TOOLS: list[Tool] = [
     Tool("check_caterer",
          "Check whether a caterer is in the Event Permit's approved-caterer lookup.",
          {"type": "object", "properties": {"name": {"type": "string"}}, "required": ["name"]}, check_caterer),
-    Tool("check_room_availability",
-         "Read the public EEB / PHE room calendars for the saved event date and time. Only works when venueKind is eeb_phe. "
-         "Unofficial and read-only: report the source and checked_at with the answer.",
-         _NO_ARGS, check_room_availability),
+    Tool("check_venue_availability",
+         "Read-only: which rooms and times the Venue Scheduling Agent could offer for the saved event, from the SIMULATED demo inventory, "
+         "plus any lead-time problems. Reserves nothing. Report the source and checked_at, and say a free slot is not a reservation.",
+         _NO_ARGS, check_venue_availability),
     Tool("record_step_progress",
          "Record something the user says has happened: tick or untick a checklist item (`check` + `done`), or store a reply detail "
          "(`data_key` + `data_value`, e.g. venue reservationNumber, permit permitCode). Only record what the user told you.",
@@ -284,12 +404,21 @@ TOOLS: list[Tool] = [
              "step": {"type": "string", "enum": list(plan.STEP_IDS)}, "check": {"type": "string"}, "done": {"type": "boolean"},
              "data_key": {"type": "string"}, "data_value": {"type": "string"}}, "required": ["step"]},
          record_step_progress),
-    Tool("start_prefill",
-         "Kick off a venue booking request or the event permit: opens a visible browser on the user's computer and pre-fills the USC "
-         "form from the profile. It stops before Submit; the user reviews and submits. Fails with reasons if fields are missing, "
-         "the step is blocked, or (permit) no 6-digit reservation number is recorded. Call it only when the user asks to start the form.",
-         {"type": "object", "properties": {"form_id": {"type": "string", "enum": list(plan.RUNNABLE_FORMS)}}, "required": ["form_id"]},
-         start_prefill),
+    Tool("prepare_booking_request",
+         "Build the venue booking (kind=venue_booking) or event permit (kind=event_permit) request from the profile and show the user a "
+         "card with the summary and a 'Confirm & send' button. It does NOT submit: only the user's click does, after which the Venue "
+         "Scheduling Agent routes it, checks simulated availability and negotiates. Fails with the missing fields or blockers "
+         "(the permit needs a confirmed venue booking).",
+         {"type": "object", "properties": {"kind": {"type": "string", "enum": KINDS}}, "required": ["kind"]}, prepare_booking_request),
+    Tool("get_booking_status",
+         "Current state of the venue booking or permit request: the active proposal and how it differs from the request, the review status, "
+         "the confirmation reference, or why it needs a human. Shows the booking card.",
+         {"type": "object", "properties": {"kind": {"type": "string", "enum": KINDS}}, "required": ["kind"]}, get_booking_status),
+    Tool("request_alternatives",
+         "Ask the Venue Scheduling Agent for a different option than the active proposal. Every constraint the user confirmed still applies. "
+         "Call only when the user asks for another option.",
+         {"type": "object", "properties": {"kind": {"type": "string", "enum": ["venue_booking"]}, "reason": {"type": "string"}},
+          "required": ["kind"]}, request_alternatives),
     Tool("offer_reset",
          "Show the user a button that clears the whole event so a new one can be planned. Use only when they ask to start over.",
          _NO_ARGS, offer_reset),

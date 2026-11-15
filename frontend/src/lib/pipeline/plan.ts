@@ -2,8 +2,17 @@
 // profile fields each form needs. Mapped by visiting every link in the walkthrough (Nov 2026).
 import { fieldApplies, fieldProblem, to12h, VENUE_KINDS, type Profile, type VenueKind } from "./fields";
 
-export type FormMode = "prefill" | "email" | "manual";
-export type RunnableForm = "tcc" | "outdoor" | "classroom" | "eeRoom" | "permit";
+// "agent": submitted through the booking agent workflow (Club Agent <-> Venue Scheduling Agent, human review), never a USC portal.
+export type FormMode = "agent" | "email" | "manual";
+export type BookingKind = "venue_booking" | "event_permit";
+export const AGENT_FORMS: Record<string, BookingKind> = {
+  tcc: "venue_booking", outdoor: "venue_booking", classroom: "venue_booking", eeRoom: "venue_booking", viterbiRoom: "venue_booking", permit: "event_permit",
+};
+/** Progress the booking workflow sets once a reviewer decides; the UI shows it read-only. */
+export const WORKFLOW_OWNED: Partial<Record<StepId, { checks: string[]; data: string[] }>> = {
+  venue: { checks: ["submitted", "confirmed"], data: ["reservationNumber", "venueContactName", "venueContactEmail"] },
+  permit: { checks: ["submitted", "approved"], data: ["permitCode"] },
+};
 
 export interface FormDef {
   name: string;
@@ -18,24 +27,29 @@ const COMMON_EVENT = ["eventName", "description", "date", "startTime", "endTime"
 
 export const FORMS: Record<string, FormDef> = {
   tcc: {
-    name: "TCC Meeting Room Request (Wufoo)", url: "https://scevents.wufoo.com/forms/p11ku1c01p5kpxf/", auto: "prefill",
+    name: "TCC meeting room request", url: "https://scevents.wufoo.com/forms/p11ku1c01p5kpxf/", auto: "agent",
     requires: [...COMMON_CONTACT, "eboardPosition", ...COMMON_EVENT, "setupTime", "teardownTime", "venueChoice1", "acceptAlternate", "food", "filmed"],
     rules: ["Submit at least 3 weeks before the event.", "Room capacity is never exceeded (TCC 221 = 10, 350/351/352 combo = 126).", "Each room has 1 trash can; extra trash boxes are charged if food is served."],
   },
   outdoor: {
-    name: "Outdoor Venue Request (Wufoo)", url: "https://scevents.wufoo.com/forms/q1ofqron0clb1tz/", auto: "prefill",
+    name: "Outdoor venue request (TES)", url: "https://scevents.wufoo.com/forms/q1ofqron0clb1tz/", auto: "agent",
     requires: [...COMMON_CONTACT, ...COMMON_EVENT, "setupTime", "teardownTime", "venueChoice1", "acceptAlternate", "eventType", "food", "filmed", "amplifiedSound"],
     rules: ["TES asks for 6 weeks notice. Your walkthrough says 3+, so the tracker uses 6.", "Outdoor events run 8:00 AM–11:30 PM; no amplified sound after 8 PM.", "Not available during Welcome Experience, Festival of Books, home football days or commencement."],
   },
   classroom: {
-    name: "Classroom Space Request (Wufoo, 8 pages)", url: "https://usccampusactivities.wufoo.com/forms/classroom-space-request-form/", auto: "prefill",
+    name: "Classroom space request", url: "https://usccampusactivities.wufoo.com/forms/classroom-space-request-form/", auto: "agent",
     requires: [...COMMON_CONTACT, "initials", ...COMMON_EVENT, "eventType", "venueChoice1", "audience", "amplifiedSound"],
     rules: ["Only for weeks 4 through the last day of instruction; never on holidays, study days or finals.", "Starts: Mon–Thu 6:00 PM or later, Fri 3:00 PM or later. Must end by 11:00 PM.", "Not accepted within 48 hours. Fri–Sun requests are due by Thursday 12:00 PM the week before.", "Recommended: at least 2 weeks ahead. A permit is needed if 25+ people OR food."],
   },
   eeRoom: {
-    name: "ECE Conference Room Request (EEB/PHE)", url: "https://ee.usc.edu/info/conference_rooms/", auto: "prefill",
+    name: "ECE conference room request (EEB/PHE)", url: "https://ee.usc.edu/info/conference_rooms/", auto: "agent",
     requires: ["firstName", "lastName", "email", "phone", "eventName", "description", "date", "startTime", "endTime", "attendance", "venueChoice1"],
-    rules: ["Submit at least 3 days ahead (2 weeks recommended).", "Non-EE departments can book at most 1 month out.", 'Availability calendars are public. Use "Check availability".'],
+    rules: ["Submit at least 3 days ahead (2 weeks recommended).", "Non-EE departments can book at most 1 month out.", "Booking is handled by the venue agent; availability comes from the simulated inventory."],
+  },
+  viterbiRoom: {
+    name: "Viterbi venue request", auto: "agent",
+    requires: [...COMMON_CONTACT, ...COMMON_EVENT, "venueChoice1", "acceptAlternate"],
+    rules: ["No published lead time; the tracker uses 3 weeks.", "Give backup rooms or allow alternates so the venue agent has options."],
   },
   viterbiEmail: {
     name: "Email Kevin Giang (kgiang@usc.edu)", auto: "email",
@@ -48,9 +62,9 @@ export const FORMS: Record<string, FormDef> = {
     rules: ["Not on the list → contact USC Hospitality. The permit then needs a one-time approval (health permit + insurance) due 2 weeks before the event."],
   },
   permit: {
-    name: "USC Event Permit (Salesforce, 11 stages)", url: "https://usc-its.my.site.com/eventpermits/s/request-submission", auto: "prefill",
+    name: "USC event permit", url: "https://usc-its.my.site.com/eventpermits/s/request-submission", auto: "agent",
     requires: [...COMMON_CONTACT, "uscId", "onsiteName", "onsitePhone", ...COMMON_EVENT, "setupTime", "teardownTime", "audience", "food", "filmed", "amplifiedSound", "catererType", "catererName", "menu", "foodValue", "paymentType", "vendorServes"],
-    rules: ["Only after the room is CONFIRMED (needs the 6-digit reservation #).", "Walkthrough: answer NO to trash/waste services; attendance must not be over 60.", "Pre-filler stops at Acknowledgements (ADA, Smoke-Free, Plastic). You tick those and submit."],
+    rules: ["Only after the room is CONFIRMED (needs the 6-digit reservation #).", "Walkthrough: answer NO to trash/waste services; attendance must not be over 60.", "The permits reviewer checks ADA, Smoke-Free and Plastic acknowledgements and anything about security, alcohol or insurance with you; TrojanConnect never answers those questions for you."],
   },
   budgetEmail: {
     name: "Email budget proposal to VP Finance (Vaibhavi)", url: "https://docs.google.com/spreadsheets/d/1SLqu6rXsgGxxRK2foMnV9HJJy8abhFsr/edit?gid=4042447", auto: "email",
@@ -76,7 +90,7 @@ export const FORMS: Record<string, FormDef> = {
   },
 };
 
-export const VENUE_FORM: Record<VenueKind, string> = { tcc: "tcc", outdoor: "outdoor", classroom: "classroom", viterbi: "viterbiEmail", eeb_phe: "eeRoom" };
+export const VENUE_FORM: Record<VenueKind, string> = { tcc: "tcc", outdoor: "outdoor", classroom: "classroom", viterbi: "viterbiRoom", eeb_phe: "eeRoom" };
 const VENUE_LEAD_DAYS: Record<VenueKind, number> = { outdoor: 42, tcc: 21, classroom: 14, viterbi: 21, eeb_phe: 14 };
 
 export type StepId = "venue" | "food" | "permit" | "funding" | "engage" | "access" | "publicity";
@@ -103,16 +117,16 @@ export function buildSteps(profile: Profile): StepDef[] {
   const noFood = profile.food === false;
   return [
     {
-      id: "venue", n: 1, title: "Reserve the venue", owner: "You → venue office",
+      id: "venue", n: 1, title: "Reserve the venue", owner: "Club Agent ↔ Venue Agent → reviewer",
       after: [], lead: vk ? VENUE_LEAD_DAYS[vk] : 21, official: true,
-      forms: vk ? [VENUE_FORM[vk]] : [], doneKey: "confirmed",
+      forms: vk ? [VENUE_FORM[vk], ...(vk === "viterbi" ? ["viterbiEmail"] : [])] : [], doneKey: "confirmed",
       substeps: [["submitted", "Request submitted"], ["confirmed", "Reservation confirmed"]],
       needsData: [
         { key: "reservationNumber", label: "Reservation # (6 digits, for the permit)" },
         { key: "venueContactName", label: "Venue manager name (who confirmed it)" },
         { key: "venueContactEmail", label: "Venue manager email" },
       ],
-      blurb: vk ? VENUE_KINDS[vk] : "Choose a venue type in the profile first.",
+      blurb: vk ? `${VENUE_KINDS[vk]}. The venue agent negotiates a room and time; a human reviewer confirms.` : "Choose a venue type in the profile first.",
     },
     {
       id: "food", n: 2, title: "Pick an approved food vendor", owner: "You",
@@ -121,11 +135,11 @@ export function buildSteps(profile: Profile): StepDef[] {
       blurb: "The permit lookup currently lists 20 approved outside caterers; the full list is on the USC-only sheet.",
     },
     {
-      id: "permit", n: 3, title: "Event permit application", owner: "You → DPS + departments",
+      id: "permit", n: 3, title: "Event permit application", owner: "Club Agent → Event Permits reviewer",
       after: noFood ? ["venue"] : ["venue", "food"], lead: 14, official: true, forms: ["permit"], doneKey: "approved",
       substeps: [["submitted", "Permit submitted"], ["followups", "Followed up with each department listed in the confirmation email"], ["approved", "Permit approved"]],
       needsData: [{ key: "permitCode", label: "Permit number / code" }],
-      blurb: 'Fill in only after the room is confirmed. Answer "No" to trash and keep attendance at 60 or under.',
+      blurb: "Opens once the room is confirmed. The permits reviewer decides and issues the permit code.",
     },
     {
       id: "funding", n: 4, title: "Funding application → VP Finance", owner: "You → Vaibhavi → Viterbi → OHE",

@@ -25,7 +25,7 @@ export function ProfileForm({ profile, onSave }: { profile: Profile; onSave: (pa
   );
 }
 
-function Field({ f, profile, onSave }: { f: FieldDef; profile: Profile; onSave: (patch: Record<string, unknown>) => void }) {
+export function Field({ f, profile, onSave }: { f: FieldDef; profile: Profile; onSave: (patch: Record<string, unknown>) => void }) {
   const v = profile[f.key];
   const prob = f.optional ? null : fieldProblem(profile, f.key);
   const bad = !!prob && prob !== "missing";

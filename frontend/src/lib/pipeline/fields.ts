@@ -13,8 +13,8 @@ export const VENUE_KINDS: Record<VenueKind, string> = {
   tcc: "TCC meeting room (Trojan Event Services)",
   outdoor: "Outdoor venue — McCarthy Quad, Alumni Park, … (Trojan Event Services)",
   classroom: "General-use classroom (Campus Activities / Classroom Scheduling)",
-  viterbi: "Viterbi venue (email Kevin Giang)",
-  eeb_phe: "EEB / PHE conference room (ECE online form)",
+  viterbi: "Viterbi venue (Viterbi events office)",
+  eeb_phe: "EEB / PHE conference room (ECE department)",
 };
 
 export const CATERER_TYPES = [
@@ -38,6 +38,8 @@ export const PERMIT_APPROVED_CATERERS = [
 ];
 
 export const AUDIENCES = ["Students", "Faculty", "Staff", "Alumni", "General Public"];
+export const EQUIPMENT = ["Projector", "Microphone", "Whiteboard", "Tables", "Stage"];
+const TIME_FLEX: Record<string, string> = { "0": "Exact time only", "30": "Up to 30 min earlier or later", "60": "Up to 1 hour earlier or later", "120": "Up to 2 hours earlier or later" };
 
 export type FieldType = "text" | "email" | "tel" | "date" | "time" | "number" | "textarea" | "select" | "bool" | "multi";
 
@@ -91,6 +93,8 @@ export const FIELDS: FieldDef[] = [
   { key: "venueChoice1", group: "Venue", label: 'First-choice room/space (e.g. "TCC 350", "THH 101", "EEB 248", "McCarthy Quad")', type: "text" },
   { key: "venueChoice2", group: "Venue", label: "Second choice", type: "text", optional: true },
   { key: "acceptAlternate", group: "Venue", label: "Accept an alternate location?", type: "bool" },
+  { key: "equipment", group: "Venue", label: "Equipment needed", type: "multi", options: EQUIPMENT, optional: true },
+  { key: "timeFlexMinutes", group: "Venue", label: "How far may the time move? (the venue agent may offer a shifted slot)", type: "select", options: Object.keys(TIME_FLEX), optionLabels: TIME_FLEX, optional: true },
 
   { key: "food", group: "Food", label: "Serving food or drinks?", type: "bool" },
   { key: "catererType", group: "Food", label: "Caterer type", type: "select", options: CATERER_TYPES, when: foodOnly },

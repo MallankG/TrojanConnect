@@ -18,8 +18,8 @@ VENUE_KINDS: dict[str, str] = {
     "tcc": "TCC meeting room (Trojan Event Services)",
     "outdoor": "Outdoor venue — McCarthy Quad, Alumni Park, … (Trojan Event Services)",
     "classroom": "General-use classroom (Campus Activities / Classroom Scheduling)",
-    "viterbi": "Viterbi venue (email Kevin Giang)",
-    "eeb_phe": "EEB / PHE conference room (ECE online form)",
+    "viterbi": "Viterbi venue (Viterbi events office)",
+    "eeb_phe": "EEB / PHE conference room (ECE department)",
 }
 
 CATERER_TYPES = [
@@ -45,6 +45,8 @@ PERMIT_APPROVED_CATERERS = [
 AUDIENCES = ["Students", "Faculty", "Staff", "Alumni", "General Public"]
 EBOARD = ["President", "Vice President", "Secretary", "Treasurer", "Programming Chair"]
 EVENT_TYPES = ["Meeting", "Lecture/Speaking Engagement", "Conference/Workshop", "Cultural Performance", "Fair", "Exhibit", "Other"]
+EQUIPMENT = ["Projector", "Microphone", "Whiteboard", "Tables", "Stage"]
+TIME_FLEX = ["0", "30", "60", "120"]
 PAYMENT_TYPES = ["PO", "ISP (Internal Service Provider)", "PCard", "Credit Card", "Check", "Sponsored", "Not Applicable"]
 
 
@@ -101,6 +103,8 @@ FIELDS: list[dict[str, Any]] = [
     _f("venueChoice1", 'First-choice room/space (e.g. "TCC 350", "THH 101", "EEB 248", "McCarthy Quad")'),
     _f("venueChoice2", "Second choice", optional=True),
     _f("acceptAlternate", "Accept an alternate location?", "bool"),
+    _f("equipment", "Equipment needed", "multi", options=EQUIPMENT, optional=True),
+    _f("timeFlexMinutes", "How far may the time move? (minutes, earlier or later)", "select", options=TIME_FLEX, optional=True),
     _f("food", "Serving food or drinks?", "bool"),
     _f("catererType", "Caterer type", "select", options=CATERER_TYPES, when=_food_only),
     _f("catererName", "Caterer / vendor name", when=_food_only),
@@ -122,7 +126,7 @@ _GROUPS = {
     "Day-of contacts": ["onsiteName", "onsitePhone", "secondaryName", "secondaryPhone", "secondaryEmail"],
     "Event": ["eventName", "description", "eventType", "date", "setupTime", "startTime", "endTime", "teardownTime", "backupDates",
               "attendance", "audience", "amplifiedSound", "filmed", "marketingPlatform"],
-    "Venue": ["venueKind", "venueChoice1", "venueChoice2", "acceptAlternate"],
+    "Venue": ["venueKind", "venueChoice1", "venueChoice2", "acceptAlternate", "equipment", "timeFlexMinutes"],
     "Food": ["food", "catererType", "catererName", "menu", "foodValue", "paymentType", "vendorServes"],
     "Funding": ["budgetTotal", "budgetLink"],
     "Contacts": ["vpFinanceEmail", "vpCommsEmail", "advisorName", "advisorEmail", "hospitalityEmail"],
@@ -177,7 +181,9 @@ def coerce_field(key: str, value: Any) -> tuple[Any, str | None]:
     if t == "multi":
         vals = value if isinstance(value, list) else [value]
         bad = [v for v in vals if v not in f["options"]]
-        return (None, f"Allowed values: {', '.join(f['options'])}") if bad or not vals else (vals, None)
+        if bad or (not vals and not f["optional"]):
+            return None, f"Allowed values: {', '.join(f['options'])}"
+        return vals, None
     s = str(value).strip()
     if t == "select" and s not in f["options"]:
         return None, f"Allowed values: {', '.join(f['options'])}"
@@ -209,20 +215,20 @@ _EVENT = ["eventName", "description", "date", "startTime", "endTime", "attendanc
 
 FORMS: dict[str, dict[str, Any]] = {
     "tcc": {
-        "name": "TCC Meeting Room Request (Wufoo)", "url": "https://scevents.wufoo.com/forms/p11ku1c01p5kpxf/", "auto": "prefill",
+        "name": "TCC meeting room request", "url": "https://scevents.wufoo.com/forms/p11ku1c01p5kpxf/", "auto": "agent",
         "requires": [*_CONTACT, "eboardPosition", *_EVENT, "setupTime", "teardownTime", "venueChoice1", "acceptAlternate", "food", "filmed"],
         "rules": ["Submit at least 3 weeks before the event.", "Room capacity is never exceeded (TCC 221 = 10, 350/351/352 combo = 126).",
                   "Each room has 1 trash can; extra trash boxes are charged if food is served."],
     },
     "outdoor": {
-        "name": "Outdoor Venue Request (Wufoo)", "url": "https://scevents.wufoo.com/forms/q1ofqron0clb1tz/", "auto": "prefill",
+        "name": "Outdoor venue request (TES)", "url": "https://scevents.wufoo.com/forms/q1ofqron0clb1tz/", "auto": "agent",
         "requires": [*_CONTACT, *_EVENT, "setupTime", "teardownTime", "venueChoice1", "acceptAlternate", "eventType", "food", "filmed", "amplifiedSound"],
         "rules": ["TES asks for 6 weeks notice. Your walkthrough says 3+, so the tracker uses 6.",
                   "Outdoor events run 8:00 AM–11:30 PM; no amplified sound after 8 PM.",
                   "Not available during Welcome Experience, Festival of Books, home football days or commencement."],
     },
     "classroom": {
-        "name": "Classroom Space Request (Wufoo, 8 pages)", "url": "https://usccampusactivities.wufoo.com/forms/classroom-space-request-form/", "auto": "prefill",
+        "name": "Classroom space request", "url": "https://usccampusactivities.wufoo.com/forms/classroom-space-request-form/", "auto": "agent",
         "requires": [*_CONTACT, "initials", *_EVENT, "eventType", "venueChoice1", "audience", "amplifiedSound"],
         "rules": ["Only for weeks 4 through the last day of instruction; never on holidays, study days or finals.",
                   "Starts: Mon–Thu 6:00 PM or later, Fri 3:00 PM or later. Must end by 11:00 PM.",
@@ -230,10 +236,15 @@ FORMS: dict[str, dict[str, Any]] = {
                   "Recommended: at least 2 weeks ahead. A permit is needed if 25+ people OR food."],
     },
     "eeRoom": {
-        "name": "ECE Conference Room Request (EEB/PHE)", "url": "https://ee.usc.edu/info/conference_rooms/", "auto": "prefill",
+        "name": "ECE conference room request (EEB/PHE)", "url": "https://ee.usc.edu/info/conference_rooms/", "auto": "agent",
         "requires": ["firstName", "lastName", "email", "phone", "eventName", "description", "date", "startTime", "endTime", "attendance", "venueChoice1"],
         "rules": ["Submit at least 3 days ahead (2 weeks recommended).", "Non-EE departments can book at most 1 month out.",
-                  'Availability calendars are public. Use "Check availability".'],
+                  "Booking is handled by the venue agent; availability comes from the simulated inventory."],
+    },
+    "viterbiRoom": {
+        "name": "Viterbi venue request", "auto": "agent",
+        "requires": [*_CONTACT, *_EVENT, "venueChoice1", "acceptAlternate"],
+        "rules": ["No published lead time; the tracker uses 3 weeks.", "Give backup rooms or allow alternates so the venue agent has options."],
     },
     "viterbiEmail": {
         "name": "Email Kevin Giang (kgiang@usc.edu)", "auto": "email", "to": "kgiang@usc.edu",
@@ -247,12 +258,13 @@ FORMS: dict[str, dict[str, Any]] = {
         "rules": ["Not on the list → contact USC Hospitality. The permit then needs a one-time approval (health permit + insurance) due 2 weeks before the event."],
     },
     "permit": {
-        "name": "USC Event Permit (Salesforce, 11 stages)", "url": "https://usc-its.my.site.com/eventpermits/s/request-submission", "auto": "prefill",
+        "name": "USC event permit", "url": "https://usc-its.my.site.com/eventpermits/s/request-submission", "auto": "agent",
         "requires": [*_CONTACT, "uscId", "onsiteName", "onsitePhone", *_EVENT, "setupTime", "teardownTime", "audience", "food", "filmed",
                      "amplifiedSound", "catererType", "catererName", "menu", "foodValue", "paymentType", "vendorServes"],
         "rules": ["Only after the room is CONFIRMED (needs the 6-digit reservation #).",
                   "Walkthrough: answer NO to trash/waste services; attendance must not be over 60.",
-                  "Pre-filler stops at Acknowledgements (ADA, Smoke-Free, Plastic). You tick those and submit."],
+                  "The permits reviewer checks ADA, Smoke-Free and Plastic acknowledgements and anything about security, alcohol or insurance with you; "
+                  "TrojanConnect never answers those questions for you."],
     },
     "budgetEmail": {
         "name": "Email budget proposal to VP Finance (Vaibhavi)", "auto": "email", "to_field": "vpFinanceEmail",
@@ -286,8 +298,9 @@ FORMS: dict[str, dict[str, Any]] = {
     },
 }
 
-RUNNABLE_FORMS = ("tcc", "outdoor", "classroom", "eeRoom", "permit")
-VENUE_FORM = {"tcc": "tcc", "outdoor": "outdoor", "classroom": "classroom", "viterbi": "viterbiEmail", "eeb_phe": "eeRoom"}
+# Forms whose submission is handled by the booking agent workflow (app/workflows/booking), not a USC portal.
+AGENT_FORMS = ("tcc", "outdoor", "classroom", "eeRoom", "viterbiRoom", "permit")
+VENUE_FORM = {"tcc": "tcc", "outdoor": "outdoor", "classroom": "classroom", "viterbi": "viterbiRoom", "eeb_phe": "eeRoom"}
 VENUE_LEAD_DAYS = {"outdoor": 42, "tcc": 21, "classroom": 14, "viterbi": 21, "eeb_phe": 14}
 
 STEP_IDS = ("venue", "food", "permit", "funding", "engage", "access", "publicity")
@@ -322,7 +335,8 @@ def build_steps(profile: Profile) -> list[dict[str, Any]]:
                 "doneKey": done_key, "substeps": substeps, "skip": skip, "needsData": needs_data or []}
 
     steps = [
-        step("venue", 1, "Reserve the venue", [], VENUE_LEAD_DAYS[vk] if vk else 21, True, [VENUE_FORM[vk]] if vk else [], "confirmed",
+        step("venue", 1, "Reserve the venue", [], VENUE_LEAD_DAYS[vk] if vk else 21, True,
+             ([VENUE_FORM[vk]] + (["viterbiEmail"] if vk == "viterbi" else [])) if vk else [], "confirmed",
              [("submitted", "Request submitted"), ("confirmed", "Reservation confirmed")],
              needs_data=[("reservationNumber", "Reservation # (6 digits, for the permit)"),
                          ("venueContactName", "Venue manager name (who confirmed it)"), ("venueContactEmail", "Venue manager email")]),
@@ -344,9 +358,10 @@ def build_steps(profile: Profile) -> list[dict[str, Any]]:
               ("dayof", "Re-posted on the day of the event")]),
     ]
     text = {
-        "venue": ("You → venue office", VENUE_KINDS[vk] if vk else "Choose a venue type in the profile first."),
+        "venue": ("Club Agent ↔ Venue Agent → reviewer", (VENUE_KINDS[vk] + ". The venue agent negotiates a room and time; a human reviewer confirms.")
+                  if vk else "Choose a venue type in the profile first."),
         "food": ("You", "The permit lookup currently lists 20 approved outside caterers; the full list is on the USC-only sheet."),
-        "permit": ("You → DPS + departments", 'Fill in only after the room is confirmed. Answer "No" to trash and keep attendance at 60 or under.'),
+        "permit": ("Club Agent → Event Permits reviewer", "Opens once the room is confirmed. The permits reviewer decides and issues the permit code."),
         "funding": ("You → Vaibhavi → Viterbi → OHE", "Vaibhavi approves the budget and submits it to Viterbi. You then place the order in person at OHE."),
         "engage": ("You → Campus Activities", "Needs a confirmed room reservation and the permit code."),
         "access": ("You ↔ Tyler", "Done before publicity so the statements appear on the graphic."),

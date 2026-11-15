@@ -1,6 +1,6 @@
 # Event Pipeline: fit with the TrojanConnect PRD and integration plan
 
-Status: proposal for team review · Branch: `feature/event-pipeline` · Reviewed against `TrojanConnect_Final_PRD.md` v1.1
+Status: proposal for team review. **Update:** conflicts 1–3 below are resolved: the pre-fillers are gone (venue and permit go through the booking agent workflow with simulated, labelled inventory), the permit no longer guesses answers (the reviewer gets an attention list), and CONFIRMED comes only from the backend after an authorized reviewer's approval · Branch: `feature/event-pipeline` · Reviewed against `TrojanConnect_Final_PRD.md` v1.1
 
 ## Summary
 

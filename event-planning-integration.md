@@ -1,62 +1,52 @@
-# Event planning: what the backend does and how to build a UI on it
+# Event planning assistant: integration guide
 
-This explains the event-planning feature and gives everything needed to build or restyle a UI using only the backend API. No planning rule has to be re-implemented in the client: the backend returns statuses, deadlines, missing fields, form readiness and email drafts ready to render.
+The main way to use event planning is the **Assistant**. A club officer types something like *"Book a 35 person event for December 20th 2026 from 7pm - 8pm"* and gets back the free rooms. After they pick one, the assistant takes them through the rest of the campus process: the venue request, food, the event permit and the emails.
 
-- Feature overview and per-step detail: [docs/event-pipeline.md](docs/event-pipeline.md)
+This guide is for embedding that Assistant in a larger app with your own styling. All the logic is in the backend. Your UI only shows the reply text and the **cards** that come with it, and calls a few endpoints when a card's button is pressed. You don't re-implement any planning rule.
+
+- Feature overview and the booking workflow: [docs/event-pipeline.md](docs/event-pipeline.md)
 - Interactive API reference (generated, always current): http://localhost:8000/docs
-- Reference UI built on these APIs: `frontend/src/components/pipeline/`
+- Reference UI: `frontend/src/components/pipeline/AssistantPanel.tsx` (it renders every card type)
 
 ---
 
-## 1. What is happening
-
-A club officer plans one event and takes it through seven campus steps:
-
-| # | Step id | Step |
-|---|---|---|
-| 1 | `venue` | Reserve the venue |
-| 2 | `food` | Pick an approved food vendor (skipped if no food) |
-| 3 | `permit` | Event permit application (needs venue + food) |
-| 4 | `funding` | Funding application to the VP of Finance |
-| 5 | `engage` | EngageSC event (needs venue + permit) |
-| 6 | `access` | Accessibility and non-discrimination statements |
-| 7 | `publicity` | Publicize (needs EngageSC + accessibility) |
-
-The backend holds three things for the event:
-
-- **Profile:** every fact about the event, entered once (name, date, times, venue, food, contacts). Each USC form and email is filled from it.
-- **Progress:** per step, a checklist of ticks and a few recorded reply details (reservation number, permit code).
-- **Activity log:** every change, newest first.
-
-From those it derives everything a screen shows: each step's status, its deadline counted back from the event date, what blocks it, which profile fields a form still needs, and whether a form can be started.
-
-Three kinds of action leave the app, and a human finishes each one:
-
-| Action | What the backend does | What the human does |
-|---|---|---|
-| **Pre-fill a USC form** | Opens a visible Chrome window on the machine running the backend, fills the form, and stops on the last page | Reviews it, ticks the attestations, presses Submit |
-| **Email draft** | Returns the recipient, subject, body and a `mailto:` link | Sends it from their mail app |
-| **Manual task** | Returns the link and the rules | Does it on the USC site (needs a USC login) |
-
-**Nothing is ever submitted or sent by the app.**
-
-There are two ways to drive all of this, and a UI can use either or both:
-
-1. **Direct API calls**: forms, buttons and checkboxes that call the endpoints in section 4.
-2. **The assistant**: one chat endpoint. The user types; the agent (Gemini) calls the same backend logic through tools and replies with text plus "cards" for the UI to render (section 6).
+## 1. How it works
 
 ```
- Browser UI ──HTTP──► FastAPI  /api/v1/pipeline/*
-                         │
-        ┌────────────────┼──────────────────────────┐
-        ▼                ▼                          ▼
-   plan.py (rules)   store.py (saved event,     agent (Gemini + tools)
-   views.py (JSON     backend/data/              backend/app/agents,
-   for the UI)        event_pipeline.json)       backend/app/tools
-                         │
-                         ▼
-                 runs.py ──► Node + Playwright pre-fillers ──► USC web forms (never submitted)
+ Your app's Assistant UI
+   │  POST /api/v1/pipeline/agent/chat   {message, history}
+   ▼
+ Club Agent  ── Gemini (ASSISTANT_MODE=gemini)  or  built-in rules agent (ASSISTANT_MODE=rules / no key / Gemini fails)
+   │  calls validated tools only (backend/app/tools/event_plan.py)
+   ▼
+ Event plan (profile, 7 steps, deadlines)        Booking workflow (venue + permit)
+ backend/app/workflows/event_pipeline            backend/app/workflows/booking
+                                                  Club Agent ⇄ Venue Scheduling Agent → reviewer → CONFIRMED
+   │
+   ▼
+ {reply, actions[], tools[], state}  →  your UI renders the text and the cards
 ```
+
+Each turn returns plain text plus a list of cards. The cards are how the user acts:
+- pick a room or a caterer (`options`)
+- fill in missing details (`fields`)
+- confirm and accept a booking (`booking`)
+- open an email draft (`form`)
+- jump to the next step (`suggestions`)
+
+**The agent never submits, accepts, approves or confirms anything.** Those happen only when the user presses a card button, or when a reviewer decides. The seven steps are the same whichever way the user works:
+
+| # | Step id | Step | Handled by |
+|---|---|---|---|
+| 1 | `venue` | Reserve the venue | Booking workflow: rooms → confirm → proposal → accept → review |
+| 2 | `food` | Pick an approved food vendor (skipped if no food) | Caterer picker + quote form |
+| 3 | `permit` | Event permit (needs venue + food) | Booking workflow → Event Permits review |
+| 4 | `funding` | Funding application to the VP of Finance | Email draft |
+| 5 | `engage` | EngageSC event (needs venue + permit) | Manual (needs a USC login) |
+| 6 | `access` | Accessibility and non-discrimination statements | Email draft |
+| 7 | `publicity` | Publicize (needs EngageSC + accessibility) | Email drafts |
+
+**Nothing is sent to a USC system or by email.** Room availability comes from a seeded demo inventory and must be shown as *simulated* (see section 7).
 
 ---
 
@@ -65,358 +55,322 @@ There are two ways to drive all of this, and a UI can use either or both:
 ```bash
 # one-time
 cd backend && python3 -m venv .venv && .venv/bin/pip install -r requirements.txt
-cd app/integrations/usc_forms && npm install        # pre-fillers; use the installed Google Chrome
-cp backend/.env.example backend/.env                # set GEMINI_API_KEY for the assistant
+cp backend/.env.example backend/.env
 
 # every time
 cd backend  && .venv/bin/uvicorn main:app --port 8000 --env-file .env
-cd frontend && npm run dev                          # reference UI at http://localhost:3000/pipeline
+cd frontend && npm run dev            # reference UI: http://localhost:3000/pipeline → Assistant tab
 ```
 
 Settings in `backend/.env`:
 
 | Variable | Purpose | Default |
 |---|---|---|
-| `GEMINI_API_KEY` | Enables the assistant. Everything else works without it | none |
-| `GEMINI_CHAT_MODEL` | Model the assistant runs on | `gemini-3.5-flash` |
-| `GEMINI_API_VERSION` | Gemini API version, e.g. `v1beta` | SDK default |
-| `FRONTEND_ORIGIN` | Browser origins allowed to call the API, comma-separated | `http://localhost:3000` |
-
-If your UI runs on another port or host, add it to `FRONTEND_ORIGIN` and restart the backend.
+| `ASSISTANT_MODE` | `rules`: the built-in agent answers, with no model calls and no API cost. `gemini`: Gemini answers, and the built-in agent takes over automatically if Gemini fails (quota, outage). | `gemini` if a key is set, else `rules` |
+| `GEMINI_API_KEY`, `GEMINI_CHAT_MODEL`, `GEMINI_API_VERSION` | Gemini settings (only for `gemini` mode) | none, `gemini-3.5-flash`, SDK default |
+| `DEMO_AUTO_REVIEW` | `true`: a **simulated** venue or permits office approves accepted requests, so the waterfall continues without a person. `false`: a reviewer approves on `/venue-review`. | `false` |
+| `FRONTEND_ORIGIN` | Browser origins allowed to call the API, comma-separated. **Add your host app's origin here.** | `http://localhost:3000` |
 
 ---
 
 ## 3. Conventions for every request
 
-- **Base URL:** `http://localhost:8000/api/v1/pipeline`
-- **Required header:** `X-TrojanConnect-Client: web` on every request, any method. Without it the API returns `403`. It is a CSRF guard, not authentication: there are no users yet.
-- **Bodies:** JSON, with `Content-Type: application/json`.
-- **Errors:** `{"detail": "human-readable message"}` with a 4xx or 5xx status. Show `detail` to the user as it is. For `422` (malformed request), `detail` is a list of validation objects.
-- **One event:** the backend stores a single event. There are no event ids yet.
-- **Value formats:** dates `YYYY-MM-DD`; times 24-hour `HH:MM`, on the hour or half hour; yes/no fields are JSON booleans; `audience` is a list of strings; everything else is a string, including numbers (`"attendance": "30"`).
+- **Base URLs:** chat and event plan `http://localhost:8000/api/v1/pipeline`; bookings `http://localhost:8000/api/v1`.
+- **Required header:** `X-TrojanConnect-Client: web` on every request. Without it you get `403`. It is a CSRF guard (it forces a CORS check), not authentication.
+- **Bodies:** JSON with `Content-Type: application/json`.
+- **Errors:** `{"detail": "message"}`. Booking endpoints send `{"detail": {"code", "message", "retryable"}}`, and `422` sends a list of validation objects. Show the message as it is.
+- **One event:** the backend stores a single event. There are no event ids or user accounts yet.
 
 A minimal client:
 
 ```ts
 const API = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:8000";
 
-export async function api<T>(path: string, init?: { method?: string; json?: unknown }): Promise<T> {
-  const res = await fetch(`${API}/api/v1/pipeline${path}`, {
+export async function api<T>(path: string, init?: { method?: string; json?: unknown; headers?: Record<string, string> }): Promise<T> {
+  const res = await fetch(`${API}/api/v1${path}`, {
     method: init?.method ?? "GET",
-    headers: { "Content-Type": "application/json", "X-TrojanConnect-Client": "web" },
+    headers: { "Content-Type": "application/json", "X-TrojanConnect-Client": "web", ...init?.headers },
     body: init?.json === undefined ? undefined : JSON.stringify(init.json),
     cache: "no-store",
   });
   const body = await res.json().catch(() => ({}));
-  if (!res.ok) throw new Error(typeof body.detail === "string" ? body.detail : res.statusText);
+  if (!res.ok) throw new Error(typeof body.detail === "string" ? body.detail : body.detail?.message ?? res.statusText);
   return body as T;
 }
 ```
 
----
-
-## 4. Endpoints
-
-### Read (render from these)
-
-| Method and path | Returns | Use it for |
-|---|---|---|
-| `GET /schema` | Static definitions: profile fields, venue kinds, forms, steps, statuses, approved caterers | Building the profile form and labels. Does not change with the event; fetch once per page load |
-| `GET /status` | The whole dashboard for the saved event | Header, progress bar, "do now" list, step list, step detail |
-| `GET /profile` | Saved values plus per-field problems | Profile form values and inline validation |
-| `GET /forms` | Every form, email and manual task with live readiness | A "field map" or a list of all tasks |
-| `GET /forms/{form_id}` | One of the above | Refreshing a single form card |
-| `GET /emails/{form_id}` | `{to, subject, body, mailto, ready, missing_fields}` | Email preview and the "open draft" link |
-| `GET /caterers?q=` | Approved caterers; with `q`, a name search | Food step vendor picker or checker |
-| `GET /ee-availability` | EEB/PHE room bookings on the event date | Venue step, only when venue kind is `eeb_phe` |
-| `GET /activity?limit=50` | `[{at, msg}]`, newest first | Activity feed |
-| `GET /run/{form_id}` | `{running, lines}` | Live log of a pre-fill |
-| `GET /agent` | `{configured, model, tools}` | Whether to enable the chat box |
-| `GET /state` | Raw `{profile, progress, log}` | Debugging; the reference UI uses it |
-
-### Write (user actions)
-
-| Method and path | Body | Effect |
-|---|---|---|
-| `PUT /profile` | Any subset of profile fields, e.g. `{"attendance": "45"}` | Merges into the profile. Returns the raw state |
-| `PUT /progress` | `{"step", "check", "value"}` | Ticks or unticks a checklist item |
-| `PUT /progress` | `{"step", "dataKey", "dataValue"}` | Records a reply detail, e.g. the reservation number |
-| `POST /run/{form_id}` | none | Opens Chrome and pre-fills the form. `form_id` is `tcc`, `outdoor`, `classroom`, `eeRoom` or `permit` |
-| `POST /agent/chat` | `{"message", "history"}` | One assistant turn (section 6) |
-| `POST /reset` | none | Erases the event. Ask the user to confirm first |
-
-After any write, re-fetch `GET /status` (and `GET /profile` if the profile form is on screen). Statuses, blockers and readiness all change together.
-
-Two things to know about writes:
-
-- `PUT /profile` does not reject bad values; it saves what it is given. Problems show up afterwards in `GET /profile` (`problem`) and in each form's `missing_fields`. Validate in the form using the schema, and display `problem` after saving.
-- `POST /run/{form_id}` returns `409` if that form is already running, or if it is the permit and no 6-digit reservation number is recorded. It returns `503` if Node or Playwright is not installed.
-
-### Shapes you will use most
-
-`GET /status` (one step shown; all seven are returned):
-
-```jsonc
-{
-  "today": "2026-11-14",
-  "event": {
-    "name": "Fall Mixer", "organization": "Robotics Club", "date": "2027-03-04",
-    "start": "6:00 PM", "end": "8:00 PM", "venue": "TCC 350",
-    "venue_kind": "tcc", "venue_kind_label": "TCC meeting room (Trojan Event Services)",
-    "attendance": "30", "serving_food": true
-  },
-  "days_to_event": 110,
-  "steps_done": 2, "steps_total": 7, "percent_done": 29,
-  "do_now": ["permit", "funding", "access"],     // step ids the user can act on
-  "waiting_on_reply": [],                        // submitted, waiting for an office
-  "late": [],                                    // past their deadline and not done
-  "missing_field_count": 0,                      // badge for the profile tab
-  "steps": [{
-    "id": "permit", "n": 3, "title": "Event permit application",
-    "owner": "You → DPS + departments",
-    "blurb": "Fill in only after the room is confirmed. …",
-    "status": "ready", "status_label": "Ready to start",
-    "done": false, "skipped": false,
-    "blocked_by": [],                            // [{id, title}] of unfinished prerequisites
-    "deadline": "2027-02-18", "deadline_official": true,   // false = a suggested date
-    "lead_days": 14, "days_left": 96, "late": false,
-    "checklist": [{ "key": "submitted", "label": "Permit submitted", "done": false }, …],
-    "checklist_done": 0, "checklist_total": 3,
-    "data_fields": [{ "key": "permitCode", "label": "Permit number / code", "value": "" }],
-    "missing_fields": [],                        // [{key, label}] across this step's forms
-    "forms": [{
-      "id": "permit", "name": "USC Event Permit (Salesforce, 11 stages)",
-      "mode": "prefill", "mode_label": "auto pre-fill",   // prefill | email | manual
-      "url": "https://usc-its.my.site.com/eventpermits/s/request-submission",
-      "step": "permit",
-      "rules": ["Only after the room is CONFIRMED (needs the 6-digit reservation #).", …],
-      "required_fields": [{ "key": "orgName", "label": "Organization name" }, …],
-      "missing_fields": [],                      // [{key, label, problem}]
-      "ready": true, "not_ready_reasons": [],    // show the reasons when ready is false
-      "prefillable": true, "run": { "running": false }
-    }]
-  }]
-}
-```
-
-Step `status` is one of:
-
-| `status` | `status_label` | Meaning |
-|---|---|---|
-| `ready` | Ready to start | Nothing blocks it and nothing is ticked yet |
-| `active` | In progress | Some checklist items ticked |
-| `waiting` | Waiting on reply | Submitted; an outside office has to answer |
-| `blocked` | Blocked | A step in `blocked_by` is not done |
-| `done` | Done | Finished |
-| `skipped` | Not needed | Does not apply (food step when no food is served) |
-
-`GET /schema`, one field:
-
-```jsonc
-{
-  "key": "venueKind", "label": "Where is the event?", "short_label": "Where is the event?",
-  "group": "Venue",                 // section heading; order is in "field_groups"
-  "type": "select",                 // text | email | tel | date | time | number | textarea | select | bool | multi
-  "options": ["tcc", "outdoor", "classroom", "viterbi", "eeb_phe"],
-  "option_labels": { "tcc": "TCC meeting room (Trojan Event Services)", … },   // null for other fields
-  "optional": false,
-  "only_when_serving_food": false,  // hide when the profile's "food" is false
-  "private": false                  // true for uscId: never send it through the assistant
-}
-```
-
-`GET /profile`, one field:
-
-```jsonc
-{ "key": "phone", "value": "213555", "applies": true, "problem": "Needs 10 digits", "used_by_forms": ["tcc", "outdoor", "classroom", "eeRoom", "permit"] }
-```
-
-`problem` is `null` when the field is fine, `"missing"` when a required field is empty, or a validation message.
+The reference client with all types is `frontend/src/lib/api-client.ts` (`pipelineApi`, `bookingApi`, `AgentAction`, `Booking`).
 
 ---
 
-## 5. Building the screens
+## 4. The chat contract
 
-### Dashboard
+### Status: `GET /pipeline/agent`
 
-One call: `GET /status`.
-
-- **Header:** `event.name`, `event.date`, `event.start`–`event.end`, `event.venue`, `event.attendance`, and `days_to_event`.
-- **Progress:** `steps_done` / `steps_total`, or `percent_done`.
-- **"Do now" strip:** for each id in `do_now`, show the step's `title` and `days_left`. Show `waiting_on_reply` and `late` as separate groups.
-- **Step list:** one row per `steps[]` with `n`, `title`, `owner`, `status_label`, `deadline`, and `checklist_done`/`checklist_total`. When `blocked_by` is non-empty, show "Waiting for: " and the titles.
-- **Empty event:** `event.date` is `null` and deadlines are `null`. Send the user to the kickoff flow.
-
-Re-fetch on a timer (the reference UI uses 30 seconds) and after every write.
-
-### Kickoff: start planning an event
-
-1. `GET /schema` for the field definitions.
-2. Collect the basics (name, date, times, attendance), then venue kind and first choice, then food. Use `fields[].type` and `options` to pick the input, `group` for sections, and hide fields where `only_when_serving_food` is true and food is off.
-3. `PUT /profile` with what was entered. It can be called once per screen or once per field.
-4. `GET /status`. The venue step now lists the right form for the chosen venue kind, with its deadline. `venue_kinds[].lead_days` in the schema lets you preview that deadline before saving.
-
-Or let the assistant do it: send the user's description to `POST /agent/chat` and it fills the profile and asks for what is missing.
-
-### Step detail
-
-Everything is in the step object from `GET /status`.
-
-- **Checklist:** render `checklist[]` as checkboxes. On change: `PUT /progress {"step": id, "check": key, "value": true|false}`.
-- **Reply details:** render `data_fields[]` as text inputs. On blur: `PUT /progress {"step": id, "dataKey": key, "dataValue": text}`. The venue `reservationNumber` must be exactly 6 digits for the permit to unlock.
-- **Forms:** one card per `forms[]` entry, by `mode`:
-
-| `mode` | Card shows | Primary button |
-|---|---|---|
-| `prefill` | `rules`, `missing_fields` or "all fields ready" | "Pre-fill in browser", enabled when `ready` is true |
-| `email` | `rules`, `missing_fields` | "Open email draft": `GET /emails/{id}`, then link to `mailto` |
-| `manual` | `rules` | "Open": link to `url` |
-
-When `ready` is false, show `not_ready_reasons`. Make each `missing_fields` entry a link that jumps to that field in the profile form.
-
-### Kicking off a booking (pre-fill)
-
-```ts
-await api(`/run/${formId}`, { method: "POST" });           // Chrome opens on the backend machine
-const timer = setInterval(async () => {
-  const run = await api<{ running: boolean; lines: string[] }>(`/run/${formId}`);
-  showLog(run.lines);                                       // e.g. "Contact information", "✔ Filled. Review…"
-  if (!run.running) clearInterval(timer);
-}, 1000);
+```jsonc
+{ "configured": true, "mode": "rules",     // "rules" | "gemini"
+  "model": "rules",                         // or e.g. "gemini-3.5-flash"
+  "tools": [{ "name": "prepare_booking_request", "description": "…" }, …] }
 ```
 
-- The browser window opens on the computer running the backend. This is a local-only feature; it cannot work on a hosted server.
-- When the log ends, the form is filled but **not submitted**. Tell the user to review it, tick the attestations and press Submit in that window, then tick "Request submitted" on the step.
-- The step object's `forms[].run.running` tells you a run is in progress if the page was reloaded.
+`configured` is always `true`, because the built-in agent needs no key. Use `mode` to choose any explanatory text, e.g. "Built-in booking assistant".
 
-### Profile form
-
-1. `GET /schema` once for definitions; `GET /profile` for values and problems.
-2. Group by `fields[].group` in `field_groups` order.
-3. Save with `PUT /profile {key: value}` on blur or change.
-4. Show `problem` under the field. Show `used_by_forms` to explain why a field is needed.
-
-### Food step extras
-
-- `GET /caterers` for the 20 caterers the permit accepts; `GET /caterers?q=name` to check one. `accepted_by_permit_lookup` is `true` or `false` when `q` is given.
-- For a vendor that is not listed, offer the Hospitality email: `GET /emails/hospitality`.
-
-### Venue step extra: room availability
-
-Only when `event.venue_kind` is `eeb_phe`: `GET /ee-availability` returns `[{room, bookings, free, conflicts}]`. It takes several seconds (it reads public calendars live). Label it as unofficial: a free slot is not a reservation.
-
-### Activity feed
-
-`GET /activity?limit=50`. Entries beginning with `assistant:` were made by the agent.
-
----
-
-## 6. The assistant
-
-A chat agent that can do everything above on the user's behalf. Check `GET /agent` first: if `configured` is false, disable the chat box and say a Gemini key is needed.
-
-### One turn
+### One turn: `POST /pipeline/agent/chat`
 
 ```ts
 type Msg = { role: "user" | "assistant"; text: string };
-
-const r = await api<AgentReply>("/agent/chat", {
-  method: "POST",
-  json: { message: "We now expect 45 people. Start the room request.", history },   // history: prior Msg[]
-});
+const r = await api<AgentReply>("/pipeline/agent/chat", { method: "POST", json: { message, history } });
 history.push({ role: "user", text: message }, { role: "assistant", text: r.reply });
 ```
 
-Response:
-
 ```jsonc
 {
-  "reply": "Saved 45 people. A browser window is opening and pre-filling the TCC request. It has NOT been submitted…",
-  "actions": [{ "type": "form", "formId": "tcc", "step": "venue", "running": true }],
-  "tools":   [{ "tool": "update_event_profile", "ok": true, "error": null },
-              { "tool": "start_prefill", "ok": true, "error": null }],
+  "reply":   "Saved: Expected attendance 35, Event date 2026-12-20 …\nRooms for 35 people on Sun Dec 20 2026, 7:00 PM–8:00 PM: …",
+  "actions": [{ "type": "options", "title": "Pick a room", "options": [ … ] }],
+  "tools":   [{ "tool": "update_event_profile", "ok": true, "error": null }],
   "state":   { "profile": {…}, "progress": {…}, "log": […] },
-  "model":   "gemini:gemini-3.5-flash"
+  "model":   "rules"                       // or "gemini:<model>"
 }
 ```
 
-- **`reply`:** plain text with line breaks. Render with `white-space: pre-wrap`; it is not Markdown.
-- **`actions`:** cards to render under the reply (below).
-- **`tools`:** what the agent did this turn. Optional to show; useful as "Updated profile · Started pre-fill".
-- **`state`:** the event after the turn. The agent may have changed it, so refresh the dashboard (re-fetch `GET /status`).
-- The backend keeps no chat history. Send the conversation so far in `history` each time (it uses the last 20 messages).
-- Limits: `message` up to 4000 characters, `history` up to 60 messages.
+- **`reply`:** plain text with line breaks. Render it with `white-space: pre-wrap`; it is not Markdown. If Gemini failed and the built-in agent answered instead, the reply starts with a note in parentheses.
+- **`actions`:** the cards to render under this reply (section 5), in order.
+- **`state`:** the event after the turn. If your app also shows the event (header, step list), refresh it from this.
+- **`history`:** the backend keeps no chat history, so send the conversation so far each time (it uses the last 20 messages). Limits: `message` ≤ 4000 characters, `history` ≤ 60 messages, no extra keys.
+- A turn takes under a second with the built-in agent and 3–15 seconds with Gemini. Show a working state and allow only one turn in flight at a time.
 
-### Cards (`actions`)
+### What the user can say
 
-| `type` | Fields | Render |
-|---|---|---|
-| `form` | `formId`, `step`, `running` | The same form card as in the step detail (`GET /forms/{formId}`). If `running` is true, the agent already started the pre-fill: start polling `GET /run/{formId}` and show the log |
-| `field` | `key` | A button that jumps to that field in the profile form. Used for the USC ID, which the agent will not take in chat |
-| `reset` | none | A "Clear this event" button. On click, confirm with the user, then `POST /reset` |
+The built-in agent understands these; Gemini understands them too, plus free-form questions.
 
-### What the agent can do
-
-`GET /agent` returns this list live in `tools`.
-
-| Tool | Effect |
+| The user says | The agent does |
 |---|---|
-| `get_event_plan_status` | Reads status, deadlines, blockers, missing fields |
-| `update_event_profile` | Saves event facts from the conversation (validated per field) |
-| `get_form_details` | Reads a form's rules and missing fields |
-| `check_caterer` | Checks a vendor against the approved list |
-| `check_room_availability` | Reads EEB/PHE calendars |
-| `record_step_progress` | Ticks checklist items; records reservation number, permit code |
-| `start_prefill` | Opens the browser and pre-fills a USC form (stops before Submit) |
-| `draft_email` | Returns a `form` card for an email draft |
-| `offer_reset` | Returns a `reset` card |
+| "Book a 35 person event for December 20th 2026 from 7pm - 8pm" (also "12/20 7-8pm", "for 40 people in TCC", "called Robotics Mixer") | Saves attendance, date, times, venue type and event name, then returns an `options` card of free rooms |
+| "Book TCC 350 from 7:00 PM to 8:00 PM" (what a room option sends) | Saves the room, drafts the venue request, returns a `booking` card (plus a `fields` card if details are missing) |
+| "Book my venue" | Drafts the request for the room already chosen, or shows room options |
+| "Which rooms are free?" | `options` card |
+| "Where is my booking?" | Booking status, the `booking` card, and `suggestions` once confirmed |
+| "Give me another option" | Asks the Venue Agent for a different option within the user's constraints |
+| "Pick a caterer" / "Use caterer City Tacos" / "No food" / "I have the quote" | Caterer `options`, saves the vendor, `fields` for the quote, marks the food step done |
+| "Apply for the permit" | Drafts the permit request (`fields` for the USC ID and on-site contact if missing) |
+| "Draft the budget / accessibility / Instagram / advisor email" | `form` card for the email draft (`fields` first if details are missing) |
+| "What should I do next?" | Steps to do now, waiting and late, plus `suggestions` |
+| "Start over" | `reset` card |
 
-### Errors to handle
+---
 
-| Status | `detail` | What to show |
+## 5. Cards (`actions`)
+
+Every card is plain JSON, so you can style it any way you like. Where a card has a button, the table says what the button must do.
+
+| `type` | Shape | Render | When the user acts |
+|---|---|---|---|
+| `options` | `{title, options: [{label, detail, message}]}` | A list of choices (rooms, caterers) | Send `message` as the next chat turn |
+| `fields` | `{title, keys: string[], then}` | An inline form for those profile fields. Get each field's label, type and options from `GET /pipeline/schema` | Save each field with `PUT /pipeline/profile {key: value}`; on "Continue", send `then` as the next chat turn |
+| `suggestions` | `{items: [{label, message}]}` | Quick-reply chips. Show them only under the latest message | Send `message` |
+| `booking` | `{kind: "venue_booking" \| "event_permit"}` | The booking card (section 6) | Booking endpoints (section 6). After submit, accept or alternatives, send "Where is my booking?" so the agent narrates what happened |
+| `form` | `{formId, step}` | An email draft card: `GET /pipeline/emails/{formId}` returns `{to, subject, body, mailto, ready, missing_fields}` | Link to `mailto`; nothing is sent by the app |
+| `field` | `{key}` | A button that opens your profile form at that field (used for the USC ID if someone types it into chat) | Your navigation |
+| `reset` | `{}` | A "Clear this event" button | Ask the user to confirm, then `POST /pipeline/reset` |
+
+Rules for cards:
+- **Only the newest `booking` card per `kind` needs to be live.** Older ones can collapse to a line like "see the latest card below", because every booking card shows the same request.
+- **`options` and `fields` from older messages should be disabled.** Their choices may be out of date.
+- **Unknown `type`s should be ignored**, so the backend can add cards later.
+
+A field definition from `GET /pipeline/schema`, for rendering `fields` cards:
+
+```jsonc
+{ "key": "eboardPosition", "label": "E-board position", "short_label": "E-board position", "group": "You (requester)",
+  "type": "select",                // text | email | tel | date | time | number | textarea | select | bool | multi
+  "options": ["President", …], "option_labels": null, "optional": false,
+  "only_when_serving_food": false, "private": false }   // private: uscId — fine in a form, never typed into chat
+```
+
+Values are strings, except yes/no fields (JSON booleans) and `multi` fields (lists). Dates are `YYYY-MM-DD`; times are 24-hour `HH:MM` on the hour or half hour. `PUT /pipeline/profile` saves what it is given, and `GET /pipeline/profile` returns a `problem` per field (`null`, `"missing"`, or a validation message) to show under the input.
+
+---
+
+## 6. The booking card
+
+Used for `booking` cards, both the venue booking and the event permit. Load the request with `GET /bookings?kind=<kind>` and take the first item, which is the latest (none if there's no request yet). Then render by `state`:
+
+| `state` | Show | Buttons |
 |---|---|---|
-| `503` | "The assistant needs a Gemini API key…" | Setup notice; disable the chat box |
-| `502` | "Gemini's rate limit for this API key was reached…" | The message, and let the user resend. One turn makes two or three model calls, so free-tier keys hit this quickly |
-| `502` | "Gemini is overloaded right now…" | The message, and let the user resend |
+| none / `NEEDS_INFORMATION` / `CHANGES_REQUESTED` | `missing_fields`, `blockers`, `next_action` | "Prepare request" → `POST /bookings/drafts {kind}` |
+| `READY_FOR_SUBMISSION` | `summary` (lines) and `warnings` | "Confirm & send" → `POST /bookings/{id}/submit {summary_hash, user_confirmed_summary: true, idempotency_key}` |
+| `NEGOTIATING` | `active_proposal`: venue, time, capacity, **`differences`**, `expires_at`; `rounds`/`max_rounds` | "Accept & send for review" → `POST /bookings/{id}/proposals/{proposal_id}/accept {proposal_version, user_confirmed: true, idempotency_key}`; "Ask for another option" → `POST /bookings/{id}/alternatives {reason, idempotency_key}` |
+| `PENDING_HUMAN_REVIEW`, `APPROVED` | "Not confirmed yet" and `next_action`. Poll every few seconds | none |
+| `CONFIRMED` | `confirmation.reference` (reservation # or permit code) and `confirmation.contact_name` | "Request cancellation" |
+| `FAILED_REQUIRES_HUMAN`, `REJECTED`, `CANCELLED` | `next_action` (it includes the reason) and `escalation.details` | "Prepare request" to start again |
 
-A turn usually takes 3–15 seconds. Show a "working" state and disable Send meanwhile.
+Use the `can` flags (`prepare`, `submit`, `accept`, `alternatives`, `cancel`) to enable buttons, and `stage`/`stages` for a progress stepper. `messages` (the Club Agent ⇄ Venue Agent conversation) and `timeline` (the audit trail) are optional extras. "Withdraw request" / "Request cancellation" → `POST /bookings/{id}/cancel {reason, idempotency_key}`.
 
-### Good first prompts to offer
+Generate a fresh `idempotency_key` per click (`crypto.randomUUID()`). Errors you'll see:
+- `409 SUMMARY_CHANGED`: the profile changed after the summary was shown. Prepare again and show the new summary.
+- `409 PROPOSAL_EXPIRED` / `PROPOSAL_STALE`: ask for another option.
+- `409 ROUND_LIMIT`: no more alternatives; accept the current proposal or cancel.
 
-"What should I do next?" · "Help me plan a new event" · "Start my venue request" · "What's blocking the permit?" · "Draft the email to the VP of Finance"
+With `DEMO_AUTO_REVIEW=false`, a person approves on `/venue-review` (reference: `frontend/src/components/review/VenueReviewApp.tsx`; endpoints `GET /venue-review/queue`, `POST /reviews/{task}/decision`, `POST /reviews/{task}/confirm`, all with the header `X-TrojanConnect-Reviewer: <id>`).
+
+### A full conversation
+
+What the reference UI does from a blank event (checked in a browser):
+
+1. **User:** "Book a 35 person event for December 20th 2026 from 7pm - 8pm"
+   **Reply:** saved facts, plus which venue types aren't possible and why. **Card:** `options` with 6 rooms.
+2. **User clicks "TCC 350 · 7:00 PM–8:00 PM"** (sends "Book TCC 350 from 7:00 PM to 8:00 PM")
+   **Cards:** `booking` (needs information) and `fields` for 8 missing details.
+3. **User fills the form → Continue** (sends "Book my venue")
+   **Card:** `booking` in `READY_FOR_SUBMISSION`.
+4. **Confirm & send** (UI then sends "Where is my booking?")
+   **Reply:** "Proposal ready… exactly as requested".
+5. **Accept & send for review** (UI sends "Where is my booking?")
+   **Reply:** "Confirmed. Reference 685595". **Card:** `suggestions` ("Pick a caterer", …).
+6. **Pick a caterer → City Tacos → `fields` (menu, cost) → Continue**
+   **Reply:** "Food step done".
+7. **Apply for the permit → `fields` (USC ID, on-site contact) → Continue → Confirm & send**
+   **Reply:** permit confirmed with a code.
+8. **Draft the budget email → `fields` → Continue**
+   **Card:** `form` with the draft.
 
 ---
 
-## 7. Rules a UI must keep
+## 7. Embedding and custom styling
 
-- **Never present a pre-filled form as submitted, or a submitted request as confirmed.** The checklist is where the user records what actually happened.
-- **Do not send the USC ID through the assistant.** Collect it only in the profile form (`private: true` in the schema). The agent refuses it and returns a `field` card instead.
-- **Confirm before `POST /reset`.** It erases the profile, progress and log.
-- **Show `not_ready_reasons` instead of hiding a disabled button**, so the user knows what to fix.
-- **Label EEB/PHE availability as unofficial.**
+You have two options. Both use the same backend, so the flow above stays the same whichever you pick.
+
+### A. Reuse the reference components and restyle them
+
+`AssistantPanel` renders the chat and every card. It needs the event state, which you load from `GET /pipeline/state`:
+
+```tsx
+"use client";
+import { useCallback, useEffect, useState } from "react";
+import { AssistantPanel } from "@/components/pipeline/AssistantPanel";
+import { pipelineApi } from "@/lib/api-client";
+import { deriveState, type PipelineState } from "@/lib/pipeline/plan";
+
+export function EventAssistant() {
+  const [state, setState] = useState<PipelineState | null>(null);
+  const reload = useCallback(() => { pipelineApi.state().then(setState); }, []);
+  useEffect(reload, [reload]);
+  if (!state) return null;
+  return (
+    <div className="tc-assistant">   {/* scope your theme overrides here */}
+      <AssistantPanel d={deriveState(state, new Date())} profile={state.profile} onState={setState} onReload={reload}
+        onJumpToField={key => { /* open your profile form at `key`, or do nothing */ }} />
+    </div>
+  );
+}
+```
+
+Files to copy:
+- `components/pipeline/AssistantPanel.tsx`, `BookingCard.tsx`, `StepDetail.tsx` (email and form cards), `ProfileForm.tsx` (inputs for `fields` cards), `ui.tsx`
+- `lib/api-client.ts`, `lib/pipeline/{plan,fields}.ts`
+
+They need Tailwind v4.
+
+**Theming.** Every colour comes from CSS variables, which Tailwind exposes as utility classes (`bg-paper`, `text-cardinal`, …) in `frontend/src/app/globals.css`. Redefine them, globally or under a wrapper class, to restyle without touching the components:
+
+```css
+.tc-assistant {
+  --tc-paper: #f7f7fb;      /* page and chat bubble background   → bg-paper   */
+  --tc-surface: #ffffff;    /* cards and panels                  → bg-surface */
+  --tc-ink: #111827;        /* main text                         → text-ink   */
+  --tc-muted: #6b7280;      /* secondary text                    → text-muted */
+  --tc-line: #e5e7eb;       /* borders                           → border-line */
+  --tc-cardinal: #4f46e5;   /* primary buttons, user bubbles     → bg-cardinal */
+  --tc-on-cardinal: #ffffff;/* text on primary                   → text-on-cardinal */
+  --tc-ok: #15803d;  --tc-ok-bg: #dcfce7;      /* done / confirmed */
+  --tc-wait: #a16207; --tc-wait-bg: #fef9c3;   /* waiting / simulated labels */
+  --tc-late: #b91c1c; --tc-late-bg: #fee2e2;   /* errors, missing fields */
+  --tc-ready: #1d4ed8; --tc-ready-bg: #dbeafe; /* ready / Club Agent messages */
+  --tc-block: #6b7280; --tc-block-bg: #f3f4f6; /* blocked / neutral pills */
+}
+```
+
+`globals.css` also redefines these for dark mode under `prefers-color-scheme: dark`; override those too if you support dark mode. The shared button styles (`btn`, `btnPrimary`) and status pills are in `components/pipeline/ui.tsx`, so restyling them there changes every card. If your app doesn't use Tailwind, use option B.
+
+### B. Build your own UI from the contract
+
+Use sections 4–6 as the spec. A complete Assistant needs:
+1. a message list (`reply` with `pre-wrap`)
+2. an input (one turn at a time)
+3. renderers for the seven card types
+4. the booking card's six states.
+
+The backend validates everything, so a mistake in the UI can't skip a rule. A wrong call gets a `409` or `422` with a message to show.
 
 ---
 
-## 8. Current limits
+## 8. Rules any UI must keep
 
-- **One event at a time.** No event ids, no dashboard of several events, no user accounts. `POST /reset` starts a new one.
-- **Local only.** Pre-fill opens Chrome on the backend machine, and state is a JSON file (`backend/data/event_pipeline.json`, git-ignored).
-- **The permit pre-fill stops at stage 6 (Vendor Details).** The live form requires a "Rentals Vendor Name" there that the filler does not handle; the user finishes from that stage by hand.
-- **`PUT /profile` saves without validating** (see section 4).
-- **The reference UI still computes status itself.** `frontend/src/lib/pipeline/plan.ts` and `fields.ts` duplicate the rules in `backend/app/workflows/event_pipeline/plan.py`. A new UI should use `GET /status` and `GET /schema` instead. Until the reference UI is switched over, a change to steps, forms or fields must be made in both places.
-- **Assistant rate limits** depend on the Gemini key's plan.
+These come from the PRD and are not optional styling choices:
+
+- **Keep "proposal", "pending human review", "approved" and "confirmed" visibly different.** Only `state: CONFIRMED` is a booking.
+- **Label venue availability as simulated** (`simulated: true`, `source_label`). Label simulated reviewer decisions as simulated: their names say "(demo)" and the reference card shows them.
+- **Only the user submits, accepts or cancels, by pressing a button.** Don't auto-press booking buttons on their behalf.
+- **Show a proposal's `differences`** before the user accepts it.
+- **Don't send the USC ID as a chat message.** Collect it in a form (`fields` card or profile form) that calls `PUT /pipeline/profile`.
+- **Confirm before `POST /pipeline/reset`.** It erases the event and withdraws open bookings.
 
 ---
 
-## 9. Where the code is
+## 9. Other endpoints
+
+The cards above use these. You only need them directly for screens beyond the Assistant, such as a dashboard or a full profile form.
+
+**Event plan** (base `/api/v1/pipeline`):
+
+| Method and path | Purpose |
+|---|---|
+| `GET /schema` | Field, step, form and venue-type definitions (fetch once) |
+| `GET /status` | Dashboard: event header, `do_now`, `waiting_on_reply`, `late`, each step's status, deadline, checklist and forms (each form has `booking: {id, state, state_label, next_action}` for agent-handled ones) |
+| `GET /profile` | Saved values and per-field problems |
+| `PUT /profile` | Merge profile fields |
+| `PUT /progress` | Tick a checklist item `{step, check, value}` or record `{step, dataKey, dataValue}`. The venue and permit outcomes return `409`: only the booking workflow sets them |
+| `GET /forms`, `/forms/{id}`, `/emails/{id}`, `/caterers?q=`, `/activity`, `/state` | Read models |
+| `POST /reset` | Clear the event |
+
+**Bookings** (base `/api/v1`):
+
+| Method and path | Purpose |
+|---|---|
+| `GET /bookings?kind=` | Requests for the current event, newest first |
+| `GET /bookings/{id}` | One request |
+| `POST /bookings/drafts` | Prepare or refresh a draft |
+| `POST /bookings/{id}/submit` | Confirm and send |
+| `POST /bookings/{id}/proposals/{pid}/accept` | Accept the active proposal |
+| `POST /bookings/{id}/alternatives` | Ask for another option |
+| `POST /bookings/{id}/cancel` | Withdraw or request cancellation |
+| `GET /venue-review/reviewers` | Demo reviewer identities |
+| `GET /venue-review/queue` | A reviewer's queue |
+| `POST /reviews/{task}/decision` | Approve, reject or request changes |
+| `POST /reviews/{task}/confirm` | Record the reference and confirm |
+
+---
+
+## 10. Current limits
+
+- **One event, no user accounts.** The club rep is a single local user, and reviewers are demo identities. Add Supabase Auth to the router dependencies before multi-user use.
+- **State is JSON files** (`backend/data/event_pipeline.json`, `backend/data/bookings.json`, git-ignored).
+- **Simulated inventory.** Rooms, most capacities and all availability are seeded demo data.
+- **The built-in agent understands booking-style phrasing** (section 4), not open questions. Use `gemini` mode for free-form chat; it falls back to the built-in agent when Gemini fails.
+- **The reference UI computes step status itself** (`lib/pipeline/plan.ts` mirrors `backend/app/workflows/event_pipeline/plan.py`). A new UI should read `GET /status` instead.
+
+---
+
+## 11. Where the code is
 
 | What | Path |
 |---|---|
-| Endpoints | `backend/app/workflows/event_pipeline/router.py` |
-| Rules: fields, forms, steps, deadlines, email templates | `backend/app/workflows/event_pipeline/plan.py` |
-| JSON returned to the UI | `backend/app/workflows/event_pipeline/views.py` |
-| Saved event | `backend/app/workflows/event_pipeline/store.py` |
-| Pre-fill runs | `backend/app/workflows/event_pipeline/runs.py`, `backend/app/integrations/usc_forms/` |
-| Assistant: loop, tools, Gemini | `backend/app/agents/`, `backend/app/tools/event_plan.py`, `backend/app/integrations/gemini/` |
+| Chat endpoint and mode switch | `backend/app/workflows/event_pipeline/router.py` (`/agent`, `/agent/chat`) |
+| Built-in Club Agent (parsing, room options, waterfall) | `backend/app/agents/rules_agent.py` |
+| Gemini Club Agent | `backend/app/agents/event_agent.py`, `backend/app/integrations/gemini/` |
+| Agent tools (shared by both agents) | `backend/app/tools/event_plan.py` |
+| Booking workflow, Venue Agent, inventory, policy | `backend/app/workflows/booking/` |
+| Event plan rules and read models | `backend/app/workflows/event_pipeline/{plan,views,store}.py` |
+| Reference Assistant UI | `frontend/src/components/pipeline/AssistantPanel.tsx`, `BookingCard.tsx` |
+| Theme tokens | `frontend/src/app/globals.css` |
 | Tests | `backend/tests/` (`cd backend && .venv/bin/python -m pytest`) |
-| Reference UI | `frontend/src/components/pipeline/`, `frontend/src/lib/api-client.ts` |

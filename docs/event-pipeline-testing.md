@@ -1,3 +1,5 @@
+> **Historical (Nov 2026).** This log covers the browser pre-fillers, which have since been removed: venue bookings and the event permit now go through the booking agent workflow (see [event-pipeline.md](event-pipeline.md)). Kept for the form rules it recorded.
+
 # Event Pipeline: running it, inputs, and dry-run test log
 
 Status: **testing paused** on 2026-11-14 at Event Permit stage 6 (Vendor Details). See [Where testing stopped](#where-testing-stopped).

@@ -135,12 +135,13 @@ export function PipelineApp() {
         {tab === "pipeline" && (
           <div className="grid items-start gap-6 lg:grid-cols-[minmax(280px,400px)_1fr]">
             <StepList d={d} selected={sel.id} onSelect={setSelected} />
-            <StepDetail key={sel.id} d={d} step={sel} profile={P} onState={setState} onJumpToField={jumpToField} />
+            {/* Pin the step on reload: a booking moving to "waiting" must not jump the view to another step. */}
+            <StepDetail key={sel.id} d={d} step={sel} profile={P} onState={setState} onReload={() => { setSelected(sel.id); load(); }} onJumpToField={jumpToField} />
           </div>
         )}
         {/* Kept mounted so the conversation survives switching tabs. */}
         <div hidden={tab !== "assistant"}>
-          <AssistantPanel d={d} profile={P} onState={setState} onJumpToField={jumpToField} />
+          <AssistantPanel d={d} profile={P} onState={setState} onReload={load} onJumpToField={jumpToField} />
         </div>
         {tab === "profile" && <ProfileForm profile={P} onSave={saveProfile} />}
         {tab === "fields" && <FieldMatrix profile={P} />}

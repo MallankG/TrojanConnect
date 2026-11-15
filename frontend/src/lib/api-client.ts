@@ -1,39 +1,108 @@
 // Thin client for the FastAPI backend. Base URL is configurable for deploys.
-import type { PipelineState, RunnableForm, StepId } from "./pipeline/plan";
+import type { BookingKind, PipelineState, StepId } from "./pipeline/plan";
 
 const API = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:8000";
+
+/** Backend errors: pipeline routes send `detail` as a string, booking routes as `{code, message}` (PRD §9.1). */
+export class ApiError extends Error {
+  constructor(message: string, readonly code?: string, readonly status?: number) { super(message); }
+}
 
 async function call<T>(path: string, init?: RequestInit & { json?: unknown }): Promise<T> {
   const res = await fetch(`${API}${path}`, {
     ...init,
-    // Custom header forces a CORS preflight; the backend rejects mutations without it (CSRF guard).
+    // Custom header forces a CORS preflight; the backend rejects requests without it (CSRF guard).
     headers: { "content-type": "application/json", "X-TrojanConnect-Client": "web", ...init?.headers },
     body: init?.json !== undefined ? JSON.stringify(init.json) : init?.body,
     cache: "no-store",
   });
   const body = await res.json().catch(() => ({}));
-  if (!res.ok) throw new Error(body?.detail ?? res.statusText);
+  if (!res.ok) {
+    const d = body?.detail;
+    if (d && typeof d === "object" && !Array.isArray(d)) throw new ApiError(d.message ?? res.statusText, d.code, res.status);
+    if (Array.isArray(d)) throw new ApiError(d.map((x: { msg?: string }) => x.msg).join("; "), "VALIDATION", res.status);
+    throw new ApiError(d ?? res.statusText, undefined, res.status);
+  }
   return body as T;
 }
 
-export interface RunStatus { running: boolean; lines: string[] }
-export interface RoomAvailability { room: string; bookings: string[]; free: boolean; conflicts: string[] }
+const key = () => (typeof crypto !== "undefined" && "randomUUID" in crypto ? crypto.randomUUID() : `k-${Date.now()}-${Math.random().toString(36).slice(2)}`);
 
 export type AgentAction =
-  | { type: "form"; formId: string; step: StepId | null; running: boolean }
+  | { type: "form"; formId: string; step: StepId | null }
+  | { type: "booking"; kind: BookingKind }
   | { type: "reset" }
-  | { type: "field"; key: string };
-export interface AgentInfo { configured: boolean; model: string }
+  | { type: "field"; key: string }
+  | { type: "options"; title: string; options: { label: string; detail: string; message: string }[] }
+  | { type: "fields"; title: string; keys: string[]; then: string }
+  | { type: "suggestions"; items: { label: string; message: string }[] };
+export interface AgentInfo { configured: boolean; mode?: "gemini" | "rules"; model: string }
 export interface AgentReply { reply: string; actions: AgentAction[]; tools: { tool: string; ok: boolean; error: string | null }[]; state: PipelineState; model: string }
+
+// ---- Booking workflow (PRD §6–§9) ----------------------------------------------------------
+export type BookingState =
+  | "DRAFT" | "NEEDS_INFORMATION" | "READY_FOR_SUBMISSION" | "SUBMITTED" | "ROUTING" | "AVAILABILITY_CHECK" | "NEGOTIATING"
+  | "PROPOSAL_ACCEPTED" | "PENDING_HUMAN_REVIEW" | "APPROVED" | "CONFIRMED" | "CHANGES_REQUESTED" | "REJECTED"
+  | "CANCEL_REQUESTED" | "CANCELLED" | "EXPIRED" | "FAILED_REQUIRES_HUMAN";
+
+export interface Window { start: string; end: string; timezone: string }
+export interface Proposal {
+  proposal_id: string; proposal_version: number; venue_id: string; venue_name: string; venue_authority_id: string;
+  time: Window; hold: Window | null; capacity: number; included_features: string[]; conditions: string[];
+  expires_at: string; source_availability_version: string; shift: number;
+  status: "offered" | "active" | "superseded" | "declined" | "declined_by_club_agent" | "accepted" | "expired" | "stale" | "withdrawn";
+  differences: string[];
+}
+export interface AgentMessageView { id: string; type: string; from: string; from_type: "club" | "venue" | "review_queue" | "workflow"; to: string; note: string; at: string; proposal_id?: string }
+export interface AuditEntry { at: string; actor: string; role: string; action: string; reason: string; from_state: string | null; to_state: string | null; correlation_id: string }
+export interface ReviewDecision { decision: string; reason: string; reviewer_id: string; reviewer_name: string; at: string }
+export interface Booking {
+  id: string; kind: BookingKind; kind_label: string; state: BookingState; state_label: string;
+  stage: number | null; stages: string[]; version: number; created_at: string; updated_at: string;
+  authority: { id: string; name: string; integration_mode: string } | null;
+  summary: string[]; summary_hash: string;
+  missing_fields: { key: string; label: string; problem: string }[]; blockers: string[];
+  warnings: { code: string; message: string; source: string }[];
+  availability: { inventory_version: string; checked_at: string; source: string; feasible_options: number } | null;
+  simulated: boolean; source_label: string; rounds: number; max_rounds: number;
+  proposals: Proposal[]; active_proposal: Proposal | null; accepted_proposal: Proposal | null;
+  messages: AgentMessageView[];
+  review: { task_id: string; authority_id: string; status: string; created_at: string; decisions: ReviewDecision[];
+    packet?: { summary: string[]; attention: string[]; differences?: string[]; checks?: Record<string, boolean>; negotiation_summary?: string;
+      availability_source?: Booking["availability"]; not_auto_answered?: string; event: Record<string, unknown>; requester: Record<string, unknown> } } | null;
+  confirmation: { reference: string; confirmed_at: string; contact_name: string; contact_email: string } | null;
+  escalation: { code: string; reason: string; details: { message?: string }[] } | null;
+  timeline: AuditEntry[]; next_action: string;
+  can: { prepare: boolean; submit: boolean; accept: boolean; alternatives: boolean; cancel: boolean };
+}
+export interface Reviewer { id: string; name: string; role: string; authorities: string[] }
+
+const reviewerHeaders = (reviewer: string) => ({ "X-TrojanConnect-Reviewer": reviewer });
+
+export const bookingApi = {
+  list: (kind?: BookingKind) => call<Booking[]>(`/api/v1/bookings${kind ? `?kind=${kind}` : ""}`),
+  prepare: (kind: BookingKind) => call<Booking>("/api/v1/bookings/drafts", { method: "POST", json: { kind } }),
+  submit: (b: Booking) => call<Booking>(`/api/v1/bookings/${b.id}/submit`, { method: "POST", json: { summary_hash: b.summary_hash, user_confirmed_summary: true, idempotency_key: key() } }),
+  accept: (b: Booking, p: Proposal) =>
+    call<Booking>(`/api/v1/bookings/${b.id}/proposals/${p.proposal_id}/accept`, { method: "POST", json: { proposal_version: p.proposal_version, user_confirmed: true, idempotency_key: key() } }),
+  alternatives: (b: Booking, reason = "") => call<Booking>(`/api/v1/bookings/${b.id}/alternatives`, { method: "POST", json: { reason, idempotency_key: key() } }),
+  cancel: (b: Booking, reason = "") => call<Booking>(`/api/v1/bookings/${b.id}/cancel`, { method: "POST", json: { reason, idempotency_key: key() } }),
+  reviewers: () => call<Reviewer[]>("/api/v1/venue-review/reviewers"),
+  queue: (reviewer: string) => call<Booking[]>("/api/v1/venue-review/queue", { headers: reviewerHeaders(reviewer) }),
+  decide: (reviewer: string, taskId: string, decision: "APPROVE" | "REJECT" | "REQUEST_CHANGES" | "CONFIRM_CANCELLATION", reason: string, reference?: string) =>
+    call<Booking>(`/api/v1/reviews/${taskId}/decision`, {
+      method: "POST", headers: reviewerHeaders(reviewer),
+      json: { decision, reason, external_confirmation_reference: reference || null, idempotency_key: key() },
+    }),
+  confirm: (reviewer: string, taskId: string, reference: string) =>
+    call<Booking>(`/api/v1/reviews/${taskId}/confirm`, { method: "POST", headers: reviewerHeaders(reviewer), json: { external_confirmation_reference: reference, idempotency_key: key() } }),
+};
 
 export const pipelineApi = {
   state: () => call<PipelineState>("/api/v1/pipeline/state"),
   updateProfile: (patch: Record<string, unknown>) => call<PipelineState>("/api/v1/pipeline/profile", { method: "PUT", json: patch }),
   setCheck: (step: StepId, check: string, value: boolean) => call<PipelineState>("/api/v1/pipeline/progress", { method: "PUT", json: { step, check, value } }),
   setData: (step: StepId, dataKey: string, dataValue: string) => call<PipelineState>("/api/v1/pipeline/progress", { method: "PUT", json: { step, dataKey, dataValue } }),
-  startRun: (form: RunnableForm) => call<{ ok: boolean }>(`/api/v1/pipeline/run/${form}`, { method: "POST" }),
-  runStatus: (form: RunnableForm) => call<RunStatus>(`/api/v1/pipeline/run/${form}`),
-  eeAvailability: () => call<RoomAvailability[]>("/api/v1/pipeline/ee-availability"),
   reset: () => call<PipelineState>("/api/v1/pipeline/reset", { method: "POST" }),
   agentInfo: () => call<AgentInfo>("/api/v1/pipeline/agent"),
   agentChat: (message: string, history: { role: "user" | "assistant"; text: string }[]) =>

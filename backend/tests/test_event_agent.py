@@ -1,13 +1,12 @@
 """Event agent: plan logic, tool guardrails, the agent loop and the chat endpoint.
 
-No network and no real model: a scripted provider stands in for Gemini, and state is written to a
-temp directory.
+No network and no real model: a scripted provider stands in for Gemini, state is written to a
+temp directory, and the seeded venue calendar is emptied.
 """
 
 from __future__ import annotations
 
 import importlib
-import time
 from datetime import date
 from typing import Any
 
@@ -18,7 +17,8 @@ import main
 from app.agents import event_agent
 from app.agents.model import ModelTurn, ToolCall
 from app.tools import event_plan as tools
-from app.workflows.event_pipeline import plan, runs, store
+from app.workflows.booking import inventory
+from app.workflows.event_pipeline import plan, store
 
 router = importlib.import_module("app.workflows.event_pipeline.router")  # the package re-exports the APIRouter under this name
 
@@ -41,37 +41,11 @@ PROFILE = {
 def temp_store(tmp_path, monkeypatch):
     monkeypatch.setattr(store, "DATA_DIR", tmp_path)
     monkeypatch.setattr(store, "STATE_PATH", tmp_path / "event_pipeline.json")
+    monkeypatch.setattr(inventory, "seeded_busy", lambda vid, day: [])
     store.reset()
 
 
-def wait_for_runs() -> None:
-    """A pre-fill logs "finished" from a background thread: let every run finish writing state."""
-    deadline = time.monotonic() + 5
-    while any(r["running"] for r in runs._runs.values()):
-        assert time.monotonic() < deadline, "a pre-fill run thread did not finish"
-        time.sleep(0.005)
-
-
-class FakeProc:
-    """Stands in for the Node pre-filler so no browser opens during tests."""
-    stdout = ["Contact information", "✔ Filled. Review every answer, then press Submit."]
-
-    def wait(self) -> int:
-        return 0
-
-
-@pytest.fixture
-def launched(monkeypatch):
-    calls: list[list[str]] = []
-    monkeypatch.setattr(runs, "node_path", lambda: "node")
-    monkeypatch.setattr(runs.subprocess, "Popen", lambda args, **k: (calls.append(args), FakeProc())[1])
-    runs._runs.clear()
-    yield calls
-    wait_for_runs()  # before the temp store is torn down, so no run thread writes to the real data file
-
-
 def seed(progress: dict[str, Any] | None = None, **profile_overrides: Any) -> None:
-    wait_for_runs()
     with store._lock:
         store.save({"profile": {**PROFILE, **profile_overrides}, "progress": progress or {}, "log": []})
 
@@ -143,41 +117,35 @@ def test_status_hides_the_usc_id_from_the_model():
 def test_records_what_the_user_reports_and_validates_it():
     seed()
     ctx = tools.ToolContext(today=TODAY)
-    assert tools.execute(ctx, "record_step_progress", {"step": "venue", "check": "submitted", "done": True})["ok"]
-    assert not tools.execute(ctx, "record_step_progress", {"step": "venue", "data_key": "reservationNumber", "data_value": "12"})["ok"]
-    assert tools.execute(ctx, "record_step_progress", {"step": "venue", "data_key": "reservationNumber", "data_value": "482913"})["ok"]
-    r = tools.execute(ctx, "record_step_progress", {"step": "venue", "check": "confirmed", "done": True})
+    assert tools.execute(ctx, "record_step_progress", {"step": "food", "check": "picked", "done": True})["ok"]
+    r = tools.execute(ctx, "record_step_progress", {"step": "food", "check": "quote", "done": True})
     assert r["ok"] and r["data"]["status"] == "done"
-    venue = store.load()["progress"]["venue"]
-    assert venue["checks"] == {"submitted": True, "confirmed": True} and venue["data"] == {"reservationNumber": "482913"}
+    assert store.load()["progress"]["food"]["checks"] == {"picked": True, "quote": True}
     assert store.load()["log"][0]["msg"].startswith("assistant: ")
-    assert tools.execute(ctx, "record_step_progress", {"step": "venue", "check": "nope", "done": True})["error"]["code"] == "unknown_check"
+    # Venue and permit outcomes come only from the booking workflow.
+    for args in ({"step": "venue", "check": "confirmed", "done": True}, {"step": "venue", "data_key": "reservationNumber", "data_value": "482913"}):
+        assert tools.execute(ctx, "record_step_progress", args)["error"]["code"] == "workflow_owned"
+    assert "venue" not in store.load()["progress"]
+    assert tools.execute(ctx, "record_step_progress", {"step": "food", "check": "nope", "done": True})["error"]["code"] == "unknown_check"
     assert tools.execute(ctx, "record_step_progress", {"step": "x", "check": "submitted", "done": True})["error"]["code"] == "unknown_step"
 
 
-def test_start_prefill_launches_only_when_ready(launched):
+def test_booking_tools_prepare_but_never_submit():
     seed()
     ctx = tools.ToolContext(today=TODAY)
-    permit = tools.execute(ctx, "start_prefill", {"form_id": "permit"})
-    assert not permit["ok"] and any("reservation number" in x for x in permit["data"]["reasons"])
-    assert any("Finish first" in x for x in permit["data"]["reasons"])
-    wrong = tools.execute(ctx, "start_prefill", {"form_id": "outdoor"})
-    assert not wrong["ok"] and "venue type" in wrong["data"]["reasons"][0]
-    assert not tools.execute(ctx, "start_prefill", {"form_id": "engage"})["ok"]
+    permit = tools.execute(ctx, "prepare_booking_request", {"kind": "event_permit"})
+    assert not permit["ok"] and "venue booking must be confirmed" in permit["data"]["blockers"][0]
     seed(phone="123")
-    assert "Cell phone" in tools.execute(ctx, "start_prefill", {"form_id": "tcc"})["data"]["reasons"][0]
-    assert launched == []
+    venue = tools.execute(ctx, "prepare_booking_request", {"kind": "venue_booking"})
+    assert not venue["ok"] and venue["data"]["missing_fields"] == ["Cell phone"]
 
     seed()
-    venue = tools.execute(ctx, "start_prefill", {"form_id": "tcc"})
-    assert venue["ok"] and "NOT been submitted" in venue["data"]["next"]
-    assert [a[1:3] for a in launched] == [["run.mjs", "tcc"]]
-    assert {"type": "form", "formId": "tcc", "step": "venue", "running": True} in ctx.actions
-    assert any(e["msg"] == "assistant: pre-fill tcc started" for e in store.load()["log"])
-
-    seed(VENUE_AND_FOOD_DONE)
-    assert tools.execute(ctx, "start_prefill", {"form_id": "permit"})["ok"]
-    assert [a[2] for a in launched] == ["tcc", "permit"]
+    venue = tools.execute(ctx, "prepare_booking_request", {"kind": "venue_booking"})
+    assert venue["ok"] and venue["data"]["state"] == "READY_FOR_SUBMISSION" and "Confirm & send" in venue["data"]["next"]
+    assert "Routed to: Trojan Event Services (TES)" in venue["data"]["summary_for_user"]
+    assert {"type": "booking", "kind": "venue_booking"} in ctx.actions
+    assert tools.execute(ctx, "prepare_booking_request", {"kind": "nope"})["error"]["code"] == "invalid_arguments"
+    assert tools.status_summary(store.load(), TODAY)["bookings"]["venue_booking"]["state"] == "READY_FOR_SUBMISSION"
 
 
 def test_reset_is_only_offered_never_done():
@@ -197,24 +165,27 @@ def test_emails_caterers_and_availability_guards():
 
     assert tools.execute(ctx, "check_caterer", {"name": "city tacos"})["data"]["accepted_by_permit_lookup"]
     assert not tools.execute(ctx, "check_caterer", {"name": "Joe's Pizza"})["data"]["accepted_by_permit_lookup"]
-    assert tools.execute(ctx, "check_room_availability", {})["error"]["code"] == "not_available"  # venue is TCC
+    seed(date="")
+    assert tools.execute(ctx, "check_venue_availability", {})["error"]["code"] == "not_ready"
+    seed()
+    assert tools.execute(ctx, "check_venue_availability", {})["data"]["options_total"] > 0
     assert len(tools.execute(ctx, "get_form_details", {"form_id": "vendorList"})["data"]["caterers_accepted_by_permit_lookup"]) == 20
     assert tools.execute(ctx, "nope", {})["error"]["code"] == "unknown_tool"
     assert tools.execute(ctx, "check_caterer", {"bogus": 1})["error"]["code"] == "invalid_arguments"
 
 
 # ---- agent loop ------------------------------------------------------------------------------
-def test_agent_runs_tools_and_returns_cards(launched):
+def test_agent_runs_tools_and_returns_cards():
     seed()
     provider = ScriptedProvider([
-        ModelTurn(tool_calls=[ToolCall("update_event_profile", {"fields": {"attendance": "40"}}), ToolCall("start_prefill", {"form_id": "tcc"})]),
-        ModelTurn(text="Saved 40 people. The TCC request card is ready below."),
+        ModelTurn(tool_calls=[ToolCall("update_event_profile", {"fields": {"attendance": "40"}}),
+                              ToolCall("prepare_booking_request", {"kind": "venue_booking"})]),
+        ModelTurn(text="Saved 40 people. Check the summary below and press Confirm & send."),
     ])
     out = event_agent.run_turn(provider, "Make it 40 people and start the room request", [{"role": "user", "text": "hi"}], today=TODAY)
     assert out["reply"].startswith("Saved 40")
-    assert out["actions"] == [{"type": "form", "formId": "tcc", "step": "venue", "running": True}]
-    assert len(launched) == 1
-    assert [t["tool"] for t in out["tools"]] == ["update_event_profile", "start_prefill"] and all(t["ok"] for t in out["tools"])
+    assert out["actions"] == [{"type": "booking", "kind": "venue_booking"}]
+    assert [t["tool"] for t in out["tools"]] == ["update_event_profile", "prepare_booking_request"] and all(t["ok"] for t in out["tools"])
     assert out["state"]["profile"]["attendance"] == "40"
     results = provider.sent[1]["tool_results"]
     assert results[0][1]["data"]["saved"] == {"attendance": "40"}
@@ -232,9 +203,9 @@ def test_chat_endpoint(monkeypatch):
     client = TestClient(main.app)
     monkeypatch.delenv("GEMINI_API_KEY", raising=False)
     assert client.post("/api/v1/pipeline/agent/chat", json={"message": "hi"}).status_code == 403
-    assert client.get("/api/v1/pipeline/agent", headers=HEADERS).json()["configured"] is False
+    assert client.get("/api/v1/pipeline/agent", headers=HEADERS).json()["mode"] == "rules"
     r = client.post("/api/v1/pipeline/agent/chat", json={"message": "hi"}, headers=HEADERS)
-    assert r.status_code == 503 and "GEMINI_API_KEY" in r.json()["detail"]
+    assert r.status_code == 200 and r.json()["model"] == "rules" and "Book a 35 person event" in r.json()["reply"]
 
     main.app.dependency_overrides[router.get_model_provider] = lambda: ScriptedProvider([ModelTurn(text="Hello.")])
     try:
@@ -246,7 +217,7 @@ def test_chat_endpoint(monkeypatch):
 
 
 # ---- UI read endpoints -----------------------------------------------------------------------
-def test_ui_endpoints_expose_everything_a_client_needs(launched):
+def test_ui_endpoints_expose_everything_a_client_needs():
     seed(VENUE_AND_FOOD_DONE)
     client = TestClient(main.app)
     get = lambda path: client.get(f"/api/v1/pipeline{path}", headers=HEADERS)  # noqa: E731
@@ -264,7 +235,7 @@ def test_ui_endpoints_expose_everything_a_client_needs(launched):
     assert status["do_now"] == ["permit", "funding", "access"] and status["event"]["start"] == "6:00 PM"
     permit = next(s for s in status["steps"] if s["id"] == "permit")
     assert permit["status_label"] == "Ready to start" and permit["deadline"] == "2027-02-18" and permit["deadline_official"]
-    assert permit["forms"][0]["ready"] and permit["forms"][0]["prefillable"] and permit["forms"][0]["run"] == {"running": False}
+    assert permit["forms"][0]["ready"] and permit["forms"][0]["agent"] and permit["forms"][0]["booking"] is None
     engage = next(s for s in status["steps"] if s["id"] == "engage")
     assert engage["blocked_by"] == [{"id": "permit", "title": "Event permit application"}]
     assert not engage["forms"][0]["ready"] and "Finish first" in engage["forms"][0]["not_ready_reasons"][0]
@@ -287,3 +258,87 @@ def test_ui_endpoints_expose_everything_a_client_needs(launched):
     assert get("/activity?limit=1").json() == [] and get("/activity?limit=0").status_code == 422
     assert [t["name"] for t in get("/agent").json()["tools"]][0] == "get_event_plan_status"
     assert "/api/v1/pipeline/status" in client.get("/openapi.json").json()["paths"]
+
+
+# ---- rule-based Club Agent (no model) ---------------------------------------------------------
+class FailingProvider:
+    label = "failing"
+
+    def start(self, *a, **k):
+        return self
+
+    def send(self, **k):
+        from app.agents.model import ModelError
+        raise ModelError("Gemini's rate limit for this API key was reached.")
+
+
+def test_rules_agent_follows_the_booking_workflow(monkeypatch):
+    from app.agents import rules_agent
+    from app.workflows.booking import service
+    seed()
+    out = rules_agent.run_turn("Book my venue", today=TODAY)
+    assert "Confirm & send" in out["reply"] and out["actions"] == [{"type": "booking", "kind": "venue_booking"}]
+    v = service.latest_view("venue_booking")
+    assert v["state"] == "READY_FOR_SUBMISSION"  # prepared, not submitted
+    service.submit(v["id"], v["summary_hash"], "rules-submit-1")
+    out = rules_agent.run_turn("where is my booking?", today=TODAY)
+    assert "Proposal ready for you" in out["reply"] and "TCC 350" in out["reply"]
+    out = rules_agent.run_turn("can I get another option?", today=TODAY)
+    assert "another option" in out["reply"] and out["tools"][0]["tool"] == "request_alternatives"
+    assert "Which rooms" not in rules_agent.run_turn("which rooms are free?", today=TODAY)["reply"]
+    out = rules_agent.run_turn("apply for the permit", today=TODAY)
+    assert "venue booking must be confirmed" in out["reply"]
+    assert "Do now" in rules_agent.run_turn("what should I do next?", today=TODAY)["reply"]
+
+
+def test_chat_falls_back_to_rules_when_gemini_fails(monkeypatch):
+    seed()
+    monkeypatch.setenv("GEMINI_API_KEY", "x")
+    monkeypatch.delenv("ASSISTANT_MODE", raising=False)
+    main.app.dependency_overrides[router.get_model_provider] = lambda: FailingProvider()
+    try:
+        r = TestClient(main.app).post("/api/v1/pipeline/agent/chat", json={"message": "book my venue"}, headers=HEADERS)
+        assert r.status_code == 200 and r.json()["model"] == "rules" and "Gemini unavailable" in r.json()["reply"]
+        assert r.json()["actions"] == [{"type": "booking", "kind": "venue_booking"}]
+    finally:
+        main.app.dependency_overrides.clear()
+
+
+def test_rules_agent_books_from_one_sentence_and_walks_the_waterfall(monkeypatch):
+    from app.agents import rules_agent
+    from app.workflows.booking import service
+    monkeypatch.setenv("DEMO_AUTO_REVIEW", "true")
+    blank = {k: v for k, v in PROFILE.items() if k not in ("date", "startTime", "endTime", "attendance", "venueKind", "venueChoice1",
+                                                          "setupTime", "teardownTime", "menu", "foodValue", "catererName")}
+    with store._lock:
+        store.save({"profile": blank, "progress": {}, "log": []})
+
+    out = rules_agent.run_turn("Book a 35 person event for decemeber 20th 2026 from 7pm - 8pm", today=TODAY)
+    p = store.load()["profile"]
+    assert (p["attendance"], p["date"], p["startTime"], p["endTime"]) == ("35", "2026-12-20", "19:00", "20:00")
+    options = next(a for a in out["actions"] if a["type"] == "options")["options"]
+    assert options and all("7:00 PM–8:00 PM" in o["label"] for o in options)
+    assert "42 days' notice" in out["reply"]  # outdoor is ruled out, not offered
+    tcc = next(o for o in options if o["label"].startswith("TCC 350"))
+
+    out = rules_agent.run_turn(tcc["message"], today=TODAY)
+    assert store.load()["profile"]["venueChoice1"] == "TCC 350" and store.load()["profile"]["venueKind"] == "tcc"
+    assert "Confirm & send" in out["reply"] and {"type": "booking", "kind": "venue_booking"} in out["actions"]
+    v = service.latest_view("venue_booking")
+    assert v["state"] == "READY_FOR_SUBMISSION"  # the agent never submits
+    v = service.view(service.submit(v["id"], v["summary_hash"], "rules-sentence-1"))
+    pr = v["active_proposal"]
+    r = service.view(service.accept_proposal(v["id"], pr["proposal_id"], pr["proposal_version"], "rules-sentence-2"))
+    assert r["state"] == "CONFIRMED" and r["review"]["decisions"][0]["reviewer_id"] == "sim-tes"  # simulated office, labelled
+    assert len(r["confirmation"]["reference"]) == 6
+
+    out = rules_agent.run_turn("where is my booking?", today=TODAY)
+    assert "Confirmed" in out["reply"] and any(a["type"] == "suggestions" for a in out["actions"])
+    out = rules_agent.run_turn("Use caterer City Tacos", today=TODAY)
+    assert store.load()["progress"]["food"]["checks"]["picked"]
+    fields = next(a for a in out["actions"] if a["type"] == "fields")
+    assert set(fields["keys"]) == {"menu", "foodValue"} and fields["then"] == "I have the quote"
+    store.update(lambda s: s["profile"].update(menu="Tacos", foodValue="300"))
+    assert "Food step done" in rules_agent.run_turn("I have the quote", today=TODAY)["reply"]
+    out = rules_agent.run_turn("Apply for the permit", today=TODAY)
+    assert "Confirm & send" in out["reply"]  # uscId etc. are in PROFILE

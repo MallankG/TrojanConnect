@@ -1,5 +1,6 @@
 """JSON views of the event plan for a UI: everything a client needs to render and drive the
-pipeline without re-implementing any rule. Built from plan.py (rules) + store (saved event) + runs.
+pipeline without re-implementing any rule. Built from plan.py (rules) + store (saved event) + the
+booking workflow (venue and permit requests).
 """
 
 from __future__ import annotations
@@ -9,11 +10,14 @@ from datetime import date
 from typing import Any
 from urllib.parse import quote
 
-from . import plan, runs
+from app.workflows.booking import service as booking
+
+from . import plan
 
 STATUS_LABELS = {"done": "Done", "ready": "Ready to start", "active": "In progress", "waiting": "Waiting on reply",
                  "blocked": "Blocked", "skipped": "Not needed"}
-MODE_LABELS = {"prefill": "auto pre-fill", "email": "email draft", "manual": "manual"}
+MODE_LABELS = {"agent": "venue agent", "email": "email draft", "manual": "manual"}
+FORM_KIND = {fid: ("event_permit" if fid == "permit" else "venue_booking") for fid in plan.AGENT_FORMS}
 # Entered by the user in the profile form only; never sent to or accepted from the assistant.
 PRIVATE_FIELDS = {"uscId"}
 
@@ -39,7 +43,7 @@ def readiness(form_id: str, state: dict[str, Any], today: date | None = None) ->
     if missing:
         reasons.append("Missing or invalid profile fields: " + ", ".join(f'{m["label"]} ({m["problem"]})' for m in missing))
     if form_id == "permit" and not re.fullmatch(r"\d{6}", d["byId"]["venue"]["data"].get("reservationNumber") or ""):
-        reasons.append("Record the 6-digit venue reservation number on the Venue step first.")
+        reasons.append("The venue booking must be confirmed by the venue reviewer first.")
     return step, reasons
 
 
@@ -57,10 +61,12 @@ def form_view(form_id: str, state: dict[str, Any], today: date | None = None) ->
         "required_fields": [{"key": k, "label": plan.short_label(k)} for k in form["requires"] if plan.field_applies(profile, k)],
         "missing_fields": plan.missing_for(form_id, profile),
         "ready": not reasons, "not_ready_reasons": reasons,
-        "prefillable": form_id in plan.RUNNABLE_FORMS,
+        "agent": form_id in plan.AGENT_FORMS,
     }
-    if out["prefillable"]:
-        out["run"] = {"running": bool(runs.status(form_id)["running"])}
+    if out["agent"]:
+        b = booking.latest_view(FORM_KIND[form_id])
+        out["booking_kind"] = FORM_KIND[form_id]
+        out["booking"] = None if not b else {"id": b["id"], "state": b["state"], "state_label": b["state_label"], "next_action": b["next_action"]}
     return out
 
 
@@ -149,7 +155,7 @@ def schema_view() -> dict[str, Any]:
         "venue_kinds": [{"id": k, "label": label, "form": plan.VENUE_FORM[k], "lead_days": plan.VENUE_LEAD_DAYS[k]}
                         for k, label in plan.VENUE_KINDS.items()],
         "forms": [{"id": fid, "name": f["name"], "mode": f["auto"], "mode_label": MODE_LABELS[f["auto"]], "url": f.get("url"),
-                   "requires": f["requires"], "rules": f["rules"], "prefillable": fid in plan.RUNNABLE_FORMS}
+                   "requires": f["requires"], "rules": f["rules"], "agent": fid in plan.AGENT_FORMS}
                   for fid, f in plan.FORMS.items()],
         "steps": [{"id": s["id"], "n": s["n"], "title": s["title"], "owner": s["owner"],
                    "checklist": [{"key": k, "label": label} for k, label in s["substeps"]],

@@ -1,47 +1,32 @@
 """Event pipeline API: the 7-step event walkthrough (venue → food → permit → funding →
 EngageSC → accessibility → publicity).
 
-Backend owns state. Form pre-fill runs launch the Node/Playwright scripts in
-app/integrations/usc_forms, which open a visible browser and STOP before Submit; a human
-always reviews and submits. Nothing here confirms or submits a real USC reservation.
+Backend owns state. Nothing here talks to a USC system: venue bookings and the event permit are
+handled by the booking agent workflow (app/workflows/booking, /api/v1/bookings), where a human
+reviewer decides and only the backend can confirm. The progress keys that workflow owns (venue
+submitted/confirmed and reservation #, permit submitted/approved and code) can't be set here.
 """
 
 from __future__ import annotations
 
+import os
 from typing import Any, Literal
 
-from fastapi import APIRouter, Depends, Header, HTTPException, Query
+from fastapi import APIRouter, Depends, HTTPException, Query
 from pydantic import BaseModel, ConfigDict, Field
 
-from app.agents import event_agent
+from app.agents import event_agent, rules_agent
 from app.agents.model import ModelError
 from app.integrations.gemini import provider as gemini
+from app.security.client import require_client_header
 from app.tools import event_plan as agent_tools
+from app.workflows.booking import service as booking
 
-from . import plan, runs, store, views
-from .availability import PipelineError, read_ee_availability
-
-CLIENT_HEADER = "X-TrojanConnect-Client"
-
-
-def require_client_header(x_trojanconnect_client: str | None = Header(default=None)) -> None:
-    """CSRF guard for every pipeline endpoint (any method).
-
-    A custom header turns every cross-origin request into a CORS-preflighted one, and CORS only
-    allows the TrojanConnect frontend origin. This stops a random website from silently resetting
-    the event, launching pre-fill browser windows, or triggering the headless calendar scrape
-    (GET /ee-availability). CORS preflights (OPTIONS) are answered by the middleware before this
-    runs. Not a substitute for real auth (PRD: Supabase Auth + server-side session verification);
-    add that dependency here when it lands.
-    """
-    if x_trojanconnect_client != "web":
-        raise HTTPException(403, f"Missing {CLIENT_HEADER} header.")
-
+from . import plan, store, views
 
 router = APIRouter(prefix="/api/v1/pipeline", tags=["event-pipeline"], dependencies=[Depends(require_client_header)])
 
 STEP_IDS = {"venue", "food", "permit", "funding", "engage", "access", "publicity"}
-RunnableForm = Literal["tcc", "outdoor", "classroom", "eeRoom", "permit"]
 
 
 class ProgressUpdate(BaseModel):
@@ -122,6 +107,9 @@ def put_profile(patch: dict[str, Any]) -> dict[str, Any]:
 def put_progress(u: ProgressUpdate) -> dict[str, Any]:
     if u.step not in STEP_IDS:
         raise HTTPException(400, f"Unknown step '{u.step}'")
+    owned = booking.WORKFLOW_OWNED.get(u.step, {})
+    if (u.check and u.check in owned.get("checks", ())) or (u.dataKey and u.dataKey in owned.get("data", ())):
+        raise HTTPException(409, "Set by the booking workflow once a reviewer decides. Use the booking card on this step.")
 
     def apply(s: dict[str, Any]) -> None:
         p = s["progress"].setdefault(u.step, {"checks": {}, "data": {}})
@@ -137,30 +125,10 @@ def put_progress(u: ProgressUpdate) -> dict[str, Any]:
 
 @router.post("/reset")
 def reset() -> dict[str, Any]:
+    """Clear the event. Open booking requests are withdrawn; held or confirmed ones go to the reviewer as cancellation requests."""
+    if event_id := store.load().get("event_id"):
+        booking.cancel_event(event_id)
     return store.reset()
-
-
-@router.post("/run/{form_id}")
-def start_run(form_id: RunnableForm) -> dict[str, bool]:
-    try:
-        runs.start(form_id)
-    except PipelineError as e:
-        raise HTTPException(e.status, e.message) from e
-    return {"ok": True}
-
-
-@router.get("/run/{form_id}")
-def get_run(form_id: RunnableForm) -> dict[str, Any]:
-    return runs.status(form_id)
-
-
-@router.get("/ee-availability")
-def ee_availability() -> list[dict[str, Any]]:
-    """Read the public ECE (EEB/PHE) room calendars for the saved event date/time."""
-    try:
-        return read_ee_availability(store.load()["profile"])["rooms"]
-    except PipelineError as e:
-        raise HTTPException(e.status, e.message) from e
 
 
 # ---- Event agent ----------------------------------------------------------------------------
@@ -175,26 +143,35 @@ class ChatRequest(BaseModel):
     history: list[ChatMessage] = Field(default_factory=list, max_length=60)
 
 
-def get_model_provider() -> gemini.GeminiProvider:
-    if not gemini.configured():
-        raise HTTPException(503, "The assistant needs a Gemini API key. Set GEMINI_API_KEY in backend/.env and restart the backend.")
+def use_rules() -> bool:
+    """ASSISTANT_MODE=rules (or no Gemini key): answer with the built-in rule-based Club Agent, no model calls."""
+    return os.environ.get("ASSISTANT_MODE", "").lower() == "rules" or not gemini.configured()
+
+
+def get_model_provider() -> gemini.GeminiProvider | None:
+    if use_rules():
+        return None
     try:
         return gemini.GeminiProvider()
-    except ModelError as e:
-        raise HTTPException(503, str(e)) from e
+    except ModelError:
+        return None
 
 
 @router.get("/agent")
 def agent_info() -> dict[str, Any]:
-    """Whether the assistant can be used, which model it runs on, and what it can do."""
-    return {"configured": gemini.configured(), "model": gemini.model_id(),
+    """Which assistant answers (Gemini or the built-in rule-based agent) and what it can do."""
+    rules = use_rules()
+    return {"configured": True, "mode": "rules" if rules else "gemini", "model": rules_agent.LABEL if rules else gemini.model_id(),
             "tools": [{"name": t.name, "description": t.description.split(". ")[0].rstrip(".") + "."} for t in agent_tools.TOOLS]}
 
 
 @router.post("/agent/chat")
-def agent_chat(req: ChatRequest, provider: gemini.GeminiProvider = Depends(get_model_provider)) -> dict[str, Any]:
-    """One chat turn with the event agent. It reads and updates the plan through validated tools only."""
+def agent_chat(req: ChatRequest, provider: gemini.GeminiProvider | None = Depends(get_model_provider)) -> dict[str, Any]:
+    """One chat turn. Gemini when configured; otherwise, or if Gemini fails, the rule-based agent. Both act only through validated tools."""
+    history = [m.model_dump() for m in req.history]
+    if provider is None:
+        return rules_agent.run_turn(req.message, history)
     try:
-        return event_agent.run_turn(provider, req.message, [m.model_dump() for m in req.history])
+        return event_agent.run_turn(provider, req.message, history)
     except ModelError as e:
-        raise HTTPException(502, str(e)) from e
+        return rules_agent.run_turn(req.message, history, note=f"Gemini unavailable: {e} Answered by the built-in assistant")

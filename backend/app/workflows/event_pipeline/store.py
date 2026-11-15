@@ -1,8 +1,9 @@
 """Persistence for the event pipeline.
 
 Hackathon storage: a single JSON document at backend/data/event_pipeline.json. The shape
-({profile, progress, log}) maps directly onto future Supabase tables (event_profiles,
-event_step_progress, audit_log) — swap this module when the database lands.
+({event_id, profile, progress, log}) maps directly onto future Supabase tables (event_profiles,
+event_step_progress, audit_log) — swap this module when the database lands. Booking requests live
+in app/workflows/booking/store.py.
 """
 
 from __future__ import annotations
@@ -17,7 +18,6 @@ from typing import Any
 BACKEND_ROOT = Path(__file__).resolve().parents[3]
 DATA_DIR = BACKEND_ROOT / "data"
 STATE_PATH = DATA_DIR / "event_pipeline.json"
-BROWSER_PROFILE_DIR = DATA_DIR / "browser-profile"
 
 EMPTY_STATE: dict[str, Any] = {
     "profile": {
@@ -27,6 +27,7 @@ EMPTY_STATE: dict[str, Any] = {
         "amplifiedSound": False,
         "filmed": False,
         "acceptAlternate": True,
+        "timeFlexMinutes": "60",
         "vendorServes": False,
         "paymentType": "PO",
     },
