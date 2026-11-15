@@ -81,9 +81,9 @@ When you set up the real bot, the slash command's Request URL is
 ## 3. Run and publish
 
 - **Run** (workspace): `scripts/replit.sh dev` starts FastAPI and the Next.js dev server; open port 3000.
-- **Publish**: Autoscale, with **max machines set to 1** in the publish settings. Some state lives in
-  the running process (the planning assistant's current event, the RSO tracker, Slack post previews), so a
-  second copy would see different data. The build command (`scripts/replit.sh build`)
+- **Publish**: **Reserved VM**. Some state lives in the running process (the planning assistant's
+  current event, the RSO tracker, Slack post previews), so one always-on machine keeps it consistent. The
+  build command (`scripts/replit.sh build`)
   installs Python and Node dependencies, tries to install Chromium for the RSO portal agent, and builds the
   frontend. The run command (`scripts/replit.sh start`) starts both servers.
 
@@ -106,6 +106,5 @@ Published at **https://trojan-connect.replit.app**:
 ## What resets on redeploy
 
 The event-planning assistant's current event and the RSO tracker are stored in `backend/data/*.json` on
-the machine's disk. Autoscale wipes that disk on each redeploy, and also when the app scales to zero after
-sitting idle. Clubs, bookings, feedback, posts and student preferences
+the VM's disk, which is wiped on each redeploy. Clubs, bookings, feedback, posts and student preferences
 are in Supabase and stay.
