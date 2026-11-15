@@ -13,14 +13,14 @@ Open the **Shell** tab in Replit and run:
 
 ```bash
 git fetch origin
-git checkout -B booking-integration origin/booking-integration   # use main once the Replit PR is merged
-git reset --hard origin/booking-integration
+git checkout -B main origin/main
+git reset --hard origin/main
 git clean -fd          # removes the template leftovers (artifacts/, lib/, .migration-backup/, pnpm files)
 git status             # should say: nothing to commit, working tree clean
 ```
 
 `git clean -fd` deletes untracked files, but not the ignored ones (`node_modules`, `.pythonlibs`).
-Afterwards the Git panel tracks `booking-integration` with nothing to pull or push.
+Afterwards the Git panel tracks `main` with nothing to pull or push. Replit deploys from `main`.
 
 If Replit's Agent is still waiting on the earlier "replace this workspace" request, you can cancel it:
 the commands above do the same thing.
