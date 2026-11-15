@@ -5,6 +5,7 @@
 import { chromium } from 'playwright';
 import { readFile } from 'node:fs/promises';
 import { FILLERS } from './forms.mjs';
+import { browserOptions } from './shared.mjs';
 
 const [, , formId, statePath, profileDir] = process.argv;
 const log = m => console.log(m);
@@ -17,7 +18,7 @@ const P = state.profile || {};
 // Reservation # and venue contact are recorded on the venue step; permit code on the permit step.
 const D = { ...(state.progress?.venue?.data || {}), ...(state.progress?.permit?.data || {}) };
 
-const ctx = await chromium.launchPersistentContext(profileDir, { headless: false, viewport: null, args: ['--start-maximized'] });
+const ctx = await chromium.launchPersistentContext(profileDir, { ...browserOptions(chromium), headless: false, viewport: null, args: ['--start-maximized'] });
 const page = ctx.pages()[0] || await ctx.newPage();
 page.setDefaultTimeout(15000);
 try {

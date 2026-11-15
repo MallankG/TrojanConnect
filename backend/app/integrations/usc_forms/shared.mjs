@@ -19,3 +19,14 @@ export function to12h(t) {
   h = h % 12 || 12;
   return `${h}:${String(m).padStart(2, '0')} ${ap}`;
 }
+
+// Prefer Playwright's bundled Chromium; fall back to the user's installed Google Chrome
+// (no ~150 MB download needed). Override with PLAYWRIGHT_CHANNEL=chrome|msedge|chromium.
+import { existsSync } from 'node:fs';
+export function browserOptions(chromium) {
+  const forced = process.env.PLAYWRIGHT_CHANNEL;
+  if (forced) return forced === 'chromium' ? {} : { channel: forced };
+  let bundled = '';
+  try { bundled = chromium.executablePath(); } catch { /* not installed */ }
+  return bundled && existsSync(bundled) ? {} : { channel: 'chrome' };
+}

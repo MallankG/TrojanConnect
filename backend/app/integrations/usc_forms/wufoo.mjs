@@ -4,15 +4,18 @@
 const norm = s => String(s ?? '').replace(/\s+/g, ' ').trim();
 
 export function makeWufoo(page, log) {
+  // One in-page query instead of per-<li> locator waits (sections without a label would
+  // otherwise each burn the full default timeout).
   async function findLi(labelRx) {
-    const lis = page.locator('form li[id*="li"]');
-    const n = await lis.count();
-    for (let i = 0; i < n; i++) {
-      const li = lis.nth(i);
-      const lab = norm(await li.locator('label.desc, legend').first().innerText().catch(() => ''));
-      if (lab && labelRx.test(lab) && await li.isVisible().catch(() => false)) return li;
-    }
-    return null;
+    const idx = await page.evaluate(([src, flags]) => {
+      const rx = new RegExp(src, flags);
+      const lis = [...document.querySelectorAll('form li[id*="li"]')];
+      return lis.findIndex(li => {
+        const l = li.querySelector('label.desc, legend');
+        return !!l && li.offsetParent !== null && rx.test(l.innerText.replace(/\s+/g, ' ').trim());
+      });
+    }, [labelRx.source, labelRx.flags]);
+    return idx < 0 ? null : page.locator('form li[id*="li"]').nth(idx);
   }
 
   async function set(labelRx, value, { optional = false } = {}) {
@@ -59,7 +62,8 @@ export function makeWufoo(page, log) {
     if (await selects.count() && nText >= 1 && maxes.every(m => m === 2) && /^\d{1,2}:\d{2}$/.test(value)) {
       let [h, m] = value.split(':').map(Number); const ap = h >= 12 ? 'PM' : 'AM'; h = h % 12 || 12;
       const parts = [String(h).padStart(2, '0'), String(m).padStart(2, '0'), '00'];
-      for (let i = 0; i < nText; i++) await texts.nth(i).fill(parts[i]);
+      // Wufoo time fields carry a hidden seconds box ("hideSeconds"); only fill visible ones.
+      for (let i = 0; i < nText; i++) if (await texts.nth(i).isVisible()) await texts.nth(i).fill(parts[i]);
       await selects.first().selectOption({ label: ap });
       return true;
     }

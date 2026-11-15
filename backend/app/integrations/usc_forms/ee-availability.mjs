@@ -2,6 +2,7 @@
 import { chromium } from 'playwright';
 import { fileURLToPath } from 'node:url';
 import path from 'node:path';
+import { browserOptions } from './shared.mjs';
 
 export const EE_ROOMS = ['EEB 110', 'EEB 132', 'EEB 203', 'EEB 248', 'EEB 349', 'EEB 403', 'EEB 539', 'PHE 223', 'PHE 631'];
 
@@ -10,7 +11,7 @@ const toMin = s => { const m = s.trim().match(/(\d+):(\d+)\s*(am|pm)/i); if (!m)
 export async function eeAvailability(dateStr, start, end, rooms = EE_ROOMS) {
   const [y, mo, d] = dateStr.split('-').map(Number);
   const want = start && end ? [toMin(hm(start)), toMin(hm(end))] : null;
-  const browser = await chromium.launch();
+  const browser = await chromium.launch(browserOptions(chromium));
   const page = await browser.newPage();
   const out = [];
   try {
@@ -21,14 +22,29 @@ export async function eeAvailability(dateStr, start, end, rooms = EE_ROOMS) {
       const cur = await page.evaluate(() => document.body.innerText.match(/\|\s*(\w+)\s+(\d{4})/)?.slice(1));
       const curMonth = cur ? new Date(`${cur[0]} 1, ${cur[1]}`).getMonth() + 1 : mo;
       if (cur && (curMonth !== mo || +cur[1] !== y)) {
-        await page.evaluate(([id, m, yy]) => window.change_month(id, m, yy), [room.replace(' ', ''), mo, y]);
-        await page.waitForLoadState('load');
+        // change_month() submits a form (navigation), so trigger it async and wait for the new page.
+        await Promise.all([
+          page.waitForNavigation({ waitUntil: 'load' }),
+          page.evaluate(([id, m, yy]) => { setTimeout(() => window.change_month(id, m, yy), 0); }, [room.replace(' ', ''), mo, y]),
+        ]);
       }
+      // Layout-agnostic parse (the calendar renders as <table> or <div>s depending on the page):
+      // a line that is just a number starts a day; following "h:mm am- h:mm pm : title" lines belong
+      // to it. Day numbers restart at 1 for the trailing next-month cells, so stop there.
       const bookings = await page.evaluate(day => {
-        const cells = [...document.querySelectorAll('td')];
-        const cell = cells.find(td => td.innerText.trim().split('\n')[0].trim() === String(day));
-        if (!cell) return null;
-        return cell.innerText.split('\n').slice(1).map(s => s.trim()).filter(s => /\d:\d\d/.test(s));
+        const lines = document.body.innerText.split('\n').map(l => l.trim()).filter(Boolean);
+        let cur = null, seenFirst = false;
+        const byDay = {};
+        for (const l of lines) {
+          if (/^\d{1,2}$/.test(l)) {
+            const n = +l;
+            if (n === 1 && seenFirst) break; // next month's spill-over
+            if (n === 1) seenFirst = true;
+            cur = seenFirst ? n : null;
+            if (cur) byDay[cur] = [];
+          } else if (cur && /\d:\d\d\s*[ap]m\s*-/i.test(l)) byDay[cur].push(l);
+        }
+        return seenFirst ? (byDay[day] ?? []) : null;
       }, d);
       const conflicts = (bookings || []).filter(b => {
         if (!want) return true;

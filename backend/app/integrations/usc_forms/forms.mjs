@@ -18,13 +18,13 @@ async function tcc(page, P, _d, log) {
   await w.set(/^Primary Contact Email/, P.email);
   await w.set(/E-Board Officer of your RSO/, 'Yes');
   await w.set(/E-Board Officer Position/, P.eboardPosition);
-  await w.set(/Responsible RSO E-Board Officer Name/, fullName(P));
-  await w.set(/E-Board Contact Email/, P.email);
-  await w.set(/E-Board Contact Cell Phone/, P.phone);
+  await w.set(/Responsible RSO E-Board Officer Name/, fullName(P), { optional: true }); // only if requester isn't an officer
+  await w.set(/E-Board Contact Email/, P.email, { optional: true });
+  await w.set(/E-Board Contact Cell Phone/, P.phone, { optional: true });
   log('Date & times');
   await w.set(/single date or multiple dates/, 'Single date');
   await w.set(/Date #1/, P.date);
-  await w.set(/weekly re-occurring/, 'No');
+  await w.set(/weekly re-occurring/, 'No', { optional: true }); // only for multi-date requests
   await w.set(/^Meeting Name/, P.eventName);
   await w.set(/^Meeting Description/, P.description);
   await w.set(/Set Up \(Reservation\) Start Time/, P.setupTime || P.startTime);
@@ -38,9 +38,12 @@ async function tcc(page, P, _d, log) {
   const room = (P.venueChoice1 || '').replace(/^TCC\s*/i, 'TCC ');
   await w.set(/first choice location/, room);
   if (P.venueChoice2) await w.set(/second choice location/, P.venueChoice2.replace(/^TCC\s*/i, 'TCC '), { optional: true });
-  await w.set(/select all rooms that you are requesting/, new RegExp('^' + room.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'), 'i'));
+  // Only shown for multi-room requests.
+  await w.set(/select all rooms that you are requesting/, new RegExp('^' + room.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'), 'i'), { optional: true });
   log('Set-up, AV, extras');
+  if (await w.findLi(/Set up type for the Franklin/)) log('  ⚠ Choose the room set-up type (Franklin/Forum) yourself — layout is your call.');
   await w.set(/request additional furniture/, 'No');
+  await w.set(/Each room comes with 1 trash can/, 'No additional trash boxes needed.'); // walkthrough: say no to trash
   await w.set(/request Audio Visual Equipment/, 'No');
   await w.set(/panel discussion/, 'No');
   await w.set(/serving food and\/or beverages/, yn(P.food));
@@ -72,7 +75,7 @@ async function outdoor(page, P, _d, log) {
   await w.set(/^Date #1/, P.date);
   await w.set(/^Sponsoring Organization/, P.orgName);
   await w.set(/^Organization Type/, 'Recognized Student Organization');
-  await w.set(/^First Contact Name/, fullName(P));
+  await w.set(/^First Contact Name/, { first: P.firstName, last: P.lastName });
   await w.set(/^Cell Phone \*/, P.phone);
   await w.set(/^Email \*/, P.email);
   if (P.secondaryName) { await w.set(/^Second Contact Name/, P.secondaryName, { optional: true }); }
@@ -169,14 +172,19 @@ async function eeRoom(page, P, _d, log) {
   const src = await page.locator('iframe').first().getAttribute('src').catch(() => null);
   if (!src) return log(`Could not find a schedule for "${P.venueChoice1}". Use e.g. "EEB 248" or "PHE 223".`);
   await page.goto(src);
-  await page.getByText('Click Here To Make A Request To Use This Conference Room.').click();
-  await page.waitForLoadState('load');
-  const f = page.locator('form');
-  await f.locator('[name=poilcy]').check().catch(() => {});
-  await f.locator('[name=room_space_name]').fill(P.venueChoice1).catch(() => {});
-  await f.locator('[name=attendees]').selectOption(String(Math.min(+P.attendance, 100))).catch(() => log('  · attendee count not in dropdown; set it manually'));
+  // The link submits a JS form; wait for the request page.
+  await Promise.all([page.waitForURL(/room_form/), page.getByText('Click Here To Make A Request To Use This Conference Room.').click()]);
+  const f = page; // the policy checkbox sits outside <form>; names are unique on this page
+  // The fields stay hidden until the policy box is ticked; the room name is pre-filled and read-only.
+  log('  · ticking "I have read the reservation policy" to reveal the form — read the policy on the page');
+  // jQuery click handler toggles the form; Playwright's actionability check stalls on it, so click in-page.
+  await f.locator('[name=poilcy]').evaluate(el => { if (!el.checked) el.click(); });
+  await f.locator('[name=name]').waitFor({ state: 'visible' });
+  const att = Math.min(+P.attendance, 50);
+  if (+P.attendance > 50) log('  ⚠ Attendance over 50 is not offered here; selected 50. Note the real number in Special Instructions.');
+  await f.locator('[name=attendees]').selectOption(String(att));
   const [y, m, d] = P.date.split('-');
-  await f.locator('[name=event_date]').fill(`${m}/${d}/${y}`).catch(() => {});
+  await f.locator('[name=event_date]').fill(`${m}/${d}/${y}`);
   await f.locator('[name=event_start_time]').selectOption({ label: to12h(P.startTime) }).catch(() => log('  · start time must be on the hour/half hour'));
   await f.locator('[name=event_end_time]').selectOption({ label: to12h(P.endTime) }).catch(() => log('  · end time must be on the hour/half hour'));
   await f.locator('[name=name]').fill(fullName(P));
@@ -185,7 +193,7 @@ async function eeRoom(page, P, _d, log) {
   await f.locator('[name=dept]').selectOption({ label: 'Other Viterbi Department' }).catch(() => {});
   await f.locator('[name=event_title]').fill(P.eventName);
   await f.locator('[name=event_description]').fill(`${P.description}\n\nOrganization: ${P.orgName}${P.food ? `\nFood: ${P.catererName}` : ''}`);
-  log('✔ Filled. Check the policy box and department, then Submit.');
+  log('✔ Filled. Check the department and details, then Submit.');
 }
 
 // ---------------- USC Event Permit (Salesforce flow) ----------------
@@ -219,13 +227,28 @@ async function permit(page, P, D, log) {
     await page.getByRole('button', { name: 'Next' }).click();
     await page.waitForTimeout(3000);
     const now = await stage();
-    if (now === s) { log(`  ! stuck on "${s}". Fix the highlighted field in the browser, then continue by hand.`); return false; }
+    if (now === s) {
+      const snap = await page.locator('body').ariaSnapshot();
+      const bad = [...new Set([...snap.matchAll(/- (?:combobox|textbox|spinbutton|group|checkbox) "([^"]+)"[^\n]*\[invalid\]/g)].map(m => m[1]))];
+      const msgs = [...new Set([...snap.matchAll(/- status:\s*\n?\s*-? ?(?:paragraph: )?([^\n]{6,160})/g)].map(m => m[1].trim()).filter(t => !/^- /.test(t)))];
+      log(`  ! stuck on "${s}". Fix in the browser, then continue by hand.`);
+      if (bad.length) log(`    invalid: ${bad.join(' | ')}`);
+      if (msgs.length) log(`    messages: ${msgs.join(' | ')}`);
+      return false;
+    }
     return true;
   };
   const isEvent = +P.attendance >= 25 || P.food;
   const outdoorVenue = P.venueKind === 'outdoor';
 
   log('Stage 1: Initial information');
+  // The flow opens on an intro screen; its "Next" reveals the first question (same stage).
+  await page.getByRole('button', { name: 'Next' }).waitFor({ state: 'visible', timeout: 30000 });
+  const venueQ = page.getByRole('combobox', { name: /Has the venue been reserved/ });
+  if (!(await venueQ.isVisible().catch(() => false))) {
+    await page.getByRole('button', { name: 'Next' }).click();
+    await venueQ.waitFor({ state: 'visible', timeout: 20000 });
+  }
   await sel('Has the venue been reserved?', 'Yes');
   if (!(await nextStage())) return;
 
@@ -259,8 +282,18 @@ async function permit(page, P, D, log) {
   await txt('USC Permit Request Event Name', P.eventName);
   await txt('Event Description', P.description);
   await sel('Campus Location', outdoorVenue ? 'University Park Campus (UPC) Outdoor' : 'University Park Campus (UPC) Indoor');
-  const venueOpt = P.venueKind === 'classroom' ? 'Classroom Space' : P.venueKind === 'tcc' ? (/35[012]/.test(P.venueChoice1) ? 'Tutor Campus Center (TCC) Rooms' : 'Other') : 'Other';
+  const venueOpt = P.venueKind === 'classroom' ? 'Classroom Space' : P.venueKind === 'tcc' ? 'Tutor Campus Center (TCC) Rooms' : 'Other';
   await sel('Campus Venue', venueOpt);
+  if (P.venueKind === 'tcc') {
+    // A second dropdown ("Campus Venue TCC") lists each room as "Tutor Campus Center 350".
+    const num = String(P.venueChoice1 || '').toUpperCase().replace(/^TCC\s*/, '').trim();
+    const sub = page.getByRole('combobox', { name: /Campus Venue TCC/ }).first();
+    if (await sub.isVisible().catch(() => false)) {
+      await sub.selectOption({ label: `Tutor Campus Center ${num}` }).catch(() => log(`  · pick TCC room "${num}" in "Campus Venue TCC" manually`));
+    }
+  } else if (venueOpt === 'Other') {
+    log(`  · Campus Venue set to "Other" — check whether the form asks you to name "${P.venueChoice1}"`);
+  }
   await dt('Event Start Date/Time', P.date, P.startTime);
   await dt('Event Setup Date/Time', P.date, P.setupTime || P.startTime);
   await dt('Event End Date/Time', P.date, P.endTime);

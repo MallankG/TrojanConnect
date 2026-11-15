@@ -3,11 +3,11 @@ import { Pill, STATUS_LABEL, fmtDate } from "./ui";
 
 const DOT: Record<string, string> = {
   done: "bg-ok border-ok text-surface",
-  ready: "border-cardinal text-cardinal",
-  active: "border-cardinal text-cardinal",
-  waiting: "border-wait text-wait",
-  blocked: "border-line text-block",
-  skipped: "border-line text-block",
+  ready: "bg-surface border-cardinal text-cardinal",
+  active: "bg-surface border-cardinal text-cardinal",
+  waiting: "bg-surface border-wait text-wait",
+  blocked: "bg-surface border-line text-block",
+  skipped: "bg-surface border-line text-block",
 };
 
 export function StepList({ d, selected, onSelect }: { d: Derived; selected: StepId; onSelect: (id: StepId) => void }) {
@@ -25,7 +25,7 @@ export function StepList({ d, selected, onSelect }: { d: Derived; selected: Step
               className={`relative grid w-full grid-cols-[44px_1fr] gap-2.5 rounded-xl py-2.5 pr-3 text-left ${s.id === selected ? "bg-surface shadow-sm" : "hover:bg-surface/60"}`}
             >
               <span
-                className={`relative z-10 ml-[7px] grid h-[30px] w-[30px] place-items-center rounded-full border-2 bg-surface text-[13px] font-bold ${DOT[s.status]} ${isCurrent ? "ring-4 ring-cardinal/20" : ""}`}
+                className={`relative z-10 ml-[7px] grid h-[30px] w-[30px] place-items-center rounded-full border-2 text-[13px] font-bold ${DOT[s.status]} ${isCurrent ? "ring-4 ring-cardinal/20" : ""}`}
               >
                 {s.done ? "✓" : s.n}
               </span>
