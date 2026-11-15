@@ -19,6 +19,13 @@ async function call<T>(path: string, init?: RequestInit & { json?: unknown }): P
 export interface RunStatus { running: boolean; lines: string[] }
 export interface RoomAvailability { room: string; bookings: string[]; free: boolean; conflicts: string[] }
 
+export type AgentAction =
+  | { type: "form"; formId: string; step: StepId | null; running: boolean }
+  | { type: "reset" }
+  | { type: "field"; key: string };
+export interface AgentInfo { configured: boolean; model: string }
+export interface AgentReply { reply: string; actions: AgentAction[]; tools: { tool: string; ok: boolean; error: string | null }[]; state: PipelineState; model: string }
+
 export const pipelineApi = {
   state: () => call<PipelineState>("/api/v1/pipeline/state"),
   updateProfile: (patch: Record<string, unknown>) => call<PipelineState>("/api/v1/pipeline/profile", { method: "PUT", json: patch }),
@@ -27,4 +34,8 @@ export const pipelineApi = {
   startRun: (form: RunnableForm) => call<{ ok: boolean }>(`/api/v1/pipeline/run/${form}`, { method: "POST" }),
   runStatus: (form: RunnableForm) => call<RunStatus>(`/api/v1/pipeline/run/${form}`),
   eeAvailability: () => call<RoomAvailability[]>("/api/v1/pipeline/ee-availability"),
+  reset: () => call<PipelineState>("/api/v1/pipeline/reset", { method: "POST" }),
+  agentInfo: () => call<AgentInfo>("/api/v1/pipeline/agent"),
+  agentChat: (message: string, history: { role: "user" | "assistant"; text: string }[]) =>
+    call<AgentReply>("/api/v1/pipeline/agent/chat", { method: "POST", json: { message, history } }),
 };

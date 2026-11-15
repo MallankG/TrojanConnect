@@ -4,14 +4,15 @@ import { useCallback, useEffect, useMemo, useState } from "react";
 import { pipelineApi } from "@/lib/api-client";
 import { VENUE_KINDS, to12h } from "@/lib/pipeline/fields";
 import { deriveState, type PipelineState, type StepId } from "@/lib/pipeline/plan";
+import { AssistantPanel } from "./AssistantPanel";
 import { FieldMatrix } from "./FieldMatrix";
 import { ProfileForm } from "./ProfileForm";
 import { StepDetail } from "./StepDetail";
 import { StepList } from "./StepList";
 import { Pill, fmtDate } from "./ui";
 
-type Tab = "pipeline" | "profile" | "fields" | "log";
-const TABS: [Tab, string][] = [["pipeline", "Pipeline"], ["profile", "Event profile"], ["fields", "Field map"], ["log", "Activity"]];
+type Tab = "pipeline" | "assistant" | "profile" | "fields" | "log";
+const TABS: [Tab, string][] = [["pipeline", "Pipeline"], ["assistant", "Assistant"], ["profile", "Event profile"], ["fields", "Field map"], ["log", "Activity"]];
 
 export function PipelineApp() {
   const [state, setState] = useState<PipelineState | null>(null);
@@ -137,6 +138,10 @@ export function PipelineApp() {
             <StepDetail key={sel.id} d={d} step={sel} profile={P} onState={setState} onJumpToField={jumpToField} />
           </div>
         )}
+        {/* Kept mounted so the conversation survives switching tabs. */}
+        <div hidden={tab !== "assistant"}>
+          <AssistantPanel d={d} profile={P} onState={setState} onJumpToField={jumpToField} />
+        </div>
         {tab === "profile" && <ProfileForm profile={P} onSave={saveProfile} />}
         {tab === "fields" && <FieldMatrix profile={P} />}
         {tab === "log" && (

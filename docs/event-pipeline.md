@@ -26,6 +26,8 @@ Then run the frontend and backend as described in the root README, and open http
 
 ## API
 
+Full reference and a guide to building a UI on these endpoints: [event-planning-integration.md](../event-planning-integration.md).
+
 | Method | Path | Purpose |
 |---|---|---|
 | GET | `/api/v1/pipeline/state` | profile, step progress and activity log |
@@ -35,8 +37,40 @@ Then run the frontend and backend as described in the root README, and open http
 | GET | `/api/v1/pipeline/run/{form}` | live log of a pre-fill run |
 | GET | `/api/v1/pipeline/ee-availability` | read the public EEB/PHE calendars for the event date |
 | POST | `/api/v1/pipeline/reset` | clear the event |
+| GET | `/api/v1/pipeline/schema`, `/status`, `/profile`, `/forms`, `/forms/{id}`, `/emails/{id}`, `/caterers`, `/activity` | read models for a UI: definitions, derived status, form readiness, email drafts |
+| GET | `/api/v1/pipeline/agent` | whether the assistant is configured, and the model id |
+| POST | `/api/v1/pipeline/agent/chat` | `{message, history}` → `{reply, actions, tools, state}` |
 
 All pipeline requests (any method) must send `X-TrojanConnect-Client: web`. This custom header makes browsers run a CORS check first, and CORS only allows the frontend origin, so other websites can't trigger resets or pre-fill runs. It is not real auth; add Supabase Auth to the router dependencies when it lands.
+
+## Event agent (Assistant tab)
+
+A chat agent that does everything on this page: you describe the event, and it fills the profile, reports status and deadlines, starts the form pre-fills, lines up the email drafts and records replies. It runs in the backend on Gemini and acts only through the tools below.
+
+Setup: copy `backend/.env.example` to `backend/.env`, set `GEMINI_API_KEY`, and start the backend with `--env-file .env`. Without a key the rest of the pipeline still works and the tab says the assistant is not set up.
+
+| Tool | What it does |
+|---|---|
+| `get_event_plan_status` | Step status, deadlines, blockers, missing fields, recent activity |
+| `update_event_profile` | Saves event facts from the conversation into the profile (validated per field) |
+| `get_form_details` | Rules, required and missing fields for a form, email or manual step |
+| `check_caterer` | Looks a vendor up in the permit's approved-caterer list |
+| `check_room_availability` | Reads the public EEB/PHE calendars for the event date |
+| `record_step_progress` | Ticks checklist items and stores reply details (reservation #, venue manager, permit code) |
+| `start_prefill` | Opens a visible browser and pre-fills the TCC, Outdoor, Classroom, EEB/PHE or Permit form; the live log shows in the chat |
+| `draft_email` | Shows a card that opens the email draft (Kevin Giang, VP Finance, VP Comms, advisor, Hospitality) |
+| `offer_reset` | Shows a "Clear this event" button to start a new event |
+
+Limits enforced in code:
+- **Nothing is submitted or sent.** Pre-fills stop on the final page, as everywhere else; email drafts open in your mail app.
+- `start_prefill` refuses when required fields are missing, the step is blocked, or (permit) no 6-digit reservation # is recorded.
+- Clearing the event needs your click and a confirmation.
+- The USC ID is not sent to the model and cannot be saved through chat; type it in the Event profile tab.
+- Unknown fields and invalid values are rejected; agent writes are logged with an `assistant:` prefix.
+
+Code: `backend/app/agents/` (loop, model interface), `backend/app/tools/event_plan.py` (tools), `backend/app/integrations/gemini/` (provider), `backend/app/workflows/event_pipeline/plan.py` (status logic), `frontend/src/components/pipeline/AssistantPanel.tsx`. Tests: `cd backend && .venv/bin/python -m pytest`.
+
+`plan.py` mirrors `frontend/src/lib/pipeline/{fields,plan}.ts`. Until the frontend reads status from the API, a change to steps, forms or fields must be made in both.
 
 ## How each step is automated
 

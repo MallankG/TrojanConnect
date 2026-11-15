@@ -87,21 +87,35 @@ function SectionTitle({ children }: { children: React.ReactNode }) {
   return <h3 className="mt-5 mb-2 text-xs font-semibold uppercase tracking-wider text-muted">{children}</h3>;
 }
 
-function DraftButton({ formId, profile, label = "Open email draft", disabled }: { formId: string; profile: Profile; label?: string; disabled?: boolean }) {
+export function DraftButton({ formId, profile, label = "Open email draft", disabled }: { formId: string; profile: Profile; label?: string; disabled?: boolean }) {
   const draft = emailDraft(formId, profile);
   if (!draft || disabled) return <button type="button" className={btn} disabled>{label}</button>;
   return <a className={btnPrimary} href={mailto(draft)}>{label}</a>;
 }
 
-function FormCard({ formId, step, d, profile, onJumpToField }: { formId: string; step: DerivedStep; d: Derived; profile: Profile; onJumpToField: (k: string) => void }) {
+/** `watch`: a run was already started elsewhere (by the assistant), so show its live log straight away. */
+export function FormCard({ formId, step, d, profile, onJumpToField, watch = false }: { formId: string; step: DerivedStep; d: Derived; profile: Profile; onJumpToField: (k: string) => void; watch?: boolean }) {
   const f = FORMS[formId];
   const miss = missingFor(formId, profile);
-  const [run, setRun] = useState<RunStatus | null>(null);
+  const [run, setRun] = useState<RunStatus | null>(watch ? { running: true, lines: [] } : null);
   const [runErr, setRunErr] = useState<string | null>(null);
   const poll = useRef<ReturnType<typeof setInterval> | null>(null);
   const logRef = useRef<HTMLPreElement>(null);
 
-  useEffect(() => () => { if (poll.current) clearInterval(poll.current); }, []);
+  const follow = () => {
+    if (poll.current) clearInterval(poll.current);
+    poll.current = setInterval(async () => {
+      const r = await pipelineApi.runStatus(formId as RunnableForm).catch(() => null);
+      if (!r) return;
+      setRun(r);
+      if (!r.running && poll.current) { clearInterval(poll.current); poll.current = null; }
+    }, 1000);
+  };
+  useEffect(() => {
+    if (watch) follow();
+    return () => { if (poll.current) clearInterval(poll.current); };
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- start following once, on mount
+  }, []);
   useEffect(() => { logRef.current?.scrollTo(0, logRef.current.scrollHeight); }, [run]);
 
   const permitNeedsRes = formId === "permit" && !/^\d{6}$/.test(d.byId.venue.data.reservationNumber ?? "");
@@ -112,11 +126,7 @@ function FormCard({ formId, step, d, profile, onJumpToField }: { formId: string;
     try {
       await pipelineApi.startRun(formId as RunnableForm);
       setRun({ running: true, lines: [] });
-      poll.current = setInterval(async () => {
-        const r = await pipelineApi.runStatus(formId as RunnableForm);
-        setRun(r);
-        if (!r.running && poll.current) { clearInterval(poll.current); poll.current = null; }
-      }, 1000);
+      follow();
     } catch (e) { setRunErr((e as Error).message); }
   };
 

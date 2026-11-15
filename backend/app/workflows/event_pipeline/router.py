@@ -8,17 +8,18 @@ always reviews and submits. Nothing here confirms or submits a real USC reservat
 
 from __future__ import annotations
 
-import json
-import re
-import shutil
-import subprocess
-import threading
 from typing import Any, Literal
 
-from fastapi import APIRouter, Depends, Header, HTTPException
-from pydantic import BaseModel
+from fastapi import APIRouter, Depends, Header, HTTPException, Query
+from pydantic import BaseModel, ConfigDict, Field
 
-from . import store
+from app.agents import event_agent
+from app.agents.model import ModelError
+from app.integrations.gemini import provider as gemini
+from app.tools import event_plan as agent_tools
+
+from . import plan, runs, store, views
+from .availability import PipelineError, read_ee_availability
 
 CLIENT_HEADER = "X-TrojanConnect-Client"
 
@@ -39,14 +40,8 @@ def require_client_header(x_trojanconnect_client: str | None = Header(default=No
 
 router = APIRouter(prefix="/api/v1/pipeline", tags=["event-pipeline"], dependencies=[Depends(require_client_header)])
 
-USC_FORMS_DIR = store.BACKEND_ROOT / "app" / "integrations" / "usc_forms"
-
 STEP_IDS = {"venue", "food", "permit", "funding", "engage", "access", "publicity"}
 RunnableForm = Literal["tcc", "outdoor", "classroom", "eeRoom", "permit"]
-
-# formId -> {"running": bool, "lines": [str]}
-_runs: dict[str, dict[str, Any]] = {}
-_runs_lock = threading.Lock()
 
 
 class ProgressUpdate(BaseModel):
@@ -57,18 +52,65 @@ class ProgressUpdate(BaseModel):
     dataValue: str | None = None
 
 
-def _node() -> str:
-    node = shutil.which("node")
-    if not node:
-        raise HTTPException(503, "Node.js is required for form pre-fill (install Node 20+).")
-    if not (USC_FORMS_DIR / "node_modules" / "playwright").exists():
-        raise HTTPException(503, "Run `npm run setup` in backend/app/integrations/usc_forms first.")
-    return node
-
-
 @router.get("/state")
 def get_state() -> dict[str, Any]:
+    """Raw saved event: `{profile, progress, log}`. Most UIs want /status instead."""
     return store.load()
+
+
+# ---- Read models for building a UI (no rule needs re-implementing client-side) --------------
+@router.get("/schema")
+def get_schema() -> dict[str, Any]:
+    """Static definitions: profile fields (label, type, options, group), venue kinds, forms, steps, caterers."""
+    return views.schema_view()
+
+
+@router.get("/status")
+def get_status() -> dict[str, Any]:
+    """The dashboard: event header, progress, what to do now, and each step with deadline, checklist and forms."""
+    return views.status_view(store.load())
+
+
+@router.get("/profile")
+def get_profile() -> dict[str, Any]:
+    """The saved profile and, per field, whether it applies, what is wrong with it, and which forms use it."""
+    return views.profile_view(store.load())
+
+
+@router.get("/forms")
+def list_forms() -> list[dict[str, Any]]:
+    """Every form, email and manual task with live readiness for the saved event."""
+    state = store.load()
+    return [views.form_view(fid, state) for fid in plan.FORMS]
+
+
+@router.get("/forms/{form_id}")
+def get_form(form_id: str) -> dict[str, Any]:
+    form = views.form_view(form_id, store.load())
+    if not form:
+        raise HTTPException(404, f"Unknown form. Valid ids: {', '.join(plan.FORMS)}")
+    return form
+
+
+@router.get("/emails/{form_id}")
+def get_email(form_id: str) -> dict[str, Any]:
+    """Draft for an email task: `{to, subject, body, mailto, ready, missing_fields}`. Nothing is sent."""
+    email = views.email_view(form_id, store.load())
+    if not email:
+        raise HTTPException(404, "No email draft for that id. Valid ids: " + ", ".join(k for k, f in plan.FORMS.items() if f["auto"] == "email"))
+    return email
+
+
+@router.get("/caterers")
+def get_caterers(q: str = Query(default="", max_length=100)) -> dict[str, Any]:
+    """Caterers the Event Permit accepts. With `q`, a case-insensitive name search."""
+    return views.caterers_view(q)
+
+
+@router.get("/activity")
+def get_activity(limit: int = Query(default=50, ge=1, le=200)) -> list[dict[str, str]]:
+    """Newest-first log of changes: `[{at, msg}]`. Entries made by the assistant start with "assistant:"."""
+    return (store.load().get("log") or [])[:limit]
 
 
 @router.put("/profile")
@@ -100,58 +142,59 @@ def reset() -> dict[str, Any]:
 
 @router.post("/run/{form_id}")
 def start_run(form_id: RunnableForm) -> dict[str, bool]:
-    node = _node()
-    state = store.load()
-    # Deterministic guard: the permit cannot be started without a confirmed venue.
-    if form_id == "permit":
-        res = state.get("progress", {}).get("venue", {}).get("data", {}).get("reservationNumber", "")
-        if not re.fullmatch(r"\d{6}", res or ""):
-            raise HTTPException(409, "Record the 6-digit venue reservation number on the Venue step first.")
-
-    with _runs_lock:
-        if _runs.get(form_id, {}).get("running"):
-            raise HTTPException(409, "That pre-fill is already running.")
-        run = _runs[form_id] = {"running": True, "lines": []}
-
-    store.BROWSER_PROFILE_DIR.mkdir(parents=True, exist_ok=True)
-    proc = subprocess.Popen(
-        [node, "run.mjs", form_id, str(store.STATE_PATH), str(store.BROWSER_PROFILE_DIR)],
-        cwd=USC_FORMS_DIR,
-        stdout=subprocess.PIPE,
-        stderr=subprocess.STDOUT,
-        text=True,
-    )
-    store.update(lambda s: store.add_log(s, f"pre-fill {form_id} started"))
-
-    def pump() -> None:
-        assert proc.stdout
-        for line in proc.stdout:
-            run["lines"].append(line.rstrip())
-        code = proc.wait()
-        run["running"] = False
-        store.update(lambda s: store.add_log(s, f"pre-fill {form_id} finished ({'ok' if code == 0 else f'exit {code}'})"))
-
-    threading.Thread(target=pump, daemon=True).start()
+    try:
+        runs.start(form_id)
+    except PipelineError as e:
+        raise HTTPException(e.status, e.message) from e
     return {"ok": True}
 
 
 @router.get("/run/{form_id}")
 def get_run(form_id: RunnableForm) -> dict[str, Any]:
-    return _runs.get(form_id, {"running": False, "lines": []})
+    return runs.status(form_id)
 
 
 @router.get("/ee-availability")
 def ee_availability() -> list[dict[str, Any]]:
     """Read the public ECE (EEB/PHE) room calendars for the saved event date/time."""
-    node = _node()
-    p = store.load()["profile"]
-    if not p.get("date"):
-        raise HTTPException(400, "Set the event date first.")
-    args = [node, "ee-availability.mjs", p["date"], p.get("startTime") or "", p.get("endTime") or ""]
     try:
-        out = subprocess.run(args, cwd=USC_FORMS_DIR, capture_output=True, text=True, timeout=120, check=True)
-    except subprocess.CalledProcessError as e:
-        raise HTTPException(502, f"Could not read ECE calendars: {e.stderr.strip()[:300]}") from e
-    except subprocess.TimeoutExpired as e:
-        raise HTTPException(504, "ECE calendars took too long to respond.") from e
-    return json.loads(out.stdout)
+        return read_ee_availability(store.load()["profile"])["rooms"]
+    except PipelineError as e:
+        raise HTTPException(e.status, e.message) from e
+
+
+# ---- Event agent ----------------------------------------------------------------------------
+class ChatMessage(BaseModel):
+    role: Literal["user", "assistant"]
+    text: str = Field(max_length=8000)
+
+
+class ChatRequest(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+    message: str = Field(min_length=1, max_length=4000)
+    history: list[ChatMessage] = Field(default_factory=list, max_length=60)
+
+
+def get_model_provider() -> gemini.GeminiProvider:
+    if not gemini.configured():
+        raise HTTPException(503, "The assistant needs a Gemini API key. Set GEMINI_API_KEY in backend/.env and restart the backend.")
+    try:
+        return gemini.GeminiProvider()
+    except ModelError as e:
+        raise HTTPException(503, str(e)) from e
+
+
+@router.get("/agent")
+def agent_info() -> dict[str, Any]:
+    """Whether the assistant can be used, which model it runs on, and what it can do."""
+    return {"configured": gemini.configured(), "model": gemini.model_id(),
+            "tools": [{"name": t.name, "description": t.description.split(". ")[0].rstrip(".") + "."} for t in agent_tools.TOOLS]}
+
+
+@router.post("/agent/chat")
+def agent_chat(req: ChatRequest, provider: gemini.GeminiProvider = Depends(get_model_provider)) -> dict[str, Any]:
+    """One chat turn with the event agent. It reads and updates the plan through validated tools only."""
+    try:
+        return event_agent.run_turn(provider, req.message, [m.model_dump() for m in req.history])
+    except ModelError as e:
+        raise HTTPException(502, str(e)) from e

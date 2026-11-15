@@ -1,2 +1,4 @@
 fastapi
 uvicorn[standard]
+google-genai>=3.3,<4  # event agent (Gemini)
+pytest  # tests
