@@ -122,7 +122,7 @@ export function BookingCard({ kind, formId, profile, blocked, onJumpToField, onP
             </button>
             <button type="button" className={btn} disabled={!!busy} onClick={() => act("prepare", () => bookingApi.prepare(kind))}>Refresh from profile</button>
           </div>
-          <p className="mt-2 text-xs text-gray-70">Nothing is sent to USC. The request goes to the TrojanConnect venue workflow, where a human reviewer decides.</p>
+          <p className="mt-2 text-xs text-gray-70">Nothing is sent to USC. The request goes to the Trojan Connect venue workflow, where a human reviewer decides.</p>
         </div>
       )}
 

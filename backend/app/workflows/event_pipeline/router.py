@@ -18,6 +18,7 @@ from pydantic import BaseModel, ConfigDict, Field
 from app.agents import event_agent, rso_agent, rules_agent
 from app.agents.model import ModelError
 from app.integrations.gemini import provider as gemini
+from app.api.streaming import stream_reply
 from app.security.auth import require_club_rep
 from app.security.client import require_client_header
 from app.tools import event_plan as agent_tools
@@ -178,3 +179,10 @@ def agent_chat(req: ChatRequest, provider: gemini.GeminiProvider | None = Depend
         return event_agent.run_turn(provider, req.message, history)
     except ModelError as e:
         return rules_agent.run_turn(req.message, history, note=f"Gemini unavailable: {e} Answered by the built-in assistant")
+
+
+@router.post("/agent/chat/stream")
+def agent_chat_stream(req: ChatRequest, provider: gemini.GeminiProvider | None = Depends(get_model_provider)):
+    """Same turn as /agent/chat, sent as Server-Sent Events (app/api/streaming.py)."""
+    turn = agent_chat(req, provider)
+    return stream_reply(turn.get("reply") or "", turn)

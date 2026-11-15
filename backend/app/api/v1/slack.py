@@ -142,7 +142,7 @@ async def _publish(actor: Actor, code: str, repo, settings: Settings) -> str:
     except AppError as e:
         return e.message
     shared = await slack.post_to_channel(settings, f"*{post['club_name']}* · {post['title']}\n{post['body']}")
-    return f"Posted “{post['title']}”. Followers are notified in TrojanConnect" + (" and in the club channel." if shared else ".")
+    return f"Posted “{post['title']}”. Followers are notified in Trojan Connect" + (" and in the club channel." if shared else ".")
 
 
 @router.post("/webhooks/slack/commands", include_in_schema=False)
@@ -157,7 +157,7 @@ async def slash_command(request: Request, background: BackgroundTasks, settings:
     user_id = slack.linked_user(settings, form.get("user_id", ""))
     if not user_id:
         return JSONResponse({"response_type": "ephemeral",
-                             "text": "Your Slack account isn't linked to TrojanConnect yet, so I can't act for you. Ask an admin to link it."})
+                             "text": "Your Slack account isn't linked to Trojan Connect yet, so I can't act for you. Ask an admin to link it."})
     actor = _actor(user_id)
 
     async def work() -> None:

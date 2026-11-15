@@ -165,7 +165,7 @@ export function Network({ reduced }: { reduced: boolean }) {
                 </span>
                 <div className="min-w-0">
                   <p className="flex items-baseline gap-1.5 text-[13px]">
-                    <span className="font-semibold">TrojanConnect</span>
+                    <span className="font-semibold">Trojan Connect</span>
                     <span className="rounded bg-wash px-1 text-[10px] font-medium text-gray-70">App</span>
                   </p>
                   <p className="mt-0.5 text-[13px] leading-snug">

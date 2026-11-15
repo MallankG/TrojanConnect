@@ -264,7 +264,7 @@ FORMS: dict[str, dict[str, Any]] = {
         "rules": ["Only after the room is CONFIRMED (needs the 6-digit reservation #).",
                   "Walkthrough: answer NO to trash/waste services; attendance must not be over 60.",
                   "The permits reviewer checks ADA, Smoke-Free and Plastic acknowledgements and anything about security, alcohol or insurance with you; "
-                  "TrojanConnect never answers those questions for you."],
+                  "Trojan Connect never answers those questions for you."],
     },
     "budgetEmail": {
         "name": "Email budget proposal to VP Finance (Vaibhavi)", "auto": "email", "to_field": "vpFinanceEmail",

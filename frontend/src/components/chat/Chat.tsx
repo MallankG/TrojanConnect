@@ -247,10 +247,17 @@ export function Chat({
           onScroll={onScroll}
           className="min-h-0 flex-1 space-y-1 overflow-y-auto overscroll-contain px-4 py-4"
         >
-          {rows.map((row) => {
-            if (row.kind === "day") return <DayRule key={row.key} label={row.label} />;
-            if (row.kind === "note") return <Note key={row.key} message={row.message} />;
-            return <Turn key={row.key} turn={row} />;
+          {/*
+            Rows are keyed by position, not by message id. A streamed reply is shown as a
+            temporary message that the finished turn then replaces under a new id; keyed by
+            id, the finished bubble would mount afresh and play its entrance a second time.
+            The transcript only ever grows at the end, so a position is a stable identity.
+          */}
+          {rows.map((row, i) => {
+            const key = `${row.kind}-${i}`;
+            if (row.kind === "day") return <DayRule key={key} label={row.label} />;
+            if (row.kind === "note") return <Note key={key} message={row.message} />;
+            return <Turn key={key} turn={row} />;
           })}
 
           {conversation.activity && (
@@ -409,8 +416,8 @@ function Turn({ turn }: { turn: Turn }) {
           {turn.name}, venue reviewer · a person
         </p>
         <div className="space-y-1">
-          {turn.messages.map((m) => (
-            <p key={m.id} className="rounded-2xl border border-ink px-4 py-3 font-serif text-[17px] italic leading-snug">
+          {turn.messages.map((m, i) => (
+            <p key={i} className="rounded-2xl border border-ink px-4 py-3 font-serif text-[17px] italic leading-snug">
               {m.text}
             </p>
           ))}
@@ -425,7 +432,7 @@ function Turn({ turn }: { turn: Turn }) {
       <div className="flex flex-col items-end gap-1 py-1.5">
         {turn.messages.map((m, i) => (
           <p
-            key={m.id}
+            key={i}
             style={{ "--bubble-origin": "bottom right" } as React.CSSProperties}
             className={`bubble-in w-fit max-w-[85%] whitespace-pre-wrap bg-cardinal px-4 py-2.5 text-[15px] leading-snug text-paper ${corners(
               side,
@@ -456,7 +463,7 @@ function Turn({ turn }: { turn: Turn }) {
         <div className="min-w-0 flex-1 space-y-1">
           {turn.messages.map((m, i) => (
             <AgentMessage
-              key={m.id}
+              key={i}
               message={m}
               shape={corners(side, i === 0, i === turn.messages.length - 1)}
             />

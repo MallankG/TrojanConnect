@@ -120,7 +120,7 @@ function TopBar({ user }: { user: DemoUser }) {
   return (
     <header className="sticky top-0 z-40 border-b border-line bg-paper/90 backdrop-blur">
       <div className="mx-auto grid h-16 max-w-6xl grid-cols-[auto_1fr_auto] items-center gap-4 px-5">
-        <Link href={HOME[user.role]} aria-label="TrojanConnect, home">
+        <Link href={HOME[user.role]} aria-label="Trojan Connect, home">
           <Wordmark tone="light" height={36} priority className="hidden sm:grid" />
           <Mark tone="light" size={40} priority className="sm:hidden" />
         </Link>

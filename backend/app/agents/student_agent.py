@@ -19,9 +19,9 @@ async def greeting(repo, actor: Actor) -> str:
     name = f" {actor.display_name.split()[0]}" if actor.display_name.strip() else ""
     prefs = await get_preferences(repo, actor.user_id)
     if has_signal(prefs):
-        return (f"Hi{name}! I'm your TrojanConnect student agent. I have your interests saved "
+        return (f"Hi{name}! I'm your Trojan Connect student agent. I have your interests saved "
                 f"({', '.join(prefs.interest_tags[:5]) or 'your goals'}). Want club recommendations, a fit check on a "
                 "specific club, or to compare two clubs?")
-    return (f"Hi{name}! I'm your TrojanConnect student agent - I help you find USC clubs that suit you. "
+    return (f"Hi{name}! I'm your Trojan Connect student agent - I help you find USC clubs that suit you. "
             "A few quick questions: What are you interested in? Roughly how many hours a week can you give a club? "
             "And what do you hope to get out of it?")

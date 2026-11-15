@@ -52,7 +52,7 @@ export function RolePicker() {
   return (
     <div className="min-h-dvh bg-paper">
       <header className="mx-auto flex h-16 max-w-5xl items-center justify-between px-5">
-        <Link href="/" aria-label="TrojanConnect, back to the story"><Wordmark tone="light" height={36} priority /></Link>
+        <Link href="/" aria-label="Trojan Connect, back to the story"><Wordmark tone="light" height={36} priority /></Link>
         <nav className="flex gap-5 text-sm text-gray-70">
           <Link href="/sign-in" className="hover:text-ink">Sign in</Link>
           <Link href="/" className="hover:text-ink">Back to the story</Link>

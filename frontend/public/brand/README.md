@@ -1,4 +1,4 @@
-# TrojanConnect brand marks
+# Trojan Connect brand marks
 
 The mark is a cardinal arch framing a Trojan helmet, with a gold orbit sweeping
 through it and a four-point spark at the upper right. All exports have

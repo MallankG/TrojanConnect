@@ -59,12 +59,18 @@ export function AssistantPanel({ d, profile, onState, onReload, onJumpToField, a
     setError(null);
     sound.play("send");
     try {
-      const r = await pipelineApi.agentChat(message, history);
+      let streaming = false; // the reply streams into one assistant message; the finished turn adds its cards
+      const show = (soFar: string) => setMessages(m => {
+        if (!streaming) { streaming = true; return [...m, { role: "assistant", text: soFar }]; }
+        return [...m.slice(0, -1), { role: "assistant", text: soFar }];
+      });
+      const r = await pipelineApi.agentChatStream(message, history, show);
       onState(r.state);
       sound.play("receive");
       announceRsoChange(); // RSO cards on screen refresh after any turn
-      setMessages(m => [...m, { role: "assistant", text: r.reply, actions: r.actions }]);
+      setMessages(m => [...(streaming ? m.slice(0, -1) : m), { role: "assistant", text: r.reply, actions: r.actions }]);
     } catch (e) {
+      setMessages(m => (m.at(-1)?.role === "assistant" && !m.at(-1)?.actions ? m.slice(0, -1) : m));
       setError((e as Error).message);
     } finally {
       setBusy(false);

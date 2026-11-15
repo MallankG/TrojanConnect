@@ -2,6 +2,7 @@
 from fastapi import APIRouter, Depends, Query
 
 from app.api.deps import orchestrator_dep, repo_dep
+from app.api.streaming import stream_reply
 from app.schemas.common import NOT_FOUND, PERMISSION_DENIED, VALIDATION_ERROR, AppError, StrictModel, ToolResult
 from app.schemas.student import ConversationCreate, MessageCreate
 from app.security.actor import Actor
@@ -50,6 +51,15 @@ async def send_message(
     conversation_id: str, body: MessageCreate, actor: Actor = Depends(get_actor), orchestrator=Depends(orchestrator_dep)
 ) -> ToolResult:
     return ToolResult.success(await orchestrator.send_message(actor, conversation_id, body.content))
+
+
+@router.post("/conversations/{conversation_id}/messages/stream")
+async def send_message_stream(
+    conversation_id: str, body: MessageCreate, actor: Actor = Depends(get_actor), orchestrator=Depends(orchestrator_dep)
+):
+    """Same turn as /messages, sent as Server-Sent Events once the guardrails have passed (app/api/streaming.py)."""
+    result = ToolResult.success(await orchestrator.send_message(actor, conversation_id, body.content))
+    return stream_reply(result.data.message.content, result.model_dump(mode="json"))
 
 
 @router.post("/conversations/{conversation_id}/confirm")

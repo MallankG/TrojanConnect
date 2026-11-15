@@ -46,7 +46,7 @@ export function Wordmark({
       className={`grid shrink-0 ${plate ? "" : className}`}
       style={{ height, width }}
       role="img"
-      aria-label="TrojanConnect"
+      aria-label="Trojan Connect"
     >
       <Image
         src="/brand/wordmark-on-light.png"
@@ -97,7 +97,7 @@ export function Mark({
       className={`grid shrink-0 ${className}`}
       style={{ width: size, height: size }}
       role="img"
-      aria-label="TrojanConnect"
+      aria-label="Trojan Connect"
     >
       <Image
         src="/brand/mark-on-light.png"

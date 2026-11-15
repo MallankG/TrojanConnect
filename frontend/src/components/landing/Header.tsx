@@ -53,7 +53,7 @@ export function Header({
         scrolled ? `${tone.scrim} backdrop-blur-md` : "bg-transparent"
       } pointer-events-none fixed inset-x-0 top-0 z-50 flex items-center justify-between px-6 py-4 transition-colors duration-300 md:px-14`}
     >
-      <Link href="/" aria-label="TrojanConnect, back to the top" className="pointer-events-auto">
+      <Link href="/" aria-label="Trojan Connect, back to the top" className="pointer-events-auto">
         <Wordmark tone={tone.mark} height={tone.plate ? 30 : 42} plate={tone.plate} priority />
       </Link>
       <div className="pointer-events-auto flex items-center gap-2">

@@ -6,6 +6,7 @@ from fastapi import APIRouter, Depends, Query
 from pydantic import Field
 
 from app.api.deps import repo_dep
+from app.api.streaming import stream_reply
 from app.config import Settings, get_settings
 from app.integrations import slack
 from app.schemas.common import StrictModel, ToolResult
@@ -84,6 +85,13 @@ async def save_source(body: SourceBody, actor: Actor = Depends(get_actor)) -> To
 @router.post("/government/ask")
 async def ask(body: AskBody, actor: Actor = Depends(get_actor)) -> ToolResult:
     return ToolResult.success(government.ask(actor, body.scope, body.question))
+
+
+@router.post("/government/ask/stream")
+async def ask_stream(body: AskBody, actor: Actor = Depends(get_actor)):
+    """Same answer as /government/ask, sent as Server-Sent Events."""
+    result = ToolResult.success(government.ask(actor, body.scope, body.question))
+    return stream_reply(result.data["answer"], result.model_dump(mode="json"))
 
 
 @router.post("/feedback")

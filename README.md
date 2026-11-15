@@ -1,6 +1,6 @@
-# TrojanConnect
+# Trojan Connect
 
-TrojanConnect is a campus agent network for USC. Club officers plan events with an assistant that
+Trojan Connect is a campus agent network for USC. Club officers plan events with an assistant that
 books rooms through a venue agent and walks them through RSO recognition (new or renewing), students
 find clubs and question each club's agent, and student government answers questions only from its own
 published pages. Built for a hackathon; it is not an
@@ -194,8 +194,14 @@ booking go from request to confirmed.
 Tests: `cd backend && .venv/bin/python -m pytest -q`; `cd frontend && npx tsc --noEmit && npm run lint`.
 
 Sign-in uses demo identities (`X-Demo-User`, enabled with `ALLOW_DEMO_AUTH`). Their roles are defined
-server-side in `backend/app/security/demo_roles.py`. Supabase Auth sign-in is supported by the backend
-but not wired into the UI.
+server-side in `backend/app/security/demo_roles.py`. The backend also accepts Supabase Auth tokens.
+
+## Deploy on Replit
+
+The repo includes `.replit` and `scripts/replit.sh`. It's published at https://trojan-connect.replit.app (Reserved VM). Replit exposes one port,
+served by Next.js, which forwards `/api/*` and `/mock-engagesc/*` to FastAPI on the same machine.
+**[REPLIT.md](REPLIT.md)** lists every secret to add (with dummy Slack values) and how to fix Replit's Git
+panel after the first import. It also covers what to check once the app is live.
 
 ## Configuration (`backend/.env`)
 
@@ -224,16 +230,6 @@ The table in "What it does" comes from a script that runs these steps against th
 
 Human think-time is not included in the 4.5 s. It measures the system's part of a chain that today runs
 over email.
-
-## Not built
-
-- Alumni (P2).
-- Streaming replies.
-- Realtime push: screens poll every 8–30 seconds.
-- Supabase Auth sign-in in the UI.
-- A real USC venue-system integration (the adapter is a stub by design).
-- Submitting to the real EngageSC: that needs USC's authorization. The portal agent only drives the
-  simulated portal (`PortalAdapter` is the seam).
 
 ## Docs
 

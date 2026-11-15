@@ -64,7 +64,7 @@ export const FORMS: Record<string, FormDef> = {
   permit: {
     name: "USC event permit", url: "https://usc-its.my.site.com/eventpermits/s/request-submission", auto: "agent",
     requires: [...COMMON_CONTACT, "uscId", "onsiteName", "onsitePhone", ...COMMON_EVENT, "setupTime", "teardownTime", "audience", "food", "filmed", "amplifiedSound", "catererType", "catererName", "menu", "foodValue", "paymentType", "vendorServes"],
-    rules: ["Only after the room is CONFIRMED (needs the 6-digit reservation #).", "Walkthrough: answer NO to trash/waste services; attendance must not be over 60.", "The permits reviewer checks ADA, Smoke-Free and Plastic acknowledgements and anything about security, alcohol or insurance with you; TrojanConnect never answers those questions for you."],
+    rules: ["Only after the room is CONFIRMED (needs the 6-digit reservation #).", "Walkthrough: answer NO to trash/waste services; attendance must not be over 60.", "The permits reviewer checks ADA, Smoke-Free and Plastic acknowledgements and anything about security, alcohol or insurance with you; Trojan Connect never answers those questions for you."],
   },
   budgetEmail: {
     name: "Email budget proposal to VP Finance (Vaibhavi)", url: "https://docs.google.com/spreadsheets/d/1SLqu6rXsgGxxRK2foMnV9HJJy8abhFsr/edit?gid=4042447", auto: "email",

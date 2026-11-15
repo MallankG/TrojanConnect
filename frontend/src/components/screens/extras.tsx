@@ -218,7 +218,7 @@ export function SignIn() {
   return (
     <div className="grid min-h-dvh bg-paper md:grid-cols-2">
       <div className="on-cardinal hidden flex-col justify-between bg-cardinal p-10 text-gold md:flex">
-        <Link href="/" aria-label="TrojanConnect, back to the story"><Wordmark tone="light" height={40} plate priority /></Link>
+        <Link href="/" aria-label="Trojan Connect, back to the story"><Wordmark tone="light" height={40} plate priority /></Link>
         <p className="max-w-[12ch] text-[clamp(2.5rem,5vw,4.5rem)] font-bold leading-[0.92] tracking-[-0.035em]" style={{ fontVariationSettings: '"wdth" 82' }}>
           Agents prepare. People decide.
         </p>
@@ -228,7 +228,7 @@ export function SignIn() {
       </div>
       <main className="flex min-w-0 flex-col justify-center px-6 py-14 md:px-14">
         <div className="mx-auto w-full max-w-md">
-          <Link href="/" aria-label="TrojanConnect, back to the story" className="md:hidden"><Wordmark tone="light" height={34} /></Link>
+          <Link href="/" aria-label="Trojan Connect, back to the story" className="md:hidden"><Wordmark tone="light" height={34} /></Link>
           <h1 className="mt-6 text-4xl font-semibold tracking-[-0.025em] md:mt-0">Sign in</h1>
           <p className="mt-2 text-[15px] text-gray-70">
             Single sign-on with a USC account is on the way. Today you can continue as one of
@@ -332,7 +332,7 @@ export function WhatsAppPreview({ conversation }: { conversation: Conversation }
           <div className="flex items-center gap-2.5 bg-paper px-4 py-3">
             <Mark tone="light" size={36} />
             <div>
-              <p className="text-[15px] font-semibold leading-tight">TrojanConnect</p>
+              <p className="text-[15px] font-semibold leading-tight">Trojan Connect</p>
               <p className="text-xs text-gray-70">{conversation.agentName} · business account</p>
             </div>
           </div>

@@ -156,7 +156,7 @@ OPEN_MEMBERSHIP_RULES = [
 
 DISCREPANCIES = [
     "Members: the Recognition Process page (updated Nov 12, 2026) asks for at least five additional student members; the older FAQ says ten. "
-    "TrojanConnect follows the newer page. Confirm with Campus Activities if unsure.",
+    "Trojan Connect follows the newer page. Confirm with Campus Activities if unsure.",
     "Advisor documents: USC links two forms (the Advisor Requirements form and forms.gle/C7h9eSXxyisopTjk8). Use the Advisor Requirements form "
     "unless Campus Activities tells you otherwise.",
     "Recognition period: the page says both \"August 1–June 30\" and \"from approval through June 30, 2027\".",

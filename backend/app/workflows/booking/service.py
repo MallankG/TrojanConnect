@@ -574,7 +574,7 @@ def _attention(req: dict[str, Any]) -> list[str]:
     if payload["event"]["is_public"]:
         out.append("Open to the general public.")
     if not payload.get("organization_verified"):
-        out.append("Club membership is not verified in TrojanConnect yet (demo).")
+        out.append("Club membership is not verified in Trojan Connect yet (demo).")
     if req["kind"] == "venue_booking":
         out += policy.reviewer_notes(payload["requested_space"]["venue_kind"])
     out += [w["message"] for w in req.get("warnings") or []]
@@ -594,7 +594,7 @@ def _open_review(req: dict[str, Any], now: datetime) -> None:
     else:
         packet.update(venue_booking=req["payload"].get("venue_booking"), food=req["payload"].get("food"),
                       onsite_contact=req["payload"].get("onsite_contact"),
-                      not_auto_answered="Trash/waste, security, alcohol, insurance and similar questions are NOT answered by TrojanConnect; "
+                      not_auto_answered="Trash/waste, security, alcohol, insurance and similar questions are NOT answered by Trojan Connect; "
                                         "check them with the club before approving.")
     req["review"] = {"task_id": str(uuid.uuid4()), "authority_id": req["authority_id"], "status": "pending", "created_at": now.isoformat(),
                      "packet": packet, "decisions": []}
