@@ -18,8 +18,10 @@ async def submit_club_interest(repo, actor: Actor, req: ClubInterestCreate) -> C
     if not req.user_confirmed:
         raise AppError(CONFIRMATION_REQUIRED, "Submitting interest requires explicit user confirmation.")
 
-    for existing in await repo.list_interests_for_student(actor.user_id):  # idempotent replay
-        if existing.idempotency_key == req.idempotency_key:
+    # Idempotent replay. The key is client-supplied, so it only cancels a submission to the
+    # SAME club: one key reused across clubs must not swallow the second club's interest.
+    for existing in await repo.list_interests_for_student(actor.user_id):
+        if (existing.idempotency_key, existing.organization_id) == (req.idempotency_key, club.organization_id):
             return existing
 
     fields = shared_fields(req.share_contact)

@@ -1,56 +1,2293 @@
 [
-  {
-    "organization_id": "usc-wccsc",
-    "name": "\"Whine\" & Cheese Club",
-    "slug": "wccsc",
-    "category": "Recreation, Social",
-    "tags": ["recreation", "social"],
-    "public_description": "Our mission is to create a welcoming space for USC students to unwind, indulge, and connect. Through curated gatherings, we promote camaraderie and offer a delightful pause from the weekly grind.",
-    "history": "",
-    "founded_year": null,
-    "activities": [],
-    "notable_events": [],
-    "meeting_schedule": "",
-    "time_commitment": "",
-    "time_commitment_hours_per_week": null,
-    "membership_requirements": "",
-    "recruitment_status": "open",
-    "how_to_join": "",
-    "who_thrives_here": "",
-    "faq": [],
-    "public_contact": "",
-    "verification_status": "unverified",
-    "data_label": "public_web",
-    "website": "https://engage.usc.edu/WCCsc/",
-    "social_links": {},
-    "source_urls": ["https://engage.usc.edu/WCCsc/"],
-    "collected_at": "2026-11-14"
+ {
+  "name": "Undergraduate Student Government",
+  "slug": "undergraduate-student-government",
+  "category": "Student Government",
+  "tags": [
+   "student_government",
+   "advocacy",
+   "campus_programming",
+   "funding",
+   "leadership"
+  ],
+  "public_description": "USG is the official governing body of USC's roughly 20,000 undergraduates. It works through advocacy, legislative, programming and funding branches to improve the undergraduate experience, and describes itself as a driven, diverse group of students who work to advance initiatives and experiences that strengthen community and enrich undergraduate life at USC.",
+  "history": "",
+  "founded_year": null,
+  "activities": [
+   "Advocacy on undergraduate issues",
+   "Weekly Senate meetings with open forum",
+   "Programming branch that serves as an umbrella for many campus student organizations",
+   "Funding applications for student groups",
+   "Project Tracker publishing current initiatives",
+   "USG newsletter"
+  ],
+  "notable_events": [
+   "Weekly USG Senate meetings (in person and online on Tuesdays)"
+  ],
+  "meeting_schedule": "The USG Senate meets in person every week; a virtual option is offered on Tuesdays.",
+  "time_commitment": "",
+  "membership_requirements": "",
+  "recruitment_status": "unknown",
+  "how_to_join": "USG lists office hours, a contact page and a newsletter sign-up on its website; funding applications are submitted through the Funding branch page.",
+  "who_thrives_here": "",
+  "faq": [
+   {
+    "question": "Can students attend USG Senate meetings?",
+    "answer": "Yes. The USG Senate meets in person every week and attendees are welcome to voice their concerns during open forum. A virtual option is offered on Tuesdays, and agendas and past meeting minutes are posted publicly."
+   }
+  ],
+  "public_contact": "",
+  "website": "https://usg.usc.edu/",
+  "social_links": {},
+  "source_urls": [
+   "https://engage.usc.edu/club_signup?view=all",
+   "https://usg.usc.edu/"
+  ],
+  "organization_id": "usc-undergraduate-student-government",
+  "data_label": "public_web",
+  "verification_status": "unverified",
+  "collected_at": "2026-11-14",
+  "time_commitment_hours_per_week": null
+ },
+ {
+  "name": "Graduate Student Government",
+  "slug": "graduate-student-government",
+  "category": "Student Government",
+  "tags": [
+   "student_government",
+   "graduate_students",
+   "advocacy",
+   "senate",
+   "community"
+  ],
+  "public_description": "GSG is the student-led government representing USC's 27,500+ graduate and professional students. It enhances the graduate and professional student experience by amplifying student voices with USC administrators and senior leadership, managing student resources, providing a voice for the student community, building a community that fosters interdisciplinary exchanges, and informing students about their rights, resources and opportunities.",
+  "history": "GSG is structured around an Executive Board of 29 officers selected every spring by GSG senators and the outgoing executive board, plus a Senate of senators elected by peers within each academic department or school. Its Constitution and Bylaws were last updated in January 2024.",
+  "founded_year": null,
+  "activities": [
+   "Advocacy with USC administration and faculty",
+   "Managing and distributing student resources and grants",
+   "Special interest committees staffed by student volunteers",
+   "Programmed social, community service and interdisciplinary events",
+   "Representation on university committees"
+  ],
+  "notable_events": [],
+  "meeting_schedule": "GSG senators meet monthly to address issues and concerns of the graduate and professional student population. The Executive Board oversees daily operations and works with the Senate.",
+  "time_commitment": "",
+  "membership_requirements": "Joining the EngageSC group is restricted to EngageSC users and requires a usc.edu email address; membership ends at graduation.",
+  "recruitment_status": "unknown",
+  "how_to_join": "Senators are elected by peers within their academic department or school. Committee membership is open to student volunteers. Executive Board officers are selected each spring by GSG senators and the outgoing executive board.",
+  "who_thrives_here": "",
+  "faq": [
+   {
+    "question": "Where are the GSG offices?",
+    "answer": "Main Campus (UPC): 3607 Trousdale Pkwy, SKS 410, Los Angeles, CA 90089, open Monday-Friday 9:00 am - 5:00 pm. Health Sciences Campus (HSC): 1969 Zonal Avenue (next to Starbucks), Los Angeles, CA 90033, open Monday-Friday 12:00 pm - 5:00 pm."
+   }
+  ],
+  "public_contact": "",
+  "website": "https://gsg.usc.edu/",
+  "social_links": {},
+  "source_urls": [
+   "https://engage.usc.edu/club_signup?view=all",
+   "https://gsg.usc.edu/"
+  ],
+  "organization_id": "usc-graduate-student-government",
+  "data_label": "public_web",
+  "verification_status": "unverified",
+  "collected_at": "2026-11-14",
+  "time_commitment_hours_per_week": null
+ },
+ {
+  "name": "AI Collective",
+  "slug": "ai-collective",
+  "category": "Academic",
+  "tags": [
+   "artificial_intelligence",
+   "interdisciplinary",
+   "product_building",
+   "networking",
+   "career_development"
+  ],
+  "public_description": "AI Collective cultivates a multidisciplinary community at USC to discuss and take part in the development of AI. Unlike other AI clubs on campus it aims to cater to a wide audience regardless of background, on the view that AI will disrupt almost every industry and all backgrounds should be included in the conversation.",
+  "history": "",
+  "founded_year": null,
+  "activities": [
+   "Sessions on state-of-the-art AI developments",
+   "Networking with industry figures working in AI",
+   "Connecting members with people working on AI in the USC community",
+   "Hands-on experience building AI products"
+  ],
+  "notable_events": [],
+  "meeting_schedule": "",
+  "time_commitment": "",
+  "membership_requirements": "",
+  "recruitment_status": "unknown",
+  "how_to_join": "",
+  "who_thrives_here": "Open to students of any background or discipline, not only technical ones.",
+  "faq": [],
+  "public_contact": "",
+  "website": "",
+  "social_links": {},
+  "source_urls": [
+   "https://engage.usc.edu/club_signup?view=all"
+  ],
+  "organization_id": "usc-ai-collective",
+  "data_label": "public_web",
+  "verification_status": "unverified",
+  "collected_at": "2026-11-14",
+  "time_commitment_hours_per_week": null
+ },
+ {
+  "name": "AI Safety USC",
+  "slug": "ai-safety-usc",
+  "category": "Academic",
+  "tags": [
+   "ai_safety",
+   "artificial_intelligence",
+   "machine_learning",
+   "research",
+   "interpretability",
+   "career_development"
+  ],
+  "public_description": "AI Safety USC helps USC students work on cutting-edge research agendas in AI safety. The group holds that it is critical for machine learning systems to be controllable and interpretable by humans, treats these as unsolved technical problems, and sets out to prepare USC students to help solve them.",
+  "history": "",
+  "founded_year": null,
+  "activities": [
+   "A semester-long AI safety curriculum covering the latest research directions",
+   "Weekly member dinners at USC Village",
+   "Advice and connections for jobs in AI safety research or engineering",
+   "Prize competitions for students"
+  ],
+  "notable_events": [],
+  "meeting_schedule": "Weekly dinners for members at the USC Village; the AI safety curriculum runs each semester.",
+  "time_commitment": "",
+  "membership_requirements": "",
+  "recruitment_status": "open",
+  "how_to_join": "Join through the group's EngageSC page.",
+  "who_thrives_here": "",
+  "faq": [],
+  "public_contact": "",
+  "website": "",
+  "social_links": {},
+  "source_urls": [
+   "https://engage.usc.edu/club_signup?view=all",
+   "https://engage.usc.edu/aisafety/"
+  ],
+  "organization_id": "usc-ai-safety-usc",
+  "data_label": "public_web",
+  "verification_status": "unverified",
+  "collected_at": "2026-11-14",
+  "time_commitment_hours_per_week": null
+ },
+ {
+  "name": "Data Science Club",
+  "slug": "data-science-club",
+  "category": "Pre-Professional",
+  "tags": [
+   "data_science",
+   "machine_learning",
+   "projects",
+   "skill_building"
+  ],
+  "public_description": "Data Science Club is USC's main club for activities related to data science and similar fields. Its stated goal is to introduce people to the world of data and give them the tools they need to go out and start their own projects.",
+  "history": "",
+  "founded_year": null,
+  "activities": [],
+  "notable_events": [],
+  "meeting_schedule": "",
+  "time_commitment": "",
+  "membership_requirements": "",
+  "recruitment_status": "unknown",
+  "how_to_join": "Join through the group's EngageSC listing.",
+  "who_thrives_here": "",
+  "faq": [],
+  "public_contact": "",
+  "website": "",
+  "social_links": {},
+  "source_urls": [
+   "https://engage.usc.edu/club_signup?view=all"
+  ],
+  "organization_id": "usc-data-science-club",
+  "data_label": "public_web",
+  "verification_status": "unverified",
+  "collected_at": "2026-11-14",
+  "time_commitment_hours_per_week": null
+ },
+ {
+  "name": "Code the Change",
+  "slug": "code-the-change",
+  "category": "Service",
+  "tags": [
+   "software_development",
+   "community_service",
+   "nonprofit_tech",
+   "agile",
+   "career_development"
+  ],
+  "public_description": "Code the Change is a student organization that promotes social impact through technology by delivering software products to non-profit organizations in the Los Angeles area.",
+  "history": "",
+  "founded_year": null,
+  "activities": [
+   "Year-long real-world software projects built in teams for LA nonprofits",
+   "Building computer science skills in specific languages and agile methodologies",
+   "Member-only corporate networking events",
+   "Social community with an active alumni network"
+  ],
+  "notable_events": [],
+  "meeting_schedule": "",
+  "time_commitment": "Members work on a year-long project with a team.",
+  "membership_requirements": "",
+  "recruitment_status": "unknown",
+  "how_to_join": "Join through the group's EngageSC listing.",
+  "who_thrives_here": "",
+  "faq": [],
+  "public_contact": "",
+  "website": "",
+  "social_links": {},
+  "source_urls": [
+   "https://engage.usc.edu/club_signup?view=all"
+  ],
+  "organization_id": "usc-code-the-change",
+  "data_label": "public_web",
+  "verification_status": "unverified",
+  "collected_at": "2026-11-14",
+  "time_commitment_hours_per_week": null
+ },
+ {
+  "name": "QuantumSC",
+  "slug": "quantumsc",
+  "category": "Academic",
+  "tags": [
+   "quantum_computing",
+   "networking",
+   "academic_community",
+   "career_development"
+  ],
+  "public_description": "QuantumSC is USC's quantum computing club. Its mission is threefold: to give members access to a community of peers interested in advancing quantum computing as an academic field and industry, to create a space for networking among members and with professionals working in quantum technologies, and to encourage understanding of what a quantum computer can achieve through active participation in club activities.",
+  "history": "",
+  "founded_year": null,
+  "activities": [
+   "Events designed to benefit members academically, professionally and socially",
+   "Networking with professionals working in quantum technologies",
+   "Newsletter for members"
+  ],
+  "notable_events": [],
+  "meeting_schedule": "",
+  "time_commitment": "",
+  "membership_requirements": "",
+  "recruitment_status": "open",
+  "how_to_join": "Join through the group's EngageSC page.",
+  "who_thrives_here": "Events are designed for members of all backgrounds and experience levels.",
+  "faq": [],
+  "public_contact": "uscquantumsc@gmail.com",
+  "website": "",
+  "social_links": {},
+  "source_urls": [
+   "https://engage.usc.edu/club_signup?view=all",
+   "https://engage.usc.edu/QSC/"
+  ],
+  "organization_id": "usc-quantumsc",
+  "data_label": "public_web",
+  "verification_status": "unverified",
+  "collected_at": "2026-11-14",
+  "time_commitment_hours_per_week": null
+ },
+ {
+  "name": "Quant SC",
+  "slug": "quant-sc",
+  "category": "Pre-Professional",
+  "tags": [
+   "quantitative_finance",
+   "career_development",
+   "community",
+   "finance"
+  ],
+  "public_description": "Quant SC fosters an educational and supportive community where USC students can explore and prepare for careers in quantitative finance.",
+  "history": "",
+  "founded_year": null,
+  "activities": [],
+  "notable_events": [],
+  "meeting_schedule": "",
+  "time_commitment": "",
+  "membership_requirements": "",
+  "recruitment_status": "open",
+  "how_to_join": "Join through the group's EngageSC page.",
+  "who_thrives_here": "",
+  "faq": [],
+  "public_contact": "quantsc@usc.edu",
+  "website": "",
+  "social_links": {},
+  "source_urls": [
+   "https://engage.usc.edu/club_signup?view=all",
+   "https://engage.usc.edu/Quantsc/"
+  ],
+  "organization_id": "usc-quant-sc",
+  "data_label": "public_web",
+  "verification_status": "unverified",
+  "collected_at": "2026-11-14",
+  "time_commitment_hours_per_week": null
+ },
+ {
+  "name": "HackSC",
+  "slug": "hacksc",
+  "category": "Academic",
+  "tags": [
+   "hackathon",
+   "event_organizing",
+   "entrepreneurship",
+   "software_development",
+   "design",
+   "community"
+  ],
+  "public_description": "HackSC is the multidisciplinary team behind USC's largest innovation events. It runs hackathons and conferences in Los Angeles where over 800 hackers, designers and visionaries attend workshops, hear speakers and build projects. The organizing team recruits software developers, designers, marketing and PR coordinators, finance planners, photographers and videographers, outreach specialists and more; members pick a primary team and are encouraged to contribute to other teams' projects.",
+  "history": "HackSC was held for the first time in 2013 as USC's first campus-focused hackathon competition, hosted by the USC Association for Computing Machinery, with fourteen teams competing to build technology products for the student body.",
+  "founded_year": 2013,
+  "activities": [
+   "Organizing large-scale student hackathons",
+   "Running conferences and community events",
+   "Hack Nights",
+   "Workshops and speaker sessions",
+   "Recruiting and running cross-functional organizing teams"
+  ],
+  "notable_events": [
+   "SoCal Tech Week",
+   "HackSC-X",
+   "HackSC Jr.",
+   "Hack Nights"
+  ],
+  "meeting_schedule": "",
+  "time_commitment": "",
+  "membership_requirements": "",
+  "recruitment_status": "unknown",
+  "how_to_join": "HackSC recruits organizing team members through its team site at https://team.hacksc.com/.",
+  "who_thrives_here": "HackSC says that if you are passionate and eager to learn, they want you on the team.",
+  "faq": [],
+  "public_contact": "",
+  "website": "https://hacksc.com/",
+  "social_links": {
+   "x": "https://twitter.com/hackscofficial"
   },
-  {
-    "organization_id": "usc-zodiac-society",
-    "name": "Zodiac Society",
-    "slug": "zodiac-society",
-    "category": "Pre-Professional, Career, Social",
-    "tags": ["pre_professional", "career", "social"],
-    "public_description": "A tight-knit social organization consisted of diverse students from various backgrounds, bearing unique experiences, all connected by a shared appreciation towards self-expression and cultural differences through creative outlets.",
-    "history": "",
-    "founded_year": null,
-    "activities": [],
-    "notable_events": [],
-    "meeting_schedule": "",
-    "time_commitment": "",
-    "time_commitment_hours_per_week": null,
-    "membership_requirements": "",
-    "recruitment_status": "open",
-    "how_to_join": "",
-    "who_thrives_here": "",
-    "faq": [],
-    "public_contact": "",
-    "verification_status": "unverified",
-    "data_label": "public_web",
-    "website": "https://vivianan55.wixsite.com/zodiacsociety",
-    "social_links": {},
-    "source_urls": ["https://vivianan55.wixsite.com/zodiacsociety"],
-    "collected_at": "2026-11-14"
-  }
+  "source_urls": [
+   "https://engage.usc.edu/club_signup?view=all",
+   "https://hacksc.com/"
+  ],
+  "organization_id": "usc-hacksc",
+  "data_label": "public_web",
+  "verification_status": "unverified",
+  "collected_at": "2026-11-14",
+  "time_commitment_hours_per_week": null
+ },
+ {
+  "name": "Spark SC",
+  "slug": "spark-sc",
+  "category": "Pre-Professional",
+  "tags": [
+   "entrepreneurship",
+   "startups",
+   "social_impact",
+   "event_planning",
+   "product_management",
+   "design",
+   "community"
+  ],
+  "public_description": "Spark SC is a student-run entrepreneurship ecosystem at USC that describes itself as a sandbox of ideas. It builds communities, unlocks creative opportunities and expands social impact for budding entrepreneurs, aiming to expand what entrepreneurship looks like by helping people from all backgrounds and disciplines turn their ideas into reality.",
+  "history": "Spark SC describes over ten years of high-impact work.",
+  "founded_year": null,
+  "activities": [
+   "Running 5-8 student-led initiatives per semester",
+   "Startup Career Fair",
+   "Blog publishing",
+   "Hands-on roles in project and product management, creative direction, financial management, design, marketing and event planning",
+   "Partnerships and sponsorships with companies"
+  ],
+  "notable_events": [
+   "Startup Career Fair"
+  ],
+  "meeting_schedule": "",
+  "time_commitment": "Spark SC reports about 45 active board members and 5-8 initiatives per semester, with an average of 700+ event attendees.",
+  "membership_requirements": "",
+  "recruitment_status": "application",
+  "how_to_join": "Apply through the application form linked from the Spark SC site (sparksc.org/join-spark), which also publishes recruitment details.",
+  "who_thrives_here": "Spark SC describes its community as self-starters, problem-solvers and creatives from 26+ different majors, and says people from all backgrounds and disciplines are welcome.",
+  "faq": [
+   {
+    "question": "How quickly can a new member take on leadership?",
+    "answer": "Spark SC describes a fast pipeline towards leadership: after your first semester you are able to lead any project or event you believe aligns with the organization's mission."
+   }
+  ],
+  "public_contact": "",
+  "website": "https://sparksc.org/",
+  "social_links": {},
+  "source_urls": [
+   "https://engage.usc.edu/club_signup?view=all",
+   "https://sparksc.org/"
+  ],
+  "organization_id": "usc-spark-sc",
+  "data_label": "public_web",
+  "verification_status": "unverified",
+  "collected_at": "2026-11-14",
+  "time_commitment_hours_per_week": null
+ },
+ {
+  "name": "Rocket Propulsion Laboratory",
+  "slug": "rocket-propulsion-laboratory",
+  "category": "Design Team",
+  "tags": [
+   "rocketry",
+   "aerospace",
+   "propulsion",
+   "design_team",
+   "engineering",
+   "research"
+  ],
+  "public_description": "USCRPL is a student-run research lab that designs, builds and launches high-performance amateur rockets, and describes itself as the world's premier undergraduate rocketry group for experimental rocket technologies. It was founded with the mission of being the first undergraduate student group in the world to send a rocket to space, and now aims to create a stable, reliable student space program where launching to space becomes regular.",
+  "history": "USCRPL was founded with the goal of becoming the first undergraduate student group in the world to send a rocket to space, which it accomplished in April 2019 with Traveler IV. Since then it has pursued a newfound goal of a stable, reliable space program with regular launches. The team lists undergraduate rocketry records including the first team to reach space (Traveler IV), the highest altitude achieved at 470,400 ft, the fastest velocity achieved at 5,283 ft/s, and the most powerful solid motor fired at 51,529 lbf-s.",
+  "founded_year": null,
+  "activities": [
+   "Designing, building and launching experimental high-power rockets",
+   "Publishing technical whitepapers on launches",
+   "Developing solid rocket motors",
+   "Development vehicles and test campaigns"
+  ],
+  "notable_events": [
+   "Traveler IV - first undergraduate team to reach space (April 2019)",
+   "Aftershock II - successful spaceshot, 2024",
+   "Daybreak - successful spaceshot, 2026",
+   "Malibu - 6-inch development vehicle",
+   "Shockwave solid motor firing"
+  ],
+  "meeting_schedule": "",
+  "time_commitment": "",
+  "membership_requirements": "",
+  "recruitment_status": "unknown",
+  "how_to_join": "",
+  "who_thrives_here": "",
+  "faq": [],
+  "public_contact": "",
+  "website": "https://www.uscrpl.com/",
+  "social_links": {},
+  "source_urls": [
+   "https://engage.usc.edu/club_signup?view=all",
+   "http://uscrpl.com/"
+  ],
+  "organization_id": "usc-rocket-propulsion-laboratory",
+  "data_label": "public_web",
+  "verification_status": "unverified",
+  "collected_at": "2026-11-14",
+  "time_commitment_hours_per_week": null
+ },
+ {
+  "name": "SC Formula Electric",
+  "slug": "sc-formula-electric",
+  "category": "Design Team",
+  "tags": [
+   "formula_sae",
+   "electric_vehicles",
+   "automotive_engineering",
+   "design_team",
+   "manufacturing",
+   "software",
+   "mentorship"
+  ],
+  "public_description": "USC Formula Electric is a student-led engineering team that designs and builds a high-performance electric race car for the Formula SAE Electric competition. Members take ownership of every aspect of the vehicle, from welding the chassis and developing software to sourcing critical components and presenting to industry judges, for a holistic engineering experience rooted in collaboration, accountability and innovation.",
+  "history": "",
+  "founded_year": null,
+  "activities": [
+   "Full-lifecycle design and build of an electric Formula-style race car",
+   "CAD modeling and design",
+   "Manufacturing, welding and fabrication",
+   "Software development",
+   "Testing, debugging and on-track validation",
+   "Component sourcing and presenting to industry judges"
+  ],
+  "notable_events": [
+   "Formula SAE Electric competition"
+  ],
+  "meeting_schedule": "",
+  "time_commitment": "",
+  "membership_requirements": "",
+  "recruitment_status": "open",
+  "how_to_join": "Join through the group's EngageSC page.",
+  "who_thrives_here": "The team uses a lead-based mentorship structure that pairs new members with experienced teammates for technical and career guidance.",
+  "faq": [],
+  "public_contact": "formulae@usc.edu",
+  "website": "",
+  "social_links": {},
+  "source_urls": [
+   "https://engage.usc.edu/club_signup?view=all",
+   "https://engage.usc.edu/Scformulae/"
+  ],
+  "organization_id": "usc-sc-formula-electric",
+  "data_label": "public_web",
+  "verification_status": "unverified",
+  "collected_at": "2026-11-14",
+  "time_commitment_hours_per_week": null
+ },
+ {
+  "name": "Autonomous Underwater Vehicle Design Team",
+  "slug": "autonomous-underwater-vehicle-design-team",
+  "category": "Design Team",
+  "tags": [
+   "robotics",
+   "autonomous_vehicles",
+   "marine_robotics",
+   "design_team",
+   "engineering",
+   "competition"
+  ],
+  "public_description": "The USC Autonomous Underwater Vehicle Design Team is a student-run group that designs and builds autonomous underwater vehicles for the RoboSub competition. It provides hands-on robotics and engineering experience in a supportive, collaborative environment, helping students develop career skills while working toward the shared goal of creating a functional submarine.",
+  "history": "",
+  "founded_year": null,
+  "activities": [
+   "Designing and building autonomous underwater vehicles",
+   "Competing in RoboSub",
+   "Hands-on robotics and engineering work"
+  ],
+  "notable_events": [
+   "RoboSub competition"
+  ],
+  "meeting_schedule": "",
+  "time_commitment": "",
+  "membership_requirements": "",
+  "recruitment_status": "open",
+  "how_to_join": "Join through the group's EngageSC page.",
+  "who_thrives_here": "",
+  "faq": [],
+  "public_contact": "uscauv@gmail.com",
+  "website": "",
+  "social_links": {},
+  "source_urls": [
+   "https://engage.usc.edu/club_signup?view=all",
+   "https://engage.usc.edu/AuvAtUsc/"
+  ],
+  "organization_id": "usc-autonomous-underwater-vehicle-design-team",
+  "data_label": "public_web",
+  "verification_status": "unverified",
+  "collected_at": "2026-11-14",
+  "time_commitment_hours_per_week": null
+ },
+ {
+  "name": "Makers",
+  "slug": "makers",
+  "category": "Pre-Professional",
+  "tags": [
+   "electronics",
+   "embedded_systems",
+   "internet_of_things",
+   "robotics",
+   "hardware_projects",
+   "community"
+  ],
+  "public_description": "Makers is a community of USC students who go beyond the textbook and turn their ideas into real engineering projects. Its mission is to facilitate exploration of concepts in electronic and system design and to stimulate interest in fields such as the Internet of Things, embedded systems and robotics, spanning electrical, computer and mechanical engineering as well as computer science.",
+  "history": "",
+  "founded_year": null,
+  "activities": [
+   "Student-led team projects taken from ideation to realization",
+   "Interdisciplinary hardware and software builds such as electromagnetic wizard's chess and smart glasses",
+   "Social events including paint night and hiking in LA"
+  ],
+  "notable_events": [],
+  "meeting_schedule": "",
+  "time_commitment": "Members work in teams of 5-7 on roughly 10 projects across the year, run from start to finish during the school year.",
+  "membership_requirements": "",
+  "recruitment_status": "unknown",
+  "how_to_join": "Makers publishes a get-involved page at https://viterbimakers.usc.edu/#/join.",
+  "who_thrives_here": "Makers states that anyone with a passion for making is welcome to join the community, which it describes as 60+ Makers and a people- and projects-first club.",
+  "faq": [],
+  "public_contact": "",
+  "website": "https://viterbimakers.usc.edu/",
+  "social_links": {},
+  "source_urls": [
+   "https://engage.usc.edu/club_signup?view=all",
+   "https://viterbimakers.usc.edu/"
+  ],
+  "organization_id": "usc-makers",
+  "data_label": "public_web",
+  "verification_status": "unverified",
+  "collected_at": "2026-11-14",
+  "time_commitment_hours_per_week": null
+ },
+ {
+  "name": "MEDesign",
+  "slug": "medesign",
+  "category": "Design Team",
+  "tags": [
+   "medical_devices",
+   "biomedical_engineering",
+   "design_team",
+   "healthcare_innovation",
+   "entrepreneurship",
+   "prototyping"
+  ],
+  "public_description": "MEDesign is USC's medical device design organization, describing itself as a medtech startup incubator. It gives students hands-on experience in the medical device field by entering medical device design competitions, participating in make-a-thons and taking on independent projects, and provides the structure and resources for design teams to invent, validate and develop novel technologies addressing pressing healthcare issues.",
+  "history": "MEDesign was founded in 2015 in Los Angeles. It reports 40+ projects and 50+ members, and leads students through the full process of creating a medical device, from customer discovery and the design process to patents and product launch. Past guest speakers have included BME Professor Dr. Loeb and Dr. Larry Yin from LA Children's Hospital.",
+  "founded_year": 2015,
+  "activities": [
+   "Student-run and student-led medical device design teams",
+   "Medical device design competitions and make-a-thons",
+   "Independent medical device projects",
+   "Guest speaker events with medical device industry figures",
+   "A free curriculum and resource library on medical device design"
+  ],
+  "notable_events": [
+   "Medical device design competitions",
+   "Make-a-thons"
+  ],
+  "meeting_schedule": "",
+  "time_commitment": "",
+  "membership_requirements": "",
+  "recruitment_status": "application",
+  "how_to_join": "Apply to a design team through the application form linked on the MEDesign website; the same form also gives access to the free curriculum drive.",
+  "who_thrives_here": "MEDesign takes pride in the diversity of its students' interests, with members including business students, neuroscience majors, engineers and music majors.",
+  "faq": [],
+  "public_contact": "",
+  "website": "https://www.medesignusc.com/",
+  "social_links": {},
+  "source_urls": [
+   "https://engage.usc.edu/club_signup?view=all",
+   "http://www.medesignusc.com/"
+  ],
+  "organization_id": "usc-medesign",
+  "data_label": "public_web",
+  "verification_status": "unverified",
+  "collected_at": "2026-11-14",
+  "time_commitment_hours_per_week": null
+ },
+ {
+  "name": "Trojan Venture Partners",
+  "slug": "trojan-venture-partners",
+  "category": "Pre-Professional",
+  "tags": [
+   "venture_capital",
+   "finance",
+   "investing",
+   "valuation",
+   "mentorship",
+   "career_development"
+  ],
+  "public_description": "Trojan Venture Partners describes itself as USC's premier buy-side organization, giving students hands-on experience in valuation, technical training and alumni mentorship. It combines technical training with a close-knit mentorship network to help members develop the judgement, communication and commercial perspective required in buy-side finance careers, and is built on three pillars: mentorship, accessible knowledge and community.",
+  "history": "",
+  "founded_year": null,
+  "activities": [
+   "TVP Membership: weekly general meetings building fluency in valuation, modeling, accounting, research, recruiting and communication, with industry speakers",
+   "TVPortfolio: weekly evaluation of a real-world business from a buy-side perspective, deciding whether TVP would acquire or pass",
+   "Capstone Analyst Program: an intensive semester-long buy-side program applying advanced valuation and investment analysis to real case studies",
+   "Guest speaker events and exclusive networking sessions",
+   "Social events"
+  ],
+  "notable_events": [
+   "Capstone investment-pitch competition"
+  ],
+  "meeting_schedule": "Weekly general meetings, each covering a new buy-side topic with industry speakers.",
+  "time_commitment": "The Capstone Analyst Program runs for a full semester.",
+  "membership_requirements": "",
+  "recruitment_status": "application",
+  "how_to_join": "Apply through the application page on the TVP website (usctvp.org/apply).",
+  "who_thrives_here": "",
+  "faq": [],
+  "public_contact": "",
+  "website": "https://www.usctvp.org/",
+  "social_links": {},
+  "source_urls": [
+   "https://engage.usc.edu/club_signup?view=all",
+   "https://www.usctvp.org/"
+  ],
+  "organization_id": "usc-trojan-venture-partners",
+  "data_label": "public_web",
+  "verification_status": "unverified",
+  "collected_at": "2026-11-14",
+  "time_commitment_hours_per_week": null
+ },
+ {
+  "name": "Blockchain at USC",
+  "slug": "blockchain-at-usc",
+  "category": "Pre-Professional",
+  "tags": [
+   "blockchain",
+   "cryptocurrency",
+   "workshops",
+   "hackathons",
+   "web3"
+  ],
+  "public_description": "Blockchain at USC is the campus community around blockchain technology and its applications. It hosts weekly workshops, organizes speaker events and runs blockchain hackathons with the aim of advancing the USC blockchain scene.",
+  "history": "",
+  "founded_year": null,
+  "activities": [
+   "Weekly workshops",
+   "Speaker events",
+   "Blockchain hackathons"
+  ],
+  "notable_events": [],
+  "meeting_schedule": "Weekly workshops.",
+  "time_commitment": "",
+  "membership_requirements": "",
+  "recruitment_status": "open",
+  "how_to_join": "Join through the group's EngageSC page.",
+  "who_thrives_here": "",
+  "faq": [],
+  "public_contact": "blockchainusc@gmail.com",
+  "website": "",
+  "social_links": {},
+  "source_urls": [
+   "https://engage.usc.edu/club_signup?view=all",
+   "https://engage.usc.edu/TrojanCryptocurrencyInvestmentClub/"
+  ],
+  "organization_id": "usc-blockchain-at-usc",
+  "data_label": "public_web",
+  "verification_status": "unverified",
+  "collected_at": "2026-11-14",
+  "time_commitment_hours_per_week": null
+ },
+ {
+  "name": "180 Degrees Consulting",
+  "slug": "180-degrees-consulting",
+  "category": "Pre-Professional",
+  "tags": [
+   "consulting",
+   "nonprofit",
+   "social_impact",
+   "professional_development",
+   "community_service",
+   "grant_writing"
+  ],
+  "public_description": "180 Degrees Consulting is the world's largest student volunteer consultancy, and USC's chapter provides pro bono consulting services to nonprofits, professional training for the USC community and social events for members. Beyond consulting it also works with nonprofits on grant proposals, partnership marketing and student-volunteer organizing, with a focus on organizations in the Los Angeles area.",
+  "history": "180 Degrees Consulting was founded in 2007 at the University of Sydney and has grown into the world's largest student volunteer consultancy, with over 80 branches across 33 countries (its USC EngageSC listing cites over 150 branches across 35 countries). It began with a mission to connect talented, socially conscious students with high-potential nonprofits and social enterprises. The USC chapter started in 2017 to give more students opportunities in nonprofit consulting and social impact, and reports 5+ global projects, 80+ completed projects, 500+ alumni and work with 40+ nonprofits.",
+  "founded_year": 2017,
+  "activities": [
+   "Pro bono consulting engagements for nonprofits and social enterprises",
+   "Grant application management and grant writing",
+   "Marketing and partnership strategy projects",
+   "AI automation and strategy work",
+   "Professional training for the USC community",
+   "Mentorship from club leadership through client engagements and internship recruiting",
+   "Social events"
+  ],
+  "notable_events": [
+   "Project work for Skid Row Housing Trust (public policy and advocacy strategies)",
+   "School on Wheels grant funding project, which won $31K",
+   "Susan G. Komen project on grants, financial models and partnerships",
+   "Arlington Garden project quantifying impact to drive public policy"
+  ],
+  "meeting_schedule": "",
+  "time_commitment": "",
+  "membership_requirements": "",
+  "recruitment_status": "application",
+  "how_to_join": "Apply through the join page on the chapter website (180degreesusc.org).",
+  "who_thrives_here": "The chapter brings together interdisciplinary teams, saying its wide reach gives it the versatility to design solutions for complex projects.",
+  "faq": [
+   {
+    "question": "What has the USC chapter been recognized for?",
+    "answer": "From USC Marshall School of Business the chapter has received the Award for Faculty Advisor of the Year (2019), the Award for Best Collaborative Program (2019) and the Diversity and Inclusion Award (2018), plus nominations for Most Improved Organization (2019), Community Impact (2019 and 2018), Faculty Advisor of the Year (2018) and Most Outstanding Marshall Recognized Student Organization (2018). From 180 Degrees Consulting globally it has received the Global Award for Best Overall Branch and Global Consulting Awards for its Para Los Ninos (Bronze), With Love Market & Cafe (Bronze) and Dominguez Hills Flying Club (Silver) projects."
+   }
+  ],
+  "public_contact": "",
+  "website": "https://www.180degreesusc.org/",
+  "social_links": {},
+  "source_urls": [
+   "https://engage.usc.edu/club_signup?view=all",
+   "http://180degreesusc.org/"
+  ],
+  "organization_id": "usc-180-degrees-consulting",
+  "data_label": "public_web",
+  "verification_status": "unverified",
+  "collected_at": "2026-11-14",
+  "time_commitment_hours_per_week": null
+ },
+ {
+  "name": "The Consulting Club at USC",
+  "slug": "the-consulting-club-at-usc",
+  "category": "Pre-Professional",
+  "tags": [
+   "consulting",
+   "case_interview_prep",
+   "mentorship",
+   "client_projects",
+   "career_development"
+  ],
+  "public_description": "The Consulting Club at USC (TCC) describes itself as the official and only undergraduate case preparation organization on campus. It empowers students exploring a consulting career through extensive case prep resources, peer mentorship and client service experience, offering end-to-end consulting recruitment preparation in one place. Its mission is to help each member excel in a consulting or related career and to propel students through the recruiting process, while strengthening critical thinking and analytical skills that transfer to any strategic field.",
+  "history": "A founding member from the Class of 2012 describes founding the USC Consulting Club and its growth into an organization that goes beyond interview prep into business initiatives and mentorship programs.",
+  "founded_year": null,
+  "activities": [
+   "An intensive 11-week case and behavioral interview preparation program",
+   "One-on-one coffee chats and coaching sessions through the peer mentorship program",
+   "Client Services program projects for companies around the world",
+   "Member-only information sessions with top consulting companies",
+   "Alumni panel sessions and networking"
+  ],
+  "notable_events": [
+   "Member-only information sessions with top consulting companies",
+   "Alumni panel sessions"
+  ],
+  "meeting_schedule": "",
+  "time_commitment": "New members join an intensive 11-week program that includes 10 guaranteed hours of case-work, the equivalent of 15-20 case interviews.",
+  "membership_requirements": "",
+  "recruitment_status": "unknown",
+  "how_to_join": "Submit the interest form linked on the TCC website and follow the join-us page at consultingclubatusc.com/join-us.",
+  "who_thrives_here": "",
+  "faq": [
+   {
+    "question": "What do members get from the case preparation program?",
+    "answer": "Members receive 10 guaranteed hours of case-work (equivalent to 15-20 case interviews), access to over $700 worth of case books, interview preparation modules and casing resources, practice with fellow members and experienced alumni, personalized one-on-one market sizing, case and behavioral interview preparation and feedback, two or more member-only information sessions with top consulting companies, and a network of alumni who have worked in consulting and adjacent industries."
+   }
+  ],
+  "public_contact": "",
+  "website": "https://www.consultingclubatusc.com/",
+  "social_links": {},
+  "source_urls": [
+   "https://engage.usc.edu/club_signup?view=all",
+   "https://www.consultingclubatusc.com/"
+  ],
+  "organization_id": "usc-the-consulting-club-at-usc",
+  "data_label": "public_web",
+  "verification_status": "unverified",
+  "collected_at": "2026-11-14",
+  "time_commitment_hours_per_week": null
+ },
+ {
+  "name": "RISE Consulting",
+  "slug": "rise-consulting",
+  "category": "Pre-Professional",
+  "tags": [
+   "consulting",
+   "startups",
+   "entrepreneurship",
+   "pro_bono",
+   "strategy",
+   "professional_development"
+  ],
+  "public_description": "RISE Consulting (Rebels, Innovators, Startups, Entrepreneurs) empowers USC undergraduates to provide high-quality, pro bono consulting services for early-stage ventures. Each semester its student teams partner with innovative organizations across industries, applying members' academic and professional backgrounds to real business challenges, with services spanning sales and promotion, entry and expansion, and finance and operations.",
+  "history": "RISE Consulting was founded in January 2019 to enable undergraduate student leaders to leverage their passions, skills, experiences and networks to serve startup businesses across the world.",
+  "founded_year": 2019,
+  "activities": [
+   "Pro bono consulting projects for startups and nonprofits",
+   "Semester-long client engagements in teams of 3 to 5 over 10 weeks",
+   "Consulting analyst program",
+   "RISE Launch general membership program",
+   "Consulting guidance from team leaders plus personal and professional development support"
+  ],
+  "notable_events": [],
+  "meeting_schedule": "",
+  "time_commitment": "Client engagements run over a 10-week period, with students working in teams of 3 to 5.",
+  "membership_requirements": "",
+  "recruitment_status": "application",
+  "how_to_join": "RISE recruits each semester; prospective members submit the recruiting interest form linked from riseusc.org and can read about the consulting analyst program and the RISE Launch general membership program on the site.",
+  "who_thrives_here": "RISE says members come from business, STEM, fine arts, performance, policy, education and beyond.",
+  "faq": [],
+  "public_contact": "riseconsulting@usc.edu",
+  "website": "https://www.riseusc.org/",
+  "social_links": {},
+  "source_urls": [
+   "https://engage.usc.edu/club_signup?view=all",
+   "https://www.riseusc.org/"
+  ],
+  "organization_id": "usc-rise-consulting",
+  "data_label": "public_web",
+  "verification_status": "unverified",
+  "collected_at": "2026-11-14",
+  "time_commitment_hours_per_week": null
+ },
+ {
+  "name": "Global Investment Society",
+  "slug": "global-investment-society",
+  "category": "Pre-Professional",
+  "tags": [
+   "investing",
+   "finance",
+   "equity_research",
+   "mentorship",
+   "global_markets",
+   "career_development"
+  ],
+  "public_description": "The USC Global Investment Society (GIS) describes itself as the premier finance and investing organization on campus, with a buy-side focus that gives members opportunities to gain tangible finance experience. Its stated purpose is to teach and practice investing with an emphasis on global markets and varied investment classes, fostering global knowledge and expertise in the investing sector, and it describes a culture of curiosity, support and reciprocity.",
+  "history": "",
+  "founded_year": null,
+  "activities": [
+   "GIS Explore: an introductory finance and investing course for students of all backgrounds and experience levels, with lectures and guest speakers",
+   "Investment Academy: courses on accounting, financial modeling, investment research and presentation-making, leading to a final project, with successful graduates invited to join Investment Research",
+   "Mentorship Program: one-on-one guidance for high-achieving sophomores through the finance recruitment cycle",
+   "Investment Research: four teams across asset classes and industries producing full-length investment pitches",
+   "Publishing investment research reports"
+  ],
+  "notable_events": [
+   "GIS Investor Series",
+   "GIS Diversity Summit",
+   "Buy Side Night"
+  ],
+  "meeting_schedule": "",
+  "time_commitment": "",
+  "membership_requirements": "",
+  "recruitment_status": "application",
+  "how_to_join": "Apply through the applications page on the GIS website (gisusc.com/applications).",
+  "who_thrives_here": "The GIS Explore introductory program is open to students from all backgrounds and experience levels.",
+  "faq": [],
+  "public_contact": "",
+  "website": "https://www.gisusc.com/",
+  "social_links": {},
+  "source_urls": [
+   "https://engage.usc.edu/club_signup?view=all",
+   "https://www.globalinvestmentsociety.com/"
+  ],
+  "organization_id": "usc-global-investment-society",
+  "data_label": "public_web",
+  "verification_status": "unverified",
+  "collected_at": "2026-11-14",
+  "time_commitment_hours_per_week": null
+ },
+ {
+  "name": "Innovative Design at USC",
+  "slug": "innovative-design-at-usc",
+  "category": "Design Team",
+  "tags": [
+   "design",
+   "ui_ux",
+   "graphic_design",
+   "photography",
+   "creative_agency",
+   "client_projects",
+   "workshops"
+  ],
+  "public_description": "Innovative Design at USC (InnoD) is a student-run creative agency of designers, photographers and web developers. Each semester it partners with startups, nonprofits, student organizations and local businesses to bring their creative visions to life, working across three divisions: UI/UX (websites, mobile apps, landing pages, product redesigns), Design (product packaging, digital marketing, print and advertisement) and Media (advertisement photos, event photography, portraits). It also provides a community for campus creatives and accessible design education through workshops and events.",
+  "history": "",
+  "founded_year": null,
+  "activities": [
+   "Client projects in UI/UX, graphic design and photography",
+   "Design workshops and speaker events",
+   "Design-a-thons",
+   "Community critique sessions",
+   "Social events including bonfire, retreat, InnoShoot and Invite",
+   "Professional mentorship and access to a creative network"
+  ],
+  "notable_events": [
+   "Riptide",
+   "CreateSC",
+   "Community Crit"
+  ],
+  "meeting_schedule": "",
+  "time_commitment": "",
+  "membership_requirements": "",
+  "recruitment_status": "application",
+  "how_to_join": "Apply through the application form linked on innodatusc.com; the membership page publishes the application timeline and FAQs. Clients request work through the services page.",
+  "who_thrives_here": "InnoD describes itself as a welcoming, tight-knit community.",
+  "faq": [],
+  "public_contact": "innod@usc.edu",
+  "website": "https://innodatusc.com/",
+  "social_links": {
+   "instagram": "https://instagram.com/innodatusc",
+   "linkedin": "https://www.linkedin.com/company/innovative-design-usc"
+  },
+  "source_urls": [
+   "https://engage.usc.edu/club_signup?view=all",
+   "https://innodatusc.com/"
+  ],
+  "organization_id": "usc-innovative-design-at-usc",
+  "data_label": "public_web",
+  "verification_status": "unverified",
+  "collected_at": "2026-11-14",
+  "time_commitment_hours_per_week": null
+ },
+ {
+  "name": "Trojan Marching Band",
+  "slug": "trojan-marching-band",
+  "category": "Visual & Performing Arts",
+  "tags": [
+   "marching_band",
+   "music",
+   "performance",
+   "school_spirit",
+   "tradition"
+  ],
+  "public_description": "The USC Trojan Marching Band, known as the Spirit of Troy, features over 300 students from nearly every major and is a prominent and visible representative of the university, with over 350 engagements each year.",
+  "history": "The band's website describes 140 years of tradition and publishes a dedicated history page at https://uscband.usc.edu/history/.",
+  "founded_year": null,
+  "activities": [
+   "Performing at USC athletic events and university engagements",
+   "Instrumental sections including flutes, clarinets, saxophones, horns, trumpets, trombones, tubas and drumline",
+   "Silks, twirler, drum major, song leaders and spirit squads",
+   "Travel to away games and external engagements",
+   "Booking appearances outside the university"
+  ],
+  "notable_events": [
+   "2026 Angels Game at Angel Stadium of Anaheim on Sunday, August 30, 2026 at 1:07pm"
+  ],
+  "meeting_schedule": "",
+  "time_commitment": "The band reports over 350 engagements each year.",
+  "membership_requirements": "The band states that its program is open to all eligible individuals and that eligibility is not determined based on race, sex, ethnicity, sexual orientation or any other prohibited factor.",
+  "recruitment_status": "open",
+  "how_to_join": "Join through the band's join page at https://uscband.usc.edu/join-now/.",
+  "who_thrives_here": "The band draws students from nearly every major.",
+  "faq": [],
+  "public_contact": "tmb@usc.edu",
+  "website": "https://uscband.usc.edu/",
+  "social_links": {
+   "facebook": "https://www.facebook.com/usctmb/",
+   "youtube": "https://www.youtube.com/@USCTMB",
+   "tiktok": "https://www.tiktok.com/@usctmb"
+  },
+  "source_urls": [
+   "https://engage.usc.edu/club_signup?view=all",
+   "https://uscband.usc.edu/"
+  ],
+  "organization_id": "usc-trojan-marching-band",
+  "data_label": "public_web",
+  "verification_status": "unverified",
+  "collected_at": "2026-11-14",
+  "time_commitment_hours_per_week": null
+ },
+ {
+  "name": "Environmental Student Assembly",
+  "slug": "environmental-student-assembly",
+  "category": "Environmental/Sustainability",
+  "tags": [
+   "sustainability",
+   "environmental_advocacy",
+   "community_service",
+   "climate",
+   "student_assembly"
+  ],
+  "public_description": "The Environmental Student Assembly (ESA) is USC's umbrella assembly for environmental student groups. It focuses on improving the environmental wellbeing of the campus and surrounding community, meets weekly, and hosts year-round events exposing students to the intersections of advocacy, environmentalism and justice. Its constitution describes encouraging and facilitating the academic, pre-professional, cultural, social and political self-realization of USC's environmental student groups as individuals and as a unified community, and advancing the green culture of the university and neighboring community.",
+  "history": "",
+  "founded_year": null,
+  "activities": [
+   "Weekly general meetings with guest speakers on environmental issues",
+   "Campus-wide environmental events",
+   "Beach and community clean-ups through ESA Service",
+   "Environmental advocacy",
+   "Newsletter on climate news and resources"
+  ],
+  "notable_events": [
+   "ESA Service Presents: Santa Monica Beach Clean Up",
+   "ESA General Meeting: Diet Coke, Cookies, and COP31 with the Gibson Climate Justice Lab"
+  ],
+  "meeting_schedule": "Weekly general meetings on Mondays at the Sustainability Hub (STU 100).",
+  "time_commitment": "",
+  "membership_requirements": "",
+  "recruitment_status": "open",
+  "how_to_join": "Join through the group's EngageSC page at https://engage.usc.edu/ESA/club_signup.",
+  "who_thrives_here": "ESA describes connecting students with a like-minded care for the environment.",
+  "faq": [],
+  "public_contact": "uscesa@usc.edu",
+  "website": "https://engage.usc.edu/esa/home/",
+  "social_links": {
+   "instagram": "https://www.instagram.com/uscesa/"
+  },
+  "source_urls": [
+   "https://engage.usc.edu/club_signup?view=all",
+   "https://engage.usc.edu/ESA/"
+  ],
+  "organization_id": "usc-environmental-student-assembly",
+  "data_label": "public_web",
+  "verification_status": "unverified",
+  "collected_at": "2026-11-14",
+  "time_commitment_hours_per_week": null
+ },
+ {
+  "name": "Association of Indian Students",
+  "slug": "association-of-indian-students",
+  "category": "Ethnic/Cultural",
+  "tags": [
+   "indian_culture",
+   "cultural_celebration",
+   "international_students",
+   "community",
+   "social_events",
+   "performing_arts"
+  ],
+  "public_description": "The Association of Indian Students (AIS) at USC is a large cultural organization that celebrates Indian culture, art, food and traditions and helps Indian students stay connected to their roots. Its EngageSC description evokes the breadth of what members bring with them, from meditation, yoga and Ayurveda to Bollywood, cricket, classical music and a thousand dialects, and describes finding what the community has in common amid its diversity through dancing to desi beats, playing with colors, sharing food and watching cricket together.",
+  "history": "",
+  "founded_year": null,
+  "activities": [
+   "Cultural celebrations and festivals through the academic year",
+   "New student transition support",
+   "Campus involvement and engagement programming",
+   "Safety education and immigration advisement referrals",
+   "Social and community events",
+   "Newsletters to members"
+  ],
+  "notable_events": [],
+  "meeting_schedule": "",
+  "time_commitment": "",
+  "membership_requirements": "Members can attend the meetings and participate in the events.",
+  "recruitment_status": "open",
+  "how_to_join": "Join through the group's EngageSC page at https://engage.usc.edu/AssociationOfIndianStudents/club_signup.",
+  "who_thrives_here": "AIS is described by USC staff as creating a home away from home for Indian students and scholars; it reports 1,245 members and 27 events.",
+  "faq": [],
+  "public_contact": "aisusc@usc.edu",
+  "website": "https://engage.usc.edu/associationofindianstudents/home/",
+  "social_links": {
+   "instagram": "https://www.instagram.com/aisusc/",
+   "linkedin": "https://www.linkedin.com/groups/13693061/"
+  },
+  "source_urls": [
+   "https://engage.usc.edu/club_signup?view=all",
+   "https://engage.usc.edu/AssociationOfIndianStudents/"
+  ],
+  "organization_id": "usc-association-of-indian-students",
+  "data_label": "public_web",
+  "verification_status": "unverified",
+  "collected_at": "2026-11-14",
+  "time_commitment_hours_per_week": null
+ },
+ {
+  "name": "Break Through Hip Hop",
+  "slug": "break-through-hip-hop",
+  "category": "Visual & Performing Arts",
+  "tags": [
+   "dance",
+   "hip_hop",
+   "performance",
+   "community_service",
+   "showcase"
+  ],
+  "public_description": "Break Through Hip Hop is a noncompetitive, hip-hop based dance team at USC. Entirely student run, it aims to share its love of dance and connect with the community through its core pillars of performance and service, and closes each season with a semester showcase performed by its student company members.",
+  "history": "Break Through Hip Hop was founded in 2006 at the University of Southern California.",
+  "founded_year": 2006,
+  "activities": [
+   "Twice-weekly dance practices",
+   "A themed semester showcase at Bovard Auditorium",
+   "Community service",
+   "A team retreat each semester focused on bonding and team spirit"
+  ],
+  "notable_events": [
+   "Themed semester showcase at Bovard Auditorium"
+  ],
+  "meeting_schedule": "Practices twice a week for two and a half hours.",
+  "time_commitment": "Two practices a week of two and a half hours each, plus showcase preparation and a semester retreat.",
+  "membership_requirements": "",
+  "recruitment_status": "open",
+  "how_to_join": "Join through the group's EngageSC page at https://engage.usc.edu/BreakThroughHipHop/club_signup.",
+  "who_thrives_here": "The team is noncompetitive and entirely student run.",
+  "faq": [
+   {
+    "question": "What do members receive?",
+    "answer": "Each semester the team puts on a themed showcase at Bovard Auditorium, prepared through practices twice a week for two and a half hours. All members receive one piece of merchandise to wear for the performance, and each semester there is a team retreat focused on bonding and building team spirit."
+   }
+  ],
+  "public_contact": "uscbthiphop@gmail.com",
+  "website": "https://engage.usc.edu/breakthroughhiphop/home/",
+  "social_links": {},
+  "source_urls": [
+   "https://engage.usc.edu/club_signup?view=all",
+   "https://engage.usc.edu/BreakThroughHipHop/"
+  ],
+  "organization_id": "usc-break-through-hip-hop",
+  "data_label": "public_web",
+  "verification_status": "unverified",
+  "collected_at": "2026-11-14",
+  "time_commitment_hours_per_week": null
+ },
+ {
+  "name": "Club Golf",
+  "slug": "club-golf",
+  "category": "Club Sport",
+  "tags": [
+   "golf",
+   "club_sports",
+   "competition",
+   "recreation",
+   "community"
+  ],
+  "public_description": "Club Golf is USC's official co-ed club golf team. It hosts events through the year to practice and compete in the National Collegiate Club Golf Association, and provides a supportive community for athletes of all skill levels to practice, play and compete in tournaments, whether they want to improve their swing or connect with fellow golf enthusiasts.",
+  "history": "",
+  "founded_year": null,
+  "activities": [
+   "Practice events through the year",
+   "Tournament competition in the National Collegiate Club Golf Association",
+   "A competitive division and a social division",
+   "Fundraising for a campus golf simulator"
+  ],
+  "notable_events": [],
+  "meeting_schedule": "",
+  "time_commitment": "",
+  "membership_requirements": "",
+  "recruitment_status": "open",
+  "how_to_join": "Join through the group's EngageSC page at https://engage.usc.edu/ClubGolf/club_signup.",
+  "who_thrives_here": "Open to athletes of all skill levels; the club reports 203 members.",
+  "faq": [
+   {
+    "question": "What is the golf simulator initiative?",
+    "answer": "Club Golf is working with the Lyon Recreation Center to bring a golf simulator to campus, with the aim of making golf more accessible so students of all skill levels can play without financial or logistical barriers. The club is seeking to raise $50,000 to purchase and install the simulator, and publishes a donation page via USC's Fight On Give Back."
+   }
+  ],
+  "public_contact": "uscclubgolf@gmail.com",
+  "website": "https://engage.usc.edu/clubgolf/home/",
+  "social_links": {},
+  "source_urls": [
+   "https://engage.usc.edu/club_signup?view=all",
+   "https://engage.usc.edu/ClubGolf/"
+  ],
+  "organization_id": "usc-club-golf",
+  "data_label": "public_web",
+  "verification_status": "unverified",
+  "collected_at": "2026-11-14",
+  "time_commitment_hours_per_week": null
+ },
+ {
+  "name": "Brazilian Jiu Jitsu",
+  "slug": "brazilian-jiu-jitsu",
+  "category": "Club Sport",
+  "tags": [
+   "brazilian_jiu_jitsu",
+   "martial_arts",
+   "self_defense",
+   "club_sports",
+   "fitness"
+  ],
+  "public_description": "The official USC Brazilian Jiu-Jitsu club trains in No-Gi Brazilian Jiu-Jitsu for sport, self-defense and MMA. Everyone is welcome, and the club encourages all USC students to try free classes during its trial period.",
+  "history": "",
+  "founded_year": null,
+  "activities": [
+   "Multiple two-hour classes each week combining instruction, live Jiu-Jitsu games and sparring",
+   "Free trial classes for new students"
+  ],
+  "notable_events": [],
+  "meeting_schedule": "Multiple classes a week, each running for two hours.",
+  "time_commitment": "Each class runs two hours, with multiple classes offered weekly.",
+  "membership_requirements": "",
+  "recruitment_status": "open",
+  "how_to_join": "Try free classes during the trial period, then join through the group's EngageSC page at https://engage.usc.edu/BrazilianJiuJitsu/club_signup.",
+  "who_thrives_here": "The club states that everyone is welcome and encourages all USC students to try free classes.",
+  "faq": [
+   {
+    "question": "Who teaches the classes and what does membership cost compared with a gym?",
+    "answer": "The club says members gain access to a campus community and instructors from the 10th Planet headquarters gym in Los Angeles, and that it offers a price that is unbeatable relative to regular martial arts schools in the Los Angeles area. A specific dues figure is not published on the public page."
+   }
+  ],
+  "public_contact": "bjj.usc@gmail.com",
+  "website": "https://engage.usc.edu/brazilianjiujitsu/home/",
+  "social_links": {},
+  "source_urls": [
+   "https://engage.usc.edu/club_signup?view=all",
+   "https://engage.usc.edu/BrazilianJiuJitsu/"
+  ],
+  "organization_id": "usc-brazilian-jiu-jitsu",
+  "data_label": "public_web",
+  "verification_status": "unverified",
+  "collected_at": "2026-11-14",
+  "time_commitment_hours_per_week": null
+ },
+ {
+  "name": "Flavors",
+  "slug": "flavors",
+  "category": "Ethnic/Cultural",
+  "tags": [
+   "food",
+   "cultural_exchange",
+   "community",
+   "conversation",
+   "social_events"
+  ],
+  "public_description": "Flavors is a cultural club built on experiencing different cultures through taste, cuisine and conversation. It treats food as a key way of understanding a culture and of building relationships, and aims to literally break bread with peers across the student body. Its main initiative is to spark conversation and create an open atmosphere where people can transcend cultural barriers and get to know one another, encouraging members to open their minds to trying new things.",
+  "history": "",
+  "founded_year": null,
+  "activities": [
+   "Shared meals and tastings across cuisines",
+   "Conversations and dialogue about cultures, values and passions",
+   "Newsletters to members"
+  ],
+  "notable_events": [],
+  "meeting_schedule": "",
+  "time_commitment": "",
+  "membership_requirements": "",
+  "recruitment_status": "open",
+  "how_to_join": "Join through the group's EngageSC page at https://engage.usc.edu/Flavors/club_signup. The group asks members to follow it on Instagram to stay up to date with events and activities.",
+  "who_thrives_here": "Flavors wants people from all walks of life to come together to share and discuss their cultures.",
+  "faq": [],
+  "public_contact": "uscflavors@gmail.com",
+  "website": "https://engage.usc.edu/flavors/home/",
+  "social_links": {
+   "instagram": "https://instagram.com/uscflavors"
+  },
+  "source_urls": [
+   "https://engage.usc.edu/club_signup?view=all",
+   "https://engage.usc.edu/Flavors/"
+  ],
+  "organization_id": "usc-flavors",
+  "data_label": "public_web",
+  "verification_status": "unverified",
+  "collected_at": "2026-11-14",
+  "time_commitment_hours_per_week": null
+ },
+ {
+  "name": "'SC Cancer Relief Chapter",
+  "slug": "sc-cancer-relief-chapter",
+  "category": "Service",
+  "tags": [
+   "community_service",
+   "cancer_support",
+   "philanthropy",
+   "pre_health",
+   "oncology",
+   "professional_development"
+  ],
+  "public_description": "'SC Cancer Relief Chapter is a student-led organization guided by a mission of spreading happiness and warmth, dedicated to bringing smiles to cancer patients. Through its initiatives and outreach programs it aims to create a positive and uplifting impact for cancer patients and their families.",
+  "history": "",
+  "founded_year": null,
+  "activities": [
+   "Outreach programs for cancer patients and their families",
+   "Philanthropic campaigns each semester",
+   "Professional development events",
+   "Guest speaker events and educational workshops with oncology and medical professionals"
+  ],
+  "notable_events": [],
+  "meeting_schedule": "",
+  "time_commitment": "",
+  "membership_requirements": "",
+  "recruitment_status": "open",
+  "how_to_join": "Join through the group's EngageSC page at https://engage.usc.edu/SCCR/club_signup.",
+  "who_thrives_here": "",
+  "faq": [
+   {
+    "question": "What career-related opportunities does membership include?",
+    "answer": "Alongside philanthropic campaigns each semester, the chapter provides opportunities to connect with professionals in oncology and medicine and organizes professional development events, including guest speaker events and educational workshops, to share insights about career paths in medicine and oncology."
+   }
+  ],
+  "public_contact": "",
+  "website": "https://engage.usc.edu/sccr/home/",
+  "social_links": {},
+  "source_urls": [
+   "https://engage.usc.edu/club_signup?view=all",
+   "https://engage.usc.edu/SCCR/"
+  ],
+  "organization_id": "usc-sc-cancer-relief-chapter",
+  "data_label": "public_web",
+  "verification_status": "unverified",
+  "collected_at": "2026-11-14",
+  "time_commitment_hours_per_week": null
+ },
+ {
+  "name": "Asli Baat Acappella",
+  "slug": "asli-baat-acappella",
+  "category": "Visual & Performing Arts",
+  "tags": [
+   "a_cappella",
+   "music",
+   "south_asian_culture",
+   "performance",
+   "competition"
+  ],
+  "public_description": "Asli Baat is a USC a cappella group committed to an enriching and welcoming experience for both members and audiences. Rooted in South Asian musical traditions, it celebrates cultural fusion and invites students of all backgrounds to join, learn and share their voices.",
+  "history": "",
+  "founded_year": null,
+  "activities": [
+   "Developing vocal skills in the a cappella style",
+   "Engaging with South Asian culture through its musical traditions",
+   "Performances in Los Angeles",
+   "Competing against other a cappella groups nationwide"
+  ],
+  "notable_events": [],
+  "meeting_schedule": "",
+  "time_commitment": "",
+  "membership_requirements": "",
+  "recruitment_status": "open",
+  "how_to_join": "Join through the group's EngageSC page at https://engage.usc.edu/AsliBaatAcappella/club_signup.",
+  "who_thrives_here": "The group invites students of all backgrounds and describes a diverse and welcoming community.",
+  "faq": [],
+  "public_contact": "aslibaat.usc@gmail.com",
+  "website": "https://engage.usc.edu/aslibaatacappella/home/",
+  "social_links": {},
+  "source_urls": [
+   "https://engage.usc.edu/club_signup?view=all",
+   "https://engage.usc.edu/AsliBaatAcappella/"
+  ],
+  "organization_id": "usc-asli-baat-acappella",
+  "data_label": "public_web",
+  "verification_status": "unverified",
+  "collected_at": "2026-11-14",
+  "time_commitment_hours_per_week": null
+ },
+ {
+  "name": "Field Robotics Lab",
+  "slug": "field-robotics-lab",
+  "category": "Design Team",
+  "tags": [
+   "robotics",
+   "mobile_robotics",
+   "space",
+   "engineering",
+   "design_team",
+   "manufacturing",
+   "project_management"
+  ],
+  "public_description": "The Field Robotics Lab (FRL) serves USC undergraduates interested in careers in mobile robotics for applications in space, scientific research, agriculture, humanitarian aid or defense. It leads university-level technical projects that equip undergraduates with practical engineering skills, beyond-classroom knowledge and inspiration they carry into their careers.",
+  "history": "",
+  "founded_year": null,
+  "activities": [
+   "Design and fabrication of the current team project within sub-teams",
+   "Applying engineering, manufacturing and project management skills",
+   "Interdisciplinary design team work"
+  ],
+  "notable_events": [],
+  "meeting_schedule": "",
+  "time_commitment": "",
+  "membership_requirements": "",
+  "recruitment_status": "open",
+  "how_to_join": "Join through the group's EngageSC page at https://engage.usc.edu/FRL/club_signup; members then join a sub-team and contribute to the current project.",
+  "who_thrives_here": "FRL is aimed at undergraduates with a keen interest in a career in mobile robotics.",
+  "faq": [],
+  "public_contact": "",
+  "website": "https://engage.usc.edu/frl/home/",
+  "social_links": {},
+  "source_urls": [
+   "https://engage.usc.edu/club_signup?view=all",
+   "https://engage.usc.edu/FRL/"
+  ],
+  "organization_id": "usc-field-robotics-lab",
+  "data_label": "public_web",
+  "verification_status": "unverified",
+  "collected_at": "2026-11-14",
+  "time_commitment_hours_per_week": null
+ },
+ {
+  "name": "Chinese American Student Association",
+  "slug": "chinese-american-student-association",
+  "category": "Ethnic/Cultural",
+  "tags": [
+   "chinese_american_culture",
+   "community_service",
+   "social_events",
+   "cultural_programming",
+   "retreats"
+  ],
+  "public_description": "USC CASA (Chinese American Student Association) describes itself as a home away from home, providing new and returning students with social, cultural and community service oriented events to enrich their college experience. It welcomes students from all backgrounds to learn about Chinese American culture and become part of a lasting family unit, and notes that it is not reserved solely for Chinese-American students but is a family of multiple diverse cultures united by social, cultural and community-based interests.",
+  "history": "",
+  "founded_year": null,
+  "activities": [
+   "General meetings",
+   "Family events",
+   "Weekend retreats",
+   "Tailgates",
+   "Community service events",
+   "A newsletter with event reminders"
+  ],
+  "notable_events": [
+   "Weekend retreats",
+   "Tailgates"
+  ],
+  "meeting_schedule": "",
+  "time_commitment": "",
+  "membership_requirements": "",
+  "recruitment_status": "open",
+  "how_to_join": "Become a member through the membership page at https://www.usccasa.org/membership, and subscribe to the newsletter for event reminders.",
+  "who_thrives_here": "CASA welcomes students from all backgrounds and says the organization is not reserved solely for Chinese-American students.",
+  "faq": [],
+  "public_contact": "casa@usc.edu",
+  "website": "https://www.usccasa.org/",
+  "social_links": {},
+  "source_urls": [
+   "https://engage.usc.edu/club_signup?view=all",
+   "https://www.usccasa.org/"
+  ],
+  "organization_id": "usc-chinese-american-student-association",
+  "data_label": "public_web",
+  "verification_status": "unverified",
+  "collected_at": "2026-11-14",
+  "time_commitment_hours_per_week": null
+ },
+ {
+  "name": "Brain Exercise Initiative at USC",
+  "slug": "brain-exercise-initiative-at-usc",
+  "category": "Service",
+  "tags": [
+   "community_service",
+   "older_adults",
+   "cognitive_health",
+   "alzheimers",
+   "intergenerational",
+   "volunteering"
+  ],
+  "public_description": "The Brain Exercise Initiative at USC is the USC chapter of a 501(c)(3) nonprofit that aims to improve cognition and memory in seniors through simple math, reading and writing exercises. USC volunteers visit retirement homes and work through the exercises with seniors.",
+  "history": "The national Brain Exercise Initiative bases its approach on research by neuroscientist Dr. Ryuta Kawashima of Tohoku University in Japan. It operates as a nationwide intergenerational program in which university students connect with seniors to do brain exercises together, and lists around 80 chapters across two countries, with the University of Southern California among them.",
+  "founded_year": null,
+  "activities": [
+   "Visiting retirement homes to run brain exercise sessions with seniors",
+   "Simple math, writing and reading-aloud exercises as a cognitive intervention"
+  ],
+  "notable_events": [],
+  "meeting_schedule": "",
+  "time_commitment": "The national program's model is 30 minutes a day, five times a week of brain exercises with participating seniors.",
+  "membership_requirements": "",
+  "recruitment_status": "unknown",
+  "how_to_join": "Join through the group's EngageSC listing.",
+  "who_thrives_here": "",
+  "faq": [
+   {
+    "question": "What is the approach based on?",
+    "answer": "The organization states its belief that simple brain exercises consisting of math, writing and reading aloud, done for 30 minutes a day five times a week, can slow the onset of Alzheimer's. The effort is based on research by neuroscientist Dr. Ryuta Kawashima of Tohoku University in Japan."
+   }
+  ],
+  "public_contact": "",
+  "website": "https://www.brainexerciseinitiative.com/",
+  "social_links": {},
+  "source_urls": [
+   "https://engage.usc.edu/club_signup?view=all",
+   "http://www.brainexerciseinitiative.com/"
+  ],
+  "organization_id": "usc-brain-exercise-initiative-at-usc",
+  "data_label": "public_web",
+  "verification_status": "unverified",
+  "collected_at": "2026-11-14",
+  "time_commitment_hours_per_week": null
+ },
+ {
+  "name": "The Sustainability Project",
+  "slug": "the-sustainability-project",
+  "category": "Environmental/Sustainability",
+  "tags": [
+   "sustainability",
+   "green_business",
+   "advocacy",
+   "education",
+   "community"
+  ],
+  "public_description": "The Sustainability Project at USC describes itself as USC's only green business club. It educates students on the importance of sustainability in business, advocates for greener policies and projects on campus and in the community, and connects people who are passionate about the cause.",
+  "history": "",
+  "founded_year": null,
+  "activities": [
+   "Educating students on sustainability in business",
+   "Advocating for greener campus and community policies and projects",
+   "Connecting students passionate about sustainability"
+  ],
+  "notable_events": [],
+  "meeting_schedule": "",
+  "time_commitment": "",
+  "membership_requirements": "",
+  "recruitment_status": "application",
+  "how_to_join": "Apply through the application form linked from the club's apply page at https://tspatusc.weebly.com/apply.html.",
+  "who_thrives_here": "",
+  "faq": [],
+  "public_contact": "",
+  "website": "https://tspatusc.weebly.com/",
+  "social_links": {},
+  "source_urls": [
+   "https://engage.usc.edu/club_signup?view=all",
+   "https://tspatusc.weebly.com/"
+  ],
+  "organization_id": "usc-the-sustainability-project",
+  "data_label": "public_web",
+  "verification_status": "unverified",
+  "collected_at": "2026-11-14",
+  "time_commitment_hours_per_week": null
+ },
+ {
+  "name": "Daily Trojan",
+  "slug": "daily-trojan",
+  "category": "Media/Publications",
+  "tags": [
+   "journalism",
+   "student_newspaper",
+   "reporting",
+   "multimedia",
+   "long_form",
+   "design"
+  ],
+  "public_description": "The Daily Trojan is the student newspaper of the University of Southern California. It is a forum for student expression, written, edited and managed by university students.",
+  "history": "The Daily Trojan Magazine, the paper's long-form arm, was established in 2023.",
+  "founded_year": null,
+  "activities": [
+   "Daily news reporting on USC and the surrounding community",
+   "Long-form stories and multimedia through Daily Trojan Magazine",
+   "Creative writing and investigations relevant to the USC community",
+   "Design and visual storytelling"
+  ],
+  "notable_events": [],
+  "meeting_schedule": "",
+  "time_commitment": "",
+  "membership_requirements": "",
+  "recruitment_status": "unknown",
+  "how_to_join": "",
+  "who_thrives_here": "",
+  "faq": [
+   {
+    "question": "What is Daily Trojan Magazine?",
+    "answer": "Daily Trojan Magazine, established in 2023, provides a forum for long-form stories and multimedia with an emphasis on journalism and creativity. It is a space to learn and experiment with form, design and reporting, and it breaks from the print newspaper's format to tell thematic narratives, creative writing and investigations relevant to the USC community, using multimedia to fuse written and visual storytelling."
+   }
+  ],
+  "public_contact": "",
+  "website": "https://dailytrojan.com/",
+  "social_links": {
+   "facebook": "http://facebook.com/DailyTrojan",
+   "x": "https://twitter.com/dailytrojan"
+  },
+  "source_urls": [
+   "https://engage.usc.edu/club_signup?view=all",
+   "https://dailytrojan.com/about/"
+  ],
+  "organization_id": "usc-daily-trojan",
+  "data_label": "public_web",
+  "verification_status": "unverified",
+  "collected_at": "2026-11-14",
+  "time_commitment_hours_per_week": null
+ },
+ {
+  "name": "Troy Camp",
+  "slug": "troy-camp",
+  "category": "Service",
+  "tags": [
+   "mentorship",
+   "youth_programs",
+   "community_service",
+   "education",
+   "leadership",
+   "south_los_angeles"
+  ],
+  "public_description": "Troy Camp is a non-profit student organization dedicated to providing long-term mentorship for students of South Los Angeles. It offers educational, extracurricular and leadership programs that foster personal growth and instill the value of learning, building relationships with local youth from 3rd through 12th grade through the school year.",
+  "history": "",
+  "founded_year": null,
+  "activities": [
+   "Long-term mentorship of South Los Angeles youth from 3rd to 12th grade",
+   "Educational programs",
+   "Extracurricular programs",
+   "Leadership programs",
+   "Year-round relationship building with local youth"
+  ],
+  "notable_events": [],
+  "meeting_schedule": "",
+  "time_commitment": "Troy Camp builds relationships with local youth throughout the school year.",
+  "membership_requirements": "",
+  "recruitment_status": "unknown",
+  "how_to_join": "Join through the group's EngageSC listing.",
+  "who_thrives_here": "",
+  "faq": [],
+  "public_contact": "",
+  "website": "",
+  "social_links": {},
+  "source_urls": [
+   "https://engage.usc.edu/club_signup?view=all"
+  ],
+  "organization_id": "usc-troy-camp",
+  "data_label": "public_web",
+  "verification_status": "unverified",
+  "collected_at": "2026-11-14",
+  "time_commitment_hours_per_week": null
+ },
+ {
+  "name": "Armenian Pre-Health Society",
+  "slug": "armenian-pre-health-society",
+  "category": "Pre-Professional",
+  "tags": [
+   "pre_health",
+   "pre_med",
+   "mentorship",
+   "professional_development",
+   "community_service",
+   "armenian_culture"
+  ],
+  "public_description": "The USC Armenian Pre-Health Society (APHS) guides students through pre-health pathways including medicine, dentistry, pharmacy, optometry, veterinary and other health-related fields. It fosters mentorship, leadership and professional development by connecting members with healthcare professionals and community involvement opportunities, and builds a network of Armenian and non-Armenian pre-health students dedicated to academic excellence, service and cultural pride.",
+  "history": "",
+  "founded_year": null,
+  "activities": [
+   "Mentorship from healthcare professionals",
+   "Workshops on entrance exams including the MCAT, DAT and GRE",
+   "Resources for research, volunteering and application preparation",
+   "Networking events",
+   "Community service initiatives",
+   "Leadership experience through the Executive Board and committees"
+  ],
+  "notable_events": [],
+  "meeting_schedule": "",
+  "time_commitment": "",
+  "membership_requirements": "",
+  "recruitment_status": "unknown",
+  "how_to_join": "Join through the group's EngageSC page.",
+  "who_thrives_here": "APHS builds a network of both Armenian and non-Armenian pre-health students.",
+  "faq": [],
+  "public_contact": "",
+  "website": "",
+  "social_links": {},
+  "source_urls": [
+   "https://engage.usc.edu/club_signup?view=all"
+  ],
+  "organization_id": "usc-armenian-pre-health-society",
+  "data_label": "public_web",
+  "verification_status": "unverified",
+  "collected_at": "2026-11-14",
+  "time_commitment_hours_per_week": null
+ },
+ {
+  "name": "Her Campus",
+  "slug": "her-campus",
+  "category": "Media/Publications",
+  "tags": [
+   "journalism",
+   "writing",
+   "publishing",
+   "community",
+   "workshops",
+   "leadership"
+  ],
+  "public_description": "Her Campus USC empowers and connects college women by providing a platform for students to share their voices, experiences and perspectives on campus life and beyond. It is a recognized student organization at USC and a chapter of the national Her Campus network, committed to an inclusive environment where all eligible individuals can participate without discrimination, with each program, meeting and publication intended to uplift student storytellers and foster community.",
+  "history": "",
+  "founded_year": null,
+  "activities": [
+   "Weekly meetings",
+   "Writing and publishing articles",
+   "Chapter events",
+   "Planning and running workshops",
+   "Committee involvement and officer roles"
+  ],
+  "notable_events": [],
+  "meeting_schedule": "The chapter holds weekly meetings.",
+  "time_commitment": "",
+  "membership_requirements": "Members pay dues, which the chapter says contribute to member perks such as food at workshops and chapter T-shirts. Voting rights are available to members once criteria are met.",
+  "recruitment_status": "unknown",
+  "how_to_join": "Join through the group's EngageSC page.",
+  "who_thrives_here": "The chapter describes a supportive, creativity-driven community and an inclusive environment open to all eligible individuals.",
+  "faq": [],
+  "public_contact": "",
+  "website": "",
+  "social_links": {},
+  "source_urls": [
+   "https://engage.usc.edu/club_signup?view=all"
+  ],
+  "organization_id": "usc-her-campus",
+  "data_label": "public_web",
+  "verification_status": "unverified",
+  "collected_at": "2026-11-14",
+  "time_commitment_hours_per_week": null
+ },
+ {
+  "name": "Trojan Filmmakers Club",
+  "slug": "trojan-filmmakers-club",
+  "category": "Media/Publications",
+  "tags": [
+   "filmmaking",
+   "screenwriting",
+   "production",
+   "workshops",
+   "creative_development"
+  ],
+  "public_description": "Trojan Filmmakers Club is a student-run production company that runs weekly workshops on areas of the creative process, from script development to pitching a story to getting it made. Students are invited to submit their own scripts, and a select two to three are chosen to be produced and funded in the Spring.",
+  "history": "",
+  "founded_year": null,
+  "activities": [
+   "Weekly workshops across the creative process",
+   "Script submissions and selection",
+   "Producing and funding two to three selected scripts each Spring",
+   "One-on-one script development sessions with the executive board",
+   "Cast and crew calls shared with members"
+  ],
+  "notable_events": [
+   "Spring production of two to three selected member scripts"
+  ],
+  "meeting_schedule": "Workshops run every week.",
+  "time_commitment": "",
+  "membership_requirements": "",
+  "recruitment_status": "unknown",
+  "how_to_join": "Join through the group's EngageSC page; members can additionally apply to be a production or development member to produce the scripts chosen in the Spring.",
+  "who_thrives_here": "",
+  "faq": [],
+  "public_contact": "",
+  "website": "",
+  "social_links": {},
+  "source_urls": [
+   "https://engage.usc.edu/club_signup?view=all"
+  ],
+  "organization_id": "usc-trojan-filmmakers-club",
+  "data_label": "public_web",
+  "verification_status": "unverified",
+  "collected_at": "2026-11-14",
+  "time_commitment_hours_per_week": null
+ },
+ {
+  "name": "Field Hockey Club",
+  "slug": "field-hockey-club",
+  "category": "Club Sport",
+  "tags": [
+   "field_hockey",
+   "club_sports",
+   "competition",
+   "recreation"
+  ],
+  "public_description": "The Field Hockey Club is a co-ed field hockey club team at USC. It welcomes players of all experience levels and competes in the Western Collegiate Field Hockey Conference against UCSD, UCSB, UCLA and Claremont McKenna College.",
+  "history": "",
+  "founded_year": null,
+  "activities": [
+   "Co-ed field hockey practice and play",
+   "Conference competition in the Western Collegiate Field Hockey Conference"
+  ],
+  "notable_events": [
+   "Western Collegiate Field Hockey Conference matches against UCSD, UCSB, UCLA and Claremont McKenna College"
+  ],
+  "meeting_schedule": "",
+  "time_commitment": "",
+  "membership_requirements": "",
+  "recruitment_status": "unknown",
+  "how_to_join": "The club asks prospective players to contact it at socalfieldhockey@gmail.com, and members can join through its EngageSC page.",
+  "who_thrives_here": "The club welcomes players of all experience levels.",
+  "faq": [],
+  "public_contact": "socalfieldhockey@gmail.com",
+  "website": "",
+  "social_links": {},
+  "source_urls": [
+   "https://engage.usc.edu/club_signup?view=all"
+  ],
+  "organization_id": "usc-field-hockey-club",
+  "data_label": "public_web",
+  "verification_status": "unverified",
+  "collected_at": "2026-11-14",
+  "time_commitment_hours_per_week": null
+ },
+ {
+  "name": "ACM SIGGRAPH",
+  "slug": "acm-siggraph",
+  "category": "Academic",
+  "tags": [
+   "computer_graphics",
+   "animation",
+   "interactive_techniques",
+   "career_development",
+   "art_and_technology"
+  ],
+  "public_description": "This is USC's student chapter of ACM SIGGRAPH, the special interest group on computer graphics within the Association for Computing Machinery. The chapter prepares students both artistically and technically to enter the computer graphics industry, and its mission is to promote the application and knowledge of computer graphics, 3D animation and interactive techniques.",
+  "history": "",
+  "founded_year": null,
+  "activities": [],
+  "notable_events": [],
+  "meeting_schedule": "",
+  "time_commitment": "",
+  "membership_requirements": "",
+  "recruitment_status": "unknown",
+  "how_to_join": "Join through the group's EngageSC listing.",
+  "who_thrives_here": "",
+  "faq": [],
+  "public_contact": "",
+  "website": "",
+  "social_links": {},
+  "source_urls": [
+   "https://engage.usc.edu/club_signup?view=all"
+  ],
+  "organization_id": "usc-acm-siggraph",
+  "data_label": "public_web",
+  "verification_status": "unverified",
+  "collected_at": "2026-11-14",
+  "time_commitment_hours_per_week": null
+ },
+ {
+  "name": "The AI Robotics Ethics Society",
+  "slug": "the-ai-robotics-ethics-society",
+  "category": "Academic",
+  "tags": [
+   "ai_ethics",
+   "artificial_intelligence",
+   "robotics",
+   "research",
+   "education",
+   "advocacy"
+  ],
+  "public_description": "AIRES at USC raises awareness and conducts research on artificial intelligence ethics, uses and implications, to help ensure the ethical creation, output and impact of AI. Its mission aligns with the wider AIRES mission of educating tomorrow's AI leaders in ethical AI principles, and it also educates the broader USC population on AI uses, advancements and dangers to prepare them for AI's impact on various industries and facets of life.",
+  "history": "",
+  "founded_year": null,
+  "activities": [
+   "Research on AI ethics, uses and implications",
+   "Awareness and education programming for the wider USC community"
+  ],
+  "notable_events": [],
+  "meeting_schedule": "",
+  "time_commitment": "",
+  "membership_requirements": "",
+  "recruitment_status": "unknown",
+  "how_to_join": "Join through the group's EngageSC listing.",
+  "who_thrives_here": "",
+  "faq": [],
+  "public_contact": "",
+  "website": "",
+  "social_links": {},
+  "source_urls": [
+   "https://engage.usc.edu/club_signup?view=all"
+  ],
+  "organization_id": "usc-the-ai-robotics-ethics-society",
+  "data_label": "public_web",
+  "verification_status": "unverified",
+  "collected_at": "2026-11-14",
+  "time_commitment_hours_per_week": null
+ },
+ {
+  "name": "Marshall Artificial Intelligence Association",
+  "slug": "marshall-artificial-intelligence-association",
+  "category": "Academic",
+  "tags": [
+   "artificial_intelligence",
+   "business",
+   "data_analytics",
+   "entrepreneurship",
+   "workshops",
+   "projects"
+  ],
+  "public_description": "The Marshall Artificial Intelligence Association empowers young entrepreneurs interested in artificial intelligence and advanced data analytics, giving them the ability to invent, explore and challenge themselves through relevant business workshops, and fostering an environment for personal growth, scholarship and hands-on community involvement.",
+  "history": "",
+  "founded_year": null,
+  "activities": [
+   "Business workshops with an AI focus",
+   "Monthly guest speakers",
+   "Member-initiated projects"
+  ],
+  "notable_events": [],
+  "meeting_schedule": "Guest speakers are offered once a month.",
+  "time_commitment": "",
+  "membership_requirements": "",
+  "recruitment_status": "unknown",
+  "how_to_join": "Join through the group's EngageSC listing.",
+  "who_thrives_here": "The association says members have free range of curiosity toward business ventures as long as they work alongside others effectively.",
+  "faq": [],
+  "public_contact": "",
+  "website": "",
+  "social_links": {},
+  "source_urls": [
+   "https://engage.usc.edu/club_signup?view=all"
+  ],
+  "organization_id": "usc-marshall-artificial-intelligence-association",
+  "data_label": "public_web",
+  "verification_status": "unverified",
+  "collected_at": "2026-11-14",
+  "time_commitment_hours_per_week": null
+ },
+ {
+  "name": "Hack School",
+  "slug": "hack-school",
+  "category": "Academic",
+  "tags": [
+   "coding_education",
+   "programming",
+   "workshops",
+   "beginner_friendly"
+  ],
+  "public_description": "Hack School is a USC organization that teaches coding fundamentals to students who are interested.",
+  "history": "",
+  "founded_year": null,
+  "activities": [],
+  "notable_events": [],
+  "meeting_schedule": "",
+  "time_commitment": "",
+  "membership_requirements": "",
+  "recruitment_status": "unknown",
+  "how_to_join": "Join through the group's EngageSC listing.",
+  "who_thrives_here": "",
+  "faq": [],
+  "public_contact": "",
+  "website": "",
+  "social_links": {},
+  "source_urls": [
+   "https://engage.usc.edu/club_signup?view=all"
+  ],
+  "organization_id": "usc-hack-school",
+  "data_label": "public_web",
+  "verification_status": "unverified",
+  "collected_at": "2026-11-14",
+  "time_commitment_hours_per_week": null
+ },
+ {
+  "name": "Venture Capital and Technology Association",
+  "slug": "venture-capital-and-technology-association",
+  "category": "Pre-Professional",
+  "tags": [
+   "venture_capital",
+   "emerging_technology",
+   "startups",
+   "law_students",
+   "discussion"
+  ],
+  "public_description": "The Venture Capital and Technology Association is a group for USC law students to gather and discuss topics in emerging technologies and start-ups.",
+  "history": "",
+  "founded_year": null,
+  "activities": [],
+  "notable_events": [],
+  "meeting_schedule": "",
+  "time_commitment": "",
+  "membership_requirements": "",
+  "recruitment_status": "unknown",
+  "how_to_join": "Join through the group's EngageSC listing.",
+  "who_thrives_here": "",
+  "faq": [],
+  "public_contact": "",
+  "website": "",
+  "social_links": {},
+  "source_urls": [
+   "https://engage.usc.edu/club_signup?view=all"
+  ],
+  "organization_id": "usc-venture-capital-and-technology-association",
+  "data_label": "public_web",
+  "verification_status": "unverified",
+  "collected_at": "2026-11-14",
+  "time_commitment_hours_per_week": null
+ },
+ {
+  "name": "Entrepreneurship & Innovation Student Association",
+  "slug": "entrepreneurship-and-innovation-student-association",
+  "category": "Pre-Professional",
+  "tags": [
+   "entrepreneurship",
+   "innovation",
+   "community",
+   "graduate_students",
+   "events"
+  ],
+  "public_description": "The Entrepreneurship & Innovation Student Association (EISA) is a student-led organization serving the MSEI (Master of Science in Entrepreneurship and Innovation) community at USC. Its goal is to create a supportive, inclusive, innovative and entrepreneurial community that empowers its founders and students.",
+  "history": "",
+  "founded_year": null,
+  "activities": [
+   "Events for the MSEI community",
+   "Open board sessions for questions and feedback",
+   "Community engagement and input gathering"
+  ],
+  "notable_events": [],
+  "meeting_schedule": "",
+  "time_commitment": "",
+  "membership_requirements": "MSEI students receive free admission to EISA events; other individuals may attend for a small fee. Donations are welcome.",
+  "recruitment_status": "unknown",
+  "how_to_join": "Join through the group's EngageSC listing.",
+  "who_thrives_here": "",
+  "faq": [],
+  "public_contact": "",
+  "website": "",
+  "social_links": {},
+  "source_urls": [
+   "https://engage.usc.edu/club_signup?view=all"
+  ],
+  "organization_id": "usc-entrepreneurship-and-innovation-student-association",
+  "data_label": "public_web",
+  "verification_status": "unverified",
+  "collected_at": "2026-11-14",
+  "time_commitment_hours_per_week": null
+ },
+ {
+  "name": "Society of Women Engineers",
+  "slug": "society-of-women-engineers",
+  "category": "Pre-Professional",
+  "tags": [
+   "women_in_engineering",
+   "professional_development",
+   "community_service",
+   "social_events",
+   "mentorship"
+  ],
+  "public_description": "The Society of Women Engineers at USC supports the community of women engineers on campus through professional development, service and social events.",
+  "history": "",
+  "founded_year": null,
+  "activities": [
+   "Professional development events",
+   "Service events",
+   "Social events"
+  ],
+  "notable_events": [],
+  "meeting_schedule": "",
+  "time_commitment": "",
+  "membership_requirements": "",
+  "recruitment_status": "unknown",
+  "how_to_join": "Join through the group's EngageSC listing.",
+  "who_thrives_here": "",
+  "faq": [],
+  "public_contact": "",
+  "website": "",
+  "social_links": {},
+  "source_urls": [
+   "https://engage.usc.edu/club_signup?view=all"
+  ],
+  "organization_id": "usc-society-of-women-engineers",
+  "data_label": "public_web",
+  "verification_status": "unverified",
+  "collected_at": "2026-11-14",
+  "time_commitment_hours_per_week": null
+ },
+ {
+  "name": "SC Advanced Robotic Combat Design Team",
+  "slug": "sc-advanced-robotic-combat-design-team",
+  "category": "Design Team",
+  "tags": [
+   "combat_robotics",
+   "robotics",
+   "design_team",
+   "fabrication",
+   "competition",
+   "engineering"
+  ],
+  "public_description": "The USC Advanced Robotic Combat (ARC) Design Team gives members hands-on experience in engineering and robotics by designing, building, competing with and repairing combat robots.",
+  "history": "",
+  "founded_year": null,
+  "activities": [
+   "Designing and fabricating combat robots",
+   "Competing at combat robotics competitions",
+   "Repairing and iterating on robots"
+  ],
+  "notable_events": [],
+  "meeting_schedule": "",
+  "time_commitment": "",
+  "membership_requirements": "Members gain access to ARC resources, documents and tools for designing and fabricating combat robots, and may represent ARC at any competition the team enters. Joining the EngageSC group requires an email address ending in .EDU.",
+  "recruitment_status": "unknown",
+  "how_to_join": "Join through the group's EngageSC listing.",
+  "who_thrives_here": "",
+  "faq": [],
+  "public_contact": "",
+  "website": "",
+  "social_links": {},
+  "source_urls": [
+   "https://engage.usc.edu/club_signup?view=all"
+  ],
+  "organization_id": "usc-sc-advanced-robotic-combat-design-team",
+  "data_label": "public_web",
+  "verification_status": "unverified",
+  "collected_at": "2026-11-14",
+  "time_commitment_hours_per_week": null
+ },
+ {
+  "name": "VEX Robotics Team @ USC",
+  "slug": "vex-robotics-team-at-usc",
+  "category": "Academic",
+  "tags": [
+   "robotics",
+   "vex_robotics",
+   "competition",
+   "design_team",
+   "engineering"
+  ],
+  "public_description": "The VEX Robotics Team at USC is a design team that competes internationally in VEX U, a two-minute robotics competition. Its EngageSC listing describes the program as the overall best VEX U robotics program in the world.",
+  "history": "",
+  "founded_year": null,
+  "activities": [
+   "Designing and building competition robots",
+   "Competing in VEX U at an international scale"
+  ],
+  "notable_events": [
+   "VEX U robotics competitions"
+  ],
+  "meeting_schedule": "",
+  "time_commitment": "",
+  "membership_requirements": "",
+  "recruitment_status": "unknown",
+  "how_to_join": "Join through the group's EngageSC listing.",
+  "who_thrives_here": "",
+  "faq": [],
+  "public_contact": "",
+  "website": "",
+  "social_links": {},
+  "source_urls": [
+   "https://engage.usc.edu/club_signup?view=all"
+  ],
+  "organization_id": "usc-vex-robotics-team-at-usc",
+  "data_label": "public_web",
+  "verification_status": "unverified",
+  "collected_at": "2026-11-14",
+  "time_commitment_hours_per_week": null
+ },
+ {
+  "name": "AeroDesign Team",
+  "slug": "aerodesign-team",
+  "category": "Design Team",
+  "tags": [
+   "aerospace",
+   "rc_aircraft",
+   "design_team",
+   "manufacturing",
+   "testing",
+   "project_management",
+   "networking"
+  ],
+  "public_description": "The AeroDesign Team designs, builds and flies competition-winning RC aircraft in a supportive, hands-on environment where members learn and understand flight in a practical setting outside the classroom.",
+  "history": "",
+  "founded_year": null,
+  "activities": [
+   "Designing, manufacturing and testing RC aircraft",
+   "Flight testing and competition",
+   "Subteam-based project management and task delegation",
+   "Networking with USC alumni and industry professionals",
+   "Practising verbal and written technical communication"
+  ],
+  "notable_events": [],
+  "meeting_schedule": "",
+  "time_commitment": "",
+  "membership_requirements": "",
+  "recruitment_status": "unknown",
+  "how_to_join": "Join through the group's EngageSC listing.",
+  "who_thrives_here": "The team describes a supportive, hands-on environment where members can learn.",
+  "faq": [],
+  "public_contact": "",
+  "website": "",
+  "social_links": {},
+  "source_urls": [
+   "https://engage.usc.edu/club_signup?view=all"
+  ],
+  "organization_id": "usc-aerodesign-team",
+  "data_label": "public_web",
+  "verification_status": "unverified",
+  "collected_at": "2026-11-14",
+  "time_commitment_hours_per_week": null
+ },
+ {
+  "name": "Makers of Entertaining Games Association",
+  "slug": "makers-of-entertaining-games-association",
+  "category": "Academic",
+  "tags": [
+   "game_development",
+   "game_design",
+   "interactive_media",
+   "creative_projects",
+   "community"
+  ],
+  "public_description": "The Makers of Entertaining Games Association (MEGA) is a student-run organization that promotes and facilitates the art of game creation at USC.",
+  "history": "",
+  "founded_year": null,
+  "activities": [],
+  "notable_events": [],
+  "meeting_schedule": "",
+  "time_commitment": "",
+  "membership_requirements": "",
+  "recruitment_status": "unknown",
+  "how_to_join": "Join through the group's EngageSC listing.",
+  "who_thrives_here": "",
+  "faq": [],
+  "public_contact": "",
+  "website": "",
+  "social_links": {},
+  "source_urls": [
+   "https://engage.usc.edu/club_signup?view=all"
+  ],
+  "organization_id": "usc-makers-of-entertaining-games-association",
+  "data_label": "public_web",
+  "verification_status": "unverified",
+  "collected_at": "2026-11-14",
+  "time_commitment_hours_per_week": null
+ },
+ {
+  "name": "Design for America",
+  "slug": "design-for-america",
+  "category": "Design Team",
+  "tags": [
+   "human_centered_design",
+   "design_thinking",
+   "social_impact",
+   "nonprofit",
+   "prototyping",
+   "figma",
+   "consulting"
+  ],
+  "public_description": "Design for America (DFA) is a nationally recognized organization that equips university students in the practice of human-centered design for social good. The USC chapter offers free design consultancy for nonprofit community partners and also works with larger companies and organizations such as Unilever and the YMCA. Nonprofit partners gain insights, strategies and project prototype launches by the end of each school year in May, and teams commit to furthering their partner's mission through a human-centered, design-driven process.",
+  "history": "",
+  "founded_year": null,
+  "activities": [
+   "Free design consultancy projects for nonprofit community partners",
+   "Projects with larger companies and organizations",
+   "Applying a six-step design-thinking framework",
+   "Prototyping with design software such as Figma",
+   "Presentation-making and pitch decks"
+  ],
+  "notable_events": [
+   "Annual project prototype launches delivered to partners by May"
+  ],
+  "meeting_schedule": "",
+  "time_commitment": "Projects run through the school year, with partner deliverables by the end of each school year in May.",
+  "membership_requirements": "",
+  "recruitment_status": "application",
+  "how_to_join": "DFA teams are chosen through a highly selective onboarding process.",
+  "who_thrives_here": "DFA selects members from a wide range of backgrounds to ensure teams are dedicated, diverse and passionate about the social challenges they focus on.",
+  "faq": [],
+  "public_contact": "",
+  "website": "",
+  "social_links": {},
+  "source_urls": [
+   "https://engage.usc.edu/club_signup?view=all"
+  ],
+  "organization_id": "usc-design-for-america",
+  "data_label": "public_web",
+  "verification_status": "unverified",
+  "collected_at": "2026-11-14",
+  "time_commitment_hours_per_week": null
+ }
 ]

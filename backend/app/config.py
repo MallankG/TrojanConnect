@@ -1,6 +1,7 @@
 """Central settings. Every key is optional so the backend boots with an empty .env:
 no Supabase keys -> in-memory seeded repository; no Gemini key -> rule-based fallback LLM."""
 from functools import lru_cache
+from typing import ClassVar
 
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
@@ -8,7 +9,9 @@ from pydantic_settings import BaseSettings, SettingsConfigDict
 class Settings(BaseSettings):
     model_config = SettingsConfigDict(env_file=".env", env_file_encoding="utf-8", extra="ignore")
 
-    environment: str = "development"
+    # Defaults are the safe ones: a deployment that sets nothing is treated as production,
+    # where the X-Demo-User header is refused. Local dev opts in via .env (see .env.example).
+    environment: str = "production"
     frontend_origin: str = "http://localhost:3000"
 
     supabase_url: str = ""
@@ -28,8 +31,11 @@ class Settings(BaseSettings):
     whatsapp_verify_token: str = ""
     telegram_bot_token: str = ""
 
+    # Which in-memory seed dataset to serve: "auto" | "real" | "demo" (see repositories/memory.py)
+    seed_dataset: str = "auto"
+
     # Dev-only: allow `X-Demo-User: <user_id>` instead of a Supabase JWT when not in production.
-    allow_demo_auth: bool = True
+    allow_demo_auth: bool = False
 
     @property
     def use_supabase(self) -> bool:
@@ -39,9 +45,13 @@ class Settings(BaseSettings):
     def use_gemini(self) -> bool:
         return bool(self.gemini_api_key)
 
+    # Anything that isn't an explicitly recognised local/dev/test environment counts as
+    # production, so "prod", "staging" or a typo cannot unlock demo auth.
+    DEV_ENVIRONMENTS: ClassVar[frozenset[str]] = frozenset({"development", "dev", "local", "test", "testing"})
+
     @property
     def is_production(self) -> bool:
-        return self.environment.lower() == "production"
+        return self.environment.strip().lower() not in self.DEV_ENVIRONMENTS
 
 
 @lru_cache

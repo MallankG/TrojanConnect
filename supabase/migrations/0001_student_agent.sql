@@ -46,8 +46,8 @@ create table if not exists club_profiles (
     time_commitment                text not null default '',
     time_commitment_hours_per_week double precision,
     membership_requirements        text not null default '',
-    recruitment_status             text not null default 'open'
-        check (recruitment_status in ('open', 'application', 'closed')),
+    recruitment_status             text not null default 'unknown'
+        check (recruitment_status in ('open', 'application', 'closed', 'unknown')),
     how_to_join                    text not null default '',
     who_thrives_here               text not null default '',
     faq                            jsonb not null default '[]'::jsonb,   -- [{question, answer}]
@@ -144,7 +144,7 @@ create table if not exists club_interests (
     consent_snapshot jsonb not null default '{}'::jsonb,
     idempotency_key  text not null,
     created_at       timestamptz not null default now(),
-    unique (student_id, idempotency_key)
+    unique (student_id, organization_id, idempotency_key)
 );
 create index if not exists club_interests_org_idx on club_interests (organization_id, created_at);
 
@@ -232,19 +232,22 @@ create policy "student_agent_feedback_own" on recommendation_feedback
     for all to authenticated
     using (user_id = (select auth.uid())::text) with check (user_id = (select auth.uid())::text);
 
--- Own conversations and their messages.
+-- Own conversations and their messages: READ ONLY for clients.
+-- Every write goes through the backend (service role), which also decides what an agent
+-- turn contains. A client that could insert or edit a message could forge an agent turn
+-- carrying a pending_confirmation, and /conversations/{id}/confirm trusts that payload.
 drop policy if exists "student_agent_conversations_own" on conversations;
-create policy "student_agent_conversations_own" on conversations
-    for all to authenticated
-    using (owner_user_id = (select auth.uid())::text) with check (owner_user_id = (select auth.uid())::text);
+drop policy if exists "student_agent_conversations_own_select" on conversations;
+create policy "student_agent_conversations_own_select" on conversations
+    for select to authenticated
+    using (owner_user_id = (select auth.uid())::text);
 
 drop policy if exists "student_agent_messages_own" on messages;
-create policy "student_agent_messages_own" on messages
-    for all to authenticated
+drop policy if exists "student_agent_messages_own_select" on messages;
+create policy "student_agent_messages_own_select" on messages
+    for select to authenticated
     using (exists (select 1 from conversations c
-                   where c.id = messages.conversation_id and c.owner_user_id = (select auth.uid())::text))
-    with check (exists (select 1 from conversations c
-                        where c.id = messages.conversation_id and c.owner_user_id = (select auth.uid())::text));
+                   where c.id = messages.conversation_id and c.owner_user_id = (select auth.uid())::text));
 
 -- Own interests: students may read and create, never edit or delete (consent record).
 drop policy if exists "student_agent_interests_own_select" on club_interests;

@@ -25,7 +25,9 @@ def create_app() -> FastAPI:
     app = FastAPI(title="TrojanConnect API", version="0.1.0")
     app.add_middleware(
         CORSMiddleware,
-        allow_origins=sorted({settings.frontend_origin.rstrip("/"), "http://localhost:3000"}),
+        # localhost is a dev convenience only; production allows the configured origin alone.
+        allow_origins=sorted({o for o in (settings.frontend_origin.rstrip("/"),
+                                          "" if settings.is_production else "http://localhost:3000") if o}),
         allow_credentials=True,
         allow_methods=["*"],
         allow_headers=["*"],

@@ -179,13 +179,14 @@ class SupabaseRepository:
         return [Message.model_validate(r) for r in rows]
 
     # ---- interests ----
-    async def _find_interest(self, student_id: str, idempotency_key: str) -> Optional[ClubInterest]:
+    async def _find_interest(self, student_id: str, organization_id: str, idempotency_key: str) -> Optional[ClubInterest]:
         rows = await self._rows(lambda: self._client.table("club_interests").select(INTEREST_COLS)
-                                .eq("student_id", student_id).eq("idempotency_key", idempotency_key).limit(1))
+                                .eq("student_id", student_id).eq("organization_id", organization_id)
+                                .eq("idempotency_key", idempotency_key).limit(1))
         return ClubInterest.model_validate(rows[0]) if rows else None
 
     async def create_interest(self, interest: ClubInterest) -> ClubInterest:
-        existing = await self._find_interest(interest.student_id, interest.idempotency_key)
+        existing = await self._find_interest(interest.student_id, interest.organization_id, interest.idempotency_key)
         if existing:
             return existing
         await self._ensure_profile(interest.student_id)
@@ -194,7 +195,7 @@ class SupabaseRepository:
             await self._rows(lambda: self._client.table("club_interests").insert(payload))
         except Exception:
             # Lost a race on unique (student_id, idempotency_key): return the winner's row.
-            existing = await self._find_interest(interest.student_id, interest.idempotency_key)
+            existing = await self._find_interest(interest.student_id, interest.organization_id, interest.idempotency_key)
             if existing:
                 return existing
             raise

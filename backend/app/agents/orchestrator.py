@@ -2,6 +2,9 @@
 import json
 import logging
 from typing import Any, Optional
+from uuid import uuid4
+
+from pydantic import ValidationError
 
 from app.agents import club_agent, student_agent
 from app.agents.guardrails import check_input, check_output, refusal_message
@@ -13,9 +16,10 @@ from app.schemas.student import (
 )
 from app.security.actor import Actor
 from app.services.interests import submit_club_interest
-from app.tools.student_tools import club_summary, execute_tool, summarize_activity
+from app.tools.student_tools import SubmitInterestArgs, club_summary, execute_tool, summarize_activity
 
 log = logging.getLogger(__name__)
+MAX_TOOL_CALLS_PER_ROUND = 6
 MAX_TOOL_ROUNDS = 4
 HISTORY_MESSAGES = 20
 MAX_CARDS = 8
@@ -74,8 +78,11 @@ class AgentOrchestrator:
             if not resp.tool_calls or round_no == MAX_TOOL_ROUNDS:
                 text = resp.text
                 break
-            messages.append(ChatMessage(role="assistant", content=resp.text, tool_calls=resp.tool_calls))
-            for call in resp.tool_calls[:6]:
+            # Cap the fan-out, then record exactly the calls we answer: a function_call left
+            # without a matching response makes the next provider request invalid.
+            calls = resp.tool_calls[:MAX_TOOL_CALLS_PER_ROUND]
+            messages.append(ChatMessage(role="assistant", content=resp.text, tool_calls=calls))
+            for call in calls:
                 result = await execute_tool(call.name, call.args, actor=actor, repo=self.repo, embedder=self.embedder,
                                             scope_org_id=scope)
                 activity.append(summarize_activity(call.name, call.args, result))
@@ -101,7 +108,13 @@ class AgentOrchestrator:
         if not raw:
             raise AppError(VALIDATION_ERROR, "There is nothing waiting for confirmation in this conversation.", status_code=409)
         pending = PendingConfirmation(**raw)
-        payload = pending.payload
+        # The payload comes back out of storage, so re-validate it against the tool's own
+        # argument model instead of trusting whatever is in the row.
+        try:
+            args = SubmitInterestArgs(**{k: v for k, v in pending.payload.items() if k in SubmitInterestArgs.model_fields})
+        except ValidationError:
+            raise AppError(VALIDATION_ERROR, "The pending action is no longer valid. Please ask again.", status_code=409)
+        payload = {**pending.payload, **args.model_dump()}
         club_name = payload.get("club_name") or "the club"
         await self.repo.add_message(Message(conversation_id=conv.id, sender_type="system",
                                             content="User confirmed the pending action." if confirmed else "User cancelled the pending action.",
@@ -113,9 +126,9 @@ class AgentOrchestrator:
             if conv.organization_id and payload.get("organization_id") != conv.organization_id:
                 raise AppError(PERMISSION_DENIED, "This confirmation does not belong to this club conversation.", status_code=403)
             interest = await submit_club_interest(self.repo, actor, ClubInterestCreate(
-                organization_id=payload["organization_id"], interest_type=payload.get("interest_type", "membership"),
-                message=payload.get("message", ""), share_contact=bool(payload.get("share_contact")),
-                user_confirmed=True, idempotency_key=payload["idempotency_key"]))
+                organization_id=args.organization_id, interest_type=args.interest_type,
+                message=args.message, share_contact=args.share_contact,
+                user_confirmed=True, idempotency_key=str(payload.get("idempotency_key") or f"chat-{uuid4()}")))
         except AppError as exc:
             act = ToolActivity(tool="submit_club_interest", summary=f"Submitting interest failed: {exc.message[:120]}", ok=False)
             return await self._persist_turn(conv, f"I couldn't send that: {exc.message} Nothing was shared.", model="system",

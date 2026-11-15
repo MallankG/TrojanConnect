@@ -1,12 +1,15 @@
 """Student-agent domain models. Source of truth for the student side (PRD 9.4, 13).
 Do not change field names without updating docs/student-agent-contract.md."""
 from datetime import datetime, timezone
+from zoneinfo import ZoneInfo
 from typing import Any, Literal, Optional
 from uuid import uuid4
 
-from pydantic import Field
+from pydantic import Field, field_validator
 
 from .common import StrictModel
+
+CAMPUS_TZ = ZoneInfo("America/Los_Angeles")
 
 
 def _uuid() -> str:
@@ -39,7 +42,9 @@ class ClubProfile(StrictModel):
     time_commitment: str = Field(default="", max_length=300)
     time_commitment_hours_per_week: Optional[float] = None
     membership_requirements: str = Field(default="", max_length=600)
-    recruitment_status: Literal["open", "application", "closed"] = "open"
+    # "unknown" = the source pages never stated it. Agents must not assert a recruitment
+    # state from the default; see services/recommendations.py.
+    recruitment_status: Literal["open", "application", "closed", "unknown"] = "unknown"
     how_to_join: str = Field(default="", max_length=600)
     who_thrives_here: str = Field(default="", max_length=600)
     faq: list[FAQItem] = Field(default_factory=list, max_length=30)
@@ -62,6 +67,13 @@ class ClubEvent(StrictModel):
     end_at: datetime
     location: str = Field(default="", max_length=200)
     visibility: Literal["public", "members"] = "public"
+
+    @field_validator("start_at", "end_at")
+    @classmethod
+    def _require_timezone(cls, value: datetime) -> datetime:
+        """Collected data sometimes omits the offset. Assume campus time rather than
+        letting a naive datetime reach comparisons against aware "now"."""
+        return value.replace(tzinfo=CAMPUS_TZ) if value.tzinfo is None else value
 
 
 class ClubSearchHit(StrictModel):

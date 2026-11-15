@@ -1,4 +1,8 @@
-"""InMemoryRepository + seed data tests (DATA layer)."""
+"""InMemoryRepository + seed data tests (DATA layer).
+
+Repositories here are pinned to the "demo" dataset so these assertions describe the
+invented seed regardless of whether the collected (real) dataset is present.
+See test_real_seed_* for the collected dataset."""
 import json
 import re
 from datetime import datetime, timedelta, timezone
@@ -6,7 +10,7 @@ from datetime import datetime, timedelta, timezone
 from app.config import Settings
 from app.repositories.base import StudentRepository
 from app.repositories.factory import build_repository
-from app.repositories.memory import SEED_DIR, InMemoryRepository
+from app.repositories.memory import REAL_SEED_DIR, SEED_DIR, InMemoryRepository, resolve_dataset
 from app.schemas.student import (
     AuditLog, ClubEvent, ClubInterest, ClubProfile, Conversation, Message,
     RecommendationFeedback, StudentPreferences,
@@ -39,7 +43,7 @@ def test_seed_clubs_validate_and_are_rich():
 
 
 async def test_repo_lists_and_gets_clubs():
-    repo = InMemoryRepository()
+    repo = InMemoryRepository("demo")
     assert isinstance(repo, StudentRepository)
     clubs = await repo.list_clubs()
     assert len(clubs) == 12
@@ -50,7 +54,7 @@ async def test_repo_lists_and_gets_clubs():
 
 
 async def test_seed_events_are_future_and_linked():
-    repo = InMemoryRepository()
+    repo = InMemoryRepository("demo")
     now = datetime.now(timezone.utc)
     events = await repo.list_events()
     assert all(isinstance(e, ClubEvent) for e in events)
@@ -69,7 +73,7 @@ async def test_seed_events_are_future_and_linked():
 
 
 async def test_past_events_hidden_when_upcoming_only():
-    repo = InMemoryRepository()
+    repo = InMemoryRepository("demo")
     past = ClubEvent(id="evt-past", organization_id="club-ai-society", title="Old",
                      start_at=datetime.now(timezone.utc) - timedelta(days=2),
                      end_at=datetime.now(timezone.utc) - timedelta(days=2, hours=-1))
@@ -80,7 +84,7 @@ async def test_past_events_hidden_when_upcoming_only():
 
 # ---------- demo users / preferences ----------
 async def test_demo_students_seeded():
-    repo = InMemoryRepository()
+    repo = InMemoryRepository("demo")
     assert {u["user_id"] for u in repo.list_demo_users()} == {"demo-student-1", "demo-student-2"}
     user = repo.get_demo_user("demo-student-1")
     assert user["display_name"] and user["email"].endswith("example.edu")
@@ -93,7 +97,7 @@ async def test_demo_students_seeded():
 
 
 async def test_preferences_upsert_refreshes_updated_at():
-    repo = InMemoryRepository()
+    repo = InMemoryRepository("demo")
     stale = datetime(2020, 1, 1, tzinfo=timezone.utc)
     saved = await repo.upsert_preferences(
         StudentPreferences(user_id="demo-student-2", interest_tags=["design"], updated_at=stale))
@@ -111,7 +115,7 @@ async def test_preferences_upsert_refreshes_updated_at():
 
 # ---------- saved clubs / feedback ----------
 async def test_saved_clubs():
-    repo = InMemoryRepository()
+    repo = InMemoryRepository("demo")
     assert await repo.list_saved_clubs("demo-student-1") == []
     await repo.save_club("demo-student-1", "club-ai-society")
     await repo.save_club("demo-student-1", "club-founders-forge")
@@ -124,7 +128,7 @@ async def test_saved_clubs():
 
 
 async def test_recommendation_feedback_latest_wins_per_club():
-    repo = InMemoryRepository()
+    repo = InMemoryRepository("demo")
     await repo.add_recommendation_feedback("u1", RecommendationFeedback(organization_id="club-ai-society", feedback="helpful"))
     await repo.add_recommendation_feedback("u1", RecommendationFeedback(organization_id="club-pixel-foundry", feedback="hide"))
     await repo.add_recommendation_feedback("u1", RecommendationFeedback(organization_id="club-ai-society", feedback="not_relevant"))
@@ -135,7 +139,7 @@ async def test_recommendation_feedback_latest_wins_per_club():
 
 # ---------- conversations ----------
 async def test_conversations_and_message_ordering():
-    repo = InMemoryRepository()
+    repo = InMemoryRepository("demo")
     t0 = datetime.now(timezone.utc)
     c1 = await repo.create_conversation(Conversation(
         owner_user_id="demo-student-1", agent_type="student", agent_id="student_agent:demo-student-1", created_at=t0))
@@ -163,7 +167,7 @@ async def test_conversations_and_message_ordering():
 
 # ---------- interests / audit ----------
 async def test_interest_idempotency():
-    repo = InMemoryRepository()
+    repo = InMemoryRepository("demo")
     first = await repo.create_interest(ClubInterest(
         student_id="demo-student-1", organization_id="club-ai-society", interest_type="membership",
         message="hi", idempotency_key="key-00000001"))
@@ -189,7 +193,7 @@ async def test_interest_idempotency():
 
 
 async def test_audit_log_recorded():
-    repo = InMemoryRepository()
+    repo = InMemoryRepository("demo")
     await repo.add_audit_log(AuditLog(actor_id="demo-student-1", action="club_interest.create",
                                       resource_type="club_interest", resource_id="abc"))
     assert [e.action for e in repo.audit_entries()] == ["club_interest.create"]
@@ -197,7 +201,7 @@ async def test_audit_log_recorded():
 
 # ---------- isolation / factory ----------
 async def test_instances_are_isolated():
-    a, b = InMemoryRepository(), InMemoryRepository()
+    a, b = InMemoryRepository("demo"), InMemoryRepository("demo")
     await a.save_club("demo-student-1", "club-ai-society")
     await a.upsert_preferences(StudentPreferences(user_id="demo-student-2", interest_tags=["finance"]))
     conv = await a.create_conversation(Conversation(owner_user_id="u", agent_type="student", agent_id="student_agent:u"))
@@ -241,3 +245,64 @@ def test_seed_sql_matches_json():
         assert c["history"].replace("'", "''") in sql
     for e in json.loads((SEED_DIR / "events.json").read_text("utf-8")):
         assert f"'{e['id']}'" in sql
+
+
+# ---------- collected ("real") dataset ----------
+def test_real_seed_validates_when_present():
+    """Skip-free check: when collected data exists it must parse and be labelled honestly."""
+    path = REAL_SEED_DIR / "clubs.json"
+    if not path.is_file():
+        assert resolve_dataset("auto") == "demo"
+        return
+    clubs = [ClubProfile.model_validate(c) for c in json.loads(path.read_text("utf-8"))]
+    assert clubs, "real clubs.json must not be empty"
+    assert len({c.organization_id for c in clubs}) == len(clubs)
+    for c in clubs:
+        assert c.data_label == "public_web", c.organization_id
+        assert c.verification_status == "unverified", c.organization_id
+        assert c.source_urls, c.organization_id
+        assert c.tags and all(TAG_RE.match(t) for t in c.tags), c.organization_id
+    repo = InMemoryRepository("real")
+    assert repo.dataset == "real"
+    # Two tiers: rich profiles plus the directory stubs, rich winning on a shared id.
+    directory = REAL_SEED_DIR / "directory.json"
+    stubs = json.loads(directory.read_text("utf-8")) if directory.is_file() else []
+    expected = {c["organization_id"] for c in stubs} | {c.organization_id for c in clubs}
+    assert set(repo._clubs) == expected
+    for stub in stubs:
+        club = ClubProfile.model_validate(stub)
+        assert club.data_label == "public_web" and club.recruitment_status == "unknown", club.organization_id
+        # Directory URLs are frequently stale and some have been re-registered by third
+        # parties, so a stub may only point at its EngageSC page.
+        assert not club.website or "engage.usc.edu" in club.website, club.organization_id
+
+
+def test_real_events_reference_known_clubs_when_present():
+    events_path, clubs_path = REAL_SEED_DIR / "events.json", REAL_SEED_DIR / "clubs.json"
+    if not (events_path.is_file() and clubs_path.is_file()):
+        return
+    known = {c["organization_id"] for c in json.loads(clubs_path.read_text("utf-8"))}
+    for raw in json.loads(events_path.read_text("utf-8")):
+        event = ClubEvent.model_validate(raw)
+        assert event.organization_id in known, event.organization_id
+        assert event.end_at >= event.start_at
+
+
+def test_active_repository_never_serves_an_event_for_an_unknown_club():
+    """The invariant that matters at runtime: whichever dataset is active, every event the
+    repository hands out belongs to a club it can also show."""
+    repo = InMemoryRepository()
+    club_ids = set(repo._clubs)
+    assert {e.organization_id for e in repo._events} <= club_ids
+    assert repo._events or True  # an empty event list is acceptable; a mismatched one is not
+
+
+def test_naive_event_datetimes_get_campus_timezone():
+    """Collected data sometimes omits the UTC offset; a naive datetime must not reach
+    comparisons against an aware "now" (it raises TypeError and 500s every events route)."""
+    event = ClubEvent.model_validate({
+        "id": "ev-naive", "organization_id": "club-x", "title": "No offset",
+        "start_at": "2027-03-01T17:00:00", "end_at": "2027-03-01T19:00:00",
+    })
+    assert event.start_at.tzinfo is not None and event.end_at.tzinfo is not None
+    assert event.end_at >= datetime(2027, 1, 1, tzinfo=timezone.utc)

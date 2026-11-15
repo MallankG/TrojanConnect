@@ -1,9 +1,16 @@
 """In-memory StudentRepository seeded from seed/*.json. Default backend when Supabase keys
 are absent. Every instance owns its own state, so tests and requests never share data
-unless they share the instance."""
+unless they share the instance.
+
+Two datasets live side by side:
+  seed/           invented demo clubs (data_label "demo"), always present
+  seed/real/      clubs collected from public web pages (data_label "public_web")
+`SEED_DATASET` picks one: "auto" (default) uses real when seed/real/clubs.json exists,
+otherwise demo; "demo" and "real" force a choice."""
 from __future__ import annotations
 
 import json
+import logging
 from datetime import datetime, time, timedelta, timezone
 from functools import lru_cache
 from pathlib import Path
@@ -15,27 +22,60 @@ from app.schemas.student import (
     RecommendationFeedback, StudentPreferences,
 )
 
+log = logging.getLogger(__name__)
+
 SEED_DIR = Path(__file__).parent / "seed"
+REAL_SEED_DIR = SEED_DIR / "real"
 CAMPUS_TZ = ZoneInfo("America/Los_Angeles")
 
 
 @lru_cache
-def _read_seed(name: str) -> str:
-    return (SEED_DIR / name).read_text(encoding="utf-8")
+def _read_seed(path: str) -> str:
+    return Path(path).read_text(encoding="utf-8")
 
 
-def _load_json(name: str) -> Any:
-    # json.loads on the cached text gives each caller its own fresh objects.
-    return json.loads(_read_seed(name))
+def _load_json(name: str, dataset: Optional[str] = None, default: Any = None) -> Any:
+    """Load a seed file from the resolved dataset. Datasets never borrow files from each
+    other: mixing demo events into collected clubs would serve events for clubs that do not
+    exist. A missing file yields `default`. json.loads gives each caller fresh objects."""
+    directory = REAL_SEED_DIR if resolve_dataset(dataset) == "real" else SEED_DIR
+    path = directory / name
+    if not path.is_file():
+        return [] if default is None else default
+    return json.loads(_read_seed(str(path)))
 
 
-def load_seed_clubs() -> list[ClubProfile]:
-    return [ClubProfile.model_validate(c) for c in _load_json("clubs.json")]
+def resolve_dataset(dataset: Optional[str] = None) -> str:
+    """"auto" (or None) -> "real" when the collected dataset is present, else "demo"."""
+    choice = (dataset or "").strip().lower()
+    if not choice or choice == "auto":
+        from app.config import get_settings
+        choice = (get_settings().seed_dataset or "auto").strip().lower()
+    if choice == "real":
+        return "real" if (REAL_SEED_DIR / "clubs.json").is_file() else "demo"
+    if choice == "demo":
+        return "demo"
+    return "real" if (REAL_SEED_DIR / "clubs.json").is_file() else "demo"
+
+
+def load_seed_clubs(dataset: Optional[str] = None) -> list[ClubProfile]:
+    """The collected dataset has two tiers: `clubs.json` holds profiles collected page by
+    page, `directory.json` holds every other publicly listed org with only what the
+    directory listing stated. A rich profile wins over a directory stub of the same org."""
+    by_id: dict[str, ClubProfile] = {}
+    for name in ("directory.json", "clubs.json"):
+        for raw in _load_json(name, dataset):
+            club = ClubProfile.model_validate(raw)
+            by_id[club.organization_id] = club
+    return list(by_id.values())
 
 
 def build_seed_event(raw: dict[str, Any], now: Optional[datetime] = None) -> ClubEvent:
-    """Seed events store `days_from_now` / `start_hour` / `duration_hours` so they are always
-    in the future. Times are campus-local (America/Los_Angeles)."""
+    """Demo seed events store `days_from_now` / `start_hour` / `duration_hours` so they are
+    always in the future; collected events carry absolute `start_at` / `end_at`. Relative
+    times are campus-local (America/Los_Angeles)."""
+    if "start_at" in raw:
+        return ClubEvent.model_validate(raw)
     today = (now or datetime.now(timezone.utc)).astimezone(CAMPUS_TZ).date()
     start_hour = float(raw["start_hour"])
     hour = int(start_hour)
@@ -56,18 +96,26 @@ def build_seed_event(raw: dict[str, Any], now: Optional[datetime] = None) -> Clu
     )
 
 
-def load_seed_events(now: Optional[datetime] = None) -> list[ClubEvent]:
-    return [build_seed_event(e, now) for e in _load_json("events.json")]
+def load_seed_events(now: Optional[datetime] = None, dataset: Optional[str] = None) -> list[ClubEvent]:
+    return [build_seed_event(e, now) for e in _load_json("events.json", dataset)]
 
 
 def load_seed_students() -> list[dict[str, Any]]:
-    return _load_json("students.json")
+    # Demo students exist in both datasets: they are the dev-auth identities, not club data.
+    return json.loads(_read_seed(str(SEED_DIR / "students.json")))
 
 
 class InMemoryRepository:
-    def __init__(self) -> None:
-        self._clubs: dict[str, ClubProfile] = {c.organization_id: c for c in load_seed_clubs()}
-        self._events: list[ClubEvent] = load_seed_events()
+    def __init__(self, dataset: Optional[str] = None) -> None:
+        self.dataset = resolve_dataset(dataset)
+        self._clubs: dict[str, ClubProfile] = {c.organization_id: c for c in load_seed_clubs(self.dataset)}
+        # Invariant: never serve an event for a club this repository cannot show.
+        self._events: list[ClubEvent] = []
+        for event in load_seed_events(dataset=self.dataset):
+            if event.organization_id in self._clubs:
+                self._events.append(event)
+            else:
+                log.warning("seed event %r dropped: unknown organization %r", event.id, event.organization_id)
         self._demo_users: dict[str, dict[str, Any]] = {}
         self._preferences: dict[str, StudentPreferences] = {}
         for s in load_seed_students():
@@ -178,7 +226,7 @@ class InMemoryRepository:
 
     # ---- interests ----
     async def create_interest(self, interest: ClubInterest) -> ClubInterest:
-        key = (interest.student_id, interest.idempotency_key)
+        key = (interest.student_id, interest.organization_id, interest.idempotency_key)
         existing = self._interests.get(key)
         if existing is None:
             existing = interest.model_copy(deep=True)

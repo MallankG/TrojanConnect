@@ -48,8 +48,9 @@ async def list_clubs(
 
 
 @router.get("/events")
-async def list_events(upcoming_only: bool = True, actor: Actor = Depends(get_actor), repo=Depends(repo_dep)) -> ToolResult:
-    return ToolResult.success(_public(await repo.list_events(None, upcoming_only)))
+async def list_events(upcoming_only: bool = True, limit: int = Query(default=50, ge=1, le=200),
+                       actor: Actor = Depends(get_actor), repo=Depends(repo_dep)) -> ToolResult:
+    return ToolResult.success(_public(await repo.list_events(None, upcoming_only))[:limit])
 
 
 @router.get("/clubs/{organization_id}")

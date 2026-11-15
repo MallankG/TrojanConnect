@@ -11,7 +11,7 @@ from app.services.preferences import get_preferences, has_signal, merge_preferen
 from app.services.text import clamp01, keywords
 
 WEIGHTS = {"tags": 0.35, "semantic": 0.25, "goal": 0.15, "time": 0.15, "recruiting": 0.05, "event": 0.05}
-RECRUITING_SCORE = {"open": 1.0, "application": 0.5, "closed": 0.0}
+RECRUITING_SCORE = {"open": 1.0, "application": 0.5, "closed": 0.0, "unknown": 0.5}
 NOT_PERSONALISED = "Not personalised: you haven't shared interests yet (or personalisation is off)."
 
 
@@ -52,7 +52,8 @@ async def recommend_clubs(repo, embedder, user_id: str, limit: int = 10) -> list
         recs = []
         for club in clubs:
             recruiting, event = club.recruitment_status == "open", events.get(club.organization_id)
-            codes = ["POPULAR_DEFAULT"] + (["RECRUITING_NOW"] if recruiting else []) + (["UPCOMING_EVENT"] if event else [])
+            codes = (["POPULAR_DEFAULT"] + (["RECRUITING_NOW"] if recruiting else [])
+                     + (["UPCOMING_EVENT"] if event else []))
             extra = [s for s in ("recruiting now" if recruiting else "", f"upcoming event: {event.title}" if event else "") if s]
             recs.append(Recommendation(
                 organization_id=club.organization_id, club_name=club.name,
@@ -99,9 +100,13 @@ async def recommend_clubs(repo, embedder, user_id: str, limit: int = 10) -> list
             why.append(f"about {_h(club.time_commitment_hours_per_week)} h/week fits your {_h(prefs.hours_per_week_available)} h/week")
         elif time_fit is not None:
             why.append(f"note: about {_h(club.time_commitment_hours_per_week)} h/week is more than your {_h(prefs.hours_per_week_available)} h/week")
-        if club.recruitment_status != "closed":
+        if club.recruitment_status == "open":
             codes.append("RECRUITING_NOW")
-            why.append("recruiting now" if club.recruitment_status == "open" else "accepting applications")
+            why.append("recruiting now")
+        elif club.recruitment_status == "application":
+            codes.append("RECRUITING_NOW")
+            why.append("accepting applications")
+        # "unknown" (not stated on the club's public pages) earns no claim either way
         if event:
             codes.append("UPCOMING_EVENT")
             why.append(f"upcoming event: {event.title}")
@@ -167,8 +172,10 @@ async def fit_check(repo, embedder, user_id: str, organization_id: str,
         concerns.append("Recruitment is currently closed, so you may not be able to join right now.")
     elif club.recruitment_status == "application":
         concerns.append("Joining requires an application; admission is not guaranteed.")
-    else:
+    elif club.recruitment_status == "open":
         reasons.append("The club is open to new members right now.")
+    else:
+        concerns.append("The club's profile doesn't say whether it is currently recruiting - ask them.")
     if club.membership_requirements:
         concerns.append(f"Check the membership requirements: {club.membership_requirements[:200]}")
 
