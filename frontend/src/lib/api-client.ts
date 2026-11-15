@@ -35,7 +35,12 @@ export type AgentAction =
   | { type: "reset" }
   | { type: "field"; key: string }
   | { type: "options"; title: string; options: { label: string; detail: string; message: string }[] }
-  | { type: "fields"; title: string; keys: string[]; then: string }
+  | { type: "fields"; title: string; keys: string[]; then: string; scope?: "event" | "rso" }
+  | { type: "rso_checklist"; section: "steps" | "officers" | "advisor" | "step"; step?: string }
+  | { type: "handoff"; title: string; url: string; label: string; steps: string[] }
+  | { type: "rso_email"; target: string }
+  | { type: "rso_status" }
+  | { type: "rso_portal" }
   | { type: "suggestions"; items: { label: string; message: string }[] };
 export interface AgentInfo { configured: boolean; mode?: "gemini" | "rules"; model: string }
 export interface AgentReply { reply: string; actions: AgentAction[]; tools: { tool: string; ok: boolean; error: string | null }[]; state: PipelineState; model: string }
@@ -108,4 +113,50 @@ export const pipelineApi = {
   agentInfo: () => call<AgentInfo>("/api/v1/pipeline/agent"),
   agentChat: (message: string, history: { role: "user" | "assistant"; text: string }[]) =>
     call<AgentReply>("/api/v1/pipeline/agent/chat", { method: "POST", json: { message, history } }),
+};
+
+// ---- RSO recognition (/api/v1/rso) -----------------------------------------------------------
+export interface RsoLink { key: string; label: string; url: string }
+export interface RsoStep { id: string; title: string; detail: string; where: "engage" | "usc" | "trojanconnect"; links: RsoLink[]; done: boolean; handoff?: boolean }
+export interface RsoFieldDef { key: string; label: string; type: "text" | "textarea" | "email" | "number" | "select" | "bool"; group: string; options?: string[]; option_labels?: Record<string, string>; optional?: boolean }
+export type RsoStatus = "not_started" | "in_progress" | "pending_approval" | "requires_modifications" | "denied" | "recognized";
+export interface RsoState {
+  cycle: string; source: RsoLink & { checked: string };
+  pathway: string | null; pathway_label: string | null; pathway_detail: string | null; listed_officer: boolean | null;
+  status: RsoStatus; status_label: string; status_note: string;
+  fields: Record<string, unknown>; steps: RsoStep[]; steps_done: number; steps_total: number; next_step: RsoStep | null;
+  ready_to_submit: boolean; submit_blockers: string[]; application_closed: boolean;
+  dates: { id: string; label: string; text: string; at: string; days_left: number }[];
+  officers: { role: string; label: string; name: string; email: string; accepted: boolean; docs: (RsoLink & { id: string; label: string; done: boolean })[] }[];
+  advisor: { name: string; email: string; full_time: boolean | null; items: (Partial<RsoLink> & { id: string; label: string; done: boolean })[] };
+  roster_gaps: string[]; members: number; min_members: number;
+  handoff: { title: string; url: string; label: string; steps: string[] } | null;
+  log: { at: string; actor: string; msg: string }[];
+}
+export interface RsoSchema {
+  cycle: string; fields: RsoFieldDef[]; field_groups: string[];
+  pathways: { id: string; label: string; detail: string; flow: string | null }[];
+  contact: { office: string; email: string; phone: string; location: string; hours: string };
+  sessions: { kind: string; when: string }[]; denial_reasons: string[]; open_membership_rules: string[]; discrepancies: string[];
+  links: RsoLink[];
+}
+export interface RsoPortal {
+  enabled: boolean; mode: "simulated" | "live" | null; base_url: string; admin_url: string;
+  running: boolean; kind: "submit" | "sync" | null; error: string | null; lines: string[];
+  application: { application_id: string; portal_status: string; note?: string; submitted_at?: string; last_checked?: string } | null;
+}
+export interface RsoEmail { target: string; to: string; subject: string; body: string; mailto: string; ready: boolean }
+
+export const rsoApi = {
+  schema: () => call<RsoSchema>("/api/v1/rso/schema"),
+  state: () => call<RsoState>("/api/v1/rso/state"),
+  setFields: (patch: Record<string, unknown>) => call<{ saved: Record<string, unknown>; rejected: Record<string, string>; state: RsoState }>("/api/v1/rso/fields", { method: "PUT", json: patch }),
+  setPathway: (pathway: string, listed_officer?: boolean) => call<RsoState>("/api/v1/rso/pathway", { method: "PUT", json: { pathway, listed_officer } }),
+  setCheck: (key: string, done: boolean) => call<RsoState>("/api/v1/rso/checks", { method: "PUT", json: { key, done } }),
+  recordStatus: (status: Exclude<RsoStatus, "not_started" | "in_progress">, note = "") => call<RsoState>("/api/v1/rso/status", { method: "PUT", json: { status, note } }),
+  email: (target: string) => call<RsoEmail>(`/api/v1/rso/emails/${target}`),
+  reset: () => call<RsoState>("/api/v1/rso/reset", { method: "POST" }),
+  portal: () => call<RsoPortal>("/api/v1/rso/portal"),
+  portalSubmit: () => call<RsoPortal>("/api/v1/rso/portal/submit", { method: "POST" }),
+  portalSync: () => call<RsoPortal>("/api/v1/rso/portal/sync", { method: "POST" }),
 };

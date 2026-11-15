@@ -8,6 +8,7 @@ import { FIELD_BY_KEY, fieldApplies, type Profile } from "@/lib/pipeline/fields"
 import { AGENT_FORMS, FORMS, VENUE_FORM, type Derived, type PipelineState } from "@/lib/pipeline/plan";
 import { BookingCard } from "./BookingCard";
 import { Field } from "./ProfileForm";
+import { HandoffCard, RsoChecklistCard, RsoEmailCard, RsoFieldsCard, RsoPortalCard, RsoStatusCard, announceRsoChange } from "./RsoCards";
 import { DraftButton, FormCard } from "./StepDetail";
 import { inputClass } from "@/components/ui/kit";
 import { sound } from "@/lib/sound/engine";
@@ -21,16 +22,19 @@ interface Props {
   onState: (s: PipelineState) => void;
   onReload: () => void;
   onJumpToField: (key: string) => void;
+  /** A message to send on the user's behalf (e.g. "Ask the assistant" on the RSO tab); `id` changes per request. */
+  ask?: { id: number; text: string } | null;
 }
 
 const STARTERS = [
   "Book a 35 person event for December 20th 2026 from 7pm - 8pm",
+  "Start a new RSO",
+  "Renew our existing RSO",
   "What should I do next?",
   "Where is my booking?",
-  "Pick a caterer",
 ];
 
-export function AssistantPanel({ d, profile, onState, onReload, onJumpToField }: Props) {
+export function AssistantPanel({ d, profile, onState, onReload, onJumpToField, ask }: Props) {
   const [messages, setMessages] = useState<Message[]>([]);
   const [input, setInput] = useState("");
   const [busy, setBusy] = useState(false);
@@ -58,6 +62,7 @@ export function AssistantPanel({ d, profile, onState, onReload, onJumpToField }:
       const r = await pipelineApi.agentChat(message, history);
       onState(r.state);
       sound.play("receive");
+      announceRsoChange(); // RSO cards on screen refresh after any turn
       setMessages(m => [...m, { role: "assistant", text: r.reply, actions: r.actions }]);
     } catch (e) {
       setError((e as Error).message);
@@ -67,12 +72,22 @@ export function AssistantPanel({ d, profile, onState, onReload, onJumpToField }:
     }
   };
 
+  // Messages handed over from elsewhere (the RSO tab's "Ask the assistant"). Sent once per id, outside render.
+  const lastAsk = useRef<number | null>(null);
+  useEffect(() => {
+    if (!ask || ask.id === lastAsk.current) return;
+    lastAsk.current = ask.id;
+    const t = setTimeout(() => { void send(ask.text); }, 0);
+    return () => clearTimeout(t);
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- `send` reads refs; re-run only for a new ask
+  }, [ask]);
+
   return (
     <section className="mx-auto flex max-w-3xl flex-col gap-3" aria-label="Event assistant">
       {info?.mode === "rules" && (
         <p role="status" className="rounded-xl bg-wash px-3.5 py-2.5 text-sm text-gray-70">
-          Built-in booking assistant (no AI model): it understands requests like &ldquo;book my venue&rdquo;, &ldquo;where is my booking?&rdquo;,
-          &ldquo;another option&rdquo; and &ldquo;apply for the permit&rdquo;. Enter event details in the Event profile tab.
+          Built-in assistant (no AI model): it books events (&ldquo;book a 35 person event for Dec 20 from 7–8pm&rdquo;, &ldquo;where is my booking?&rdquo;)
+          and walks you through RSO recognition (&ldquo;start a new RSO&rdquo;, &ldquo;renew our existing RSO&rdquo;).
         </p>
       )}
 
@@ -98,7 +113,9 @@ export function AssistantPanel({ d, profile, onState, onReload, onJumpToField }:
             </div>
             {m.actions?.map((a, j) => (
               // Only the newest card for each booking stays live; older ones would just repeat it.
-              a.type === "booking" && messages.slice(i + 1).some(n => n.actions?.some(x => x.type === "booking" && x.kind === a.kind)) ? (
+              (a.type === "booking" && messages.slice(i + 1).some(n => n.actions?.some(x => x.type === "booking" && x.kind === a.kind))) ||
+              (a.type === "rso_checklist" && messages.slice(i + 1).some(n => n.actions?.some(x => x.type === "rso_checklist" && x.section === a.section && x.step === a.step))) ? (
+                a.type === "rso_checklist" ? <p key={j} className="mt-1 text-left text-xs text-gray-70">RSO checklist: see the latest one below.</p> :
                 <p key={j} className="mt-1 text-left text-xs text-gray-70">{a.kind === "venue_booking" ? "Venue booking" : "Permit"} card: see the latest one below.</p>
               ) : (
               <div key={j} className="mt-2 text-left">
@@ -132,7 +149,7 @@ export function AssistantPanel({ d, profile, onState, onReload, onJumpToField }:
   );
 }
 
-type CardProps = { action: AgentAction; onSend: (text: string) => void; busy: boolean; latest: boolean } & Props;
+type CardProps = { action: AgentAction; onSend: (text: string) => void; busy: boolean; latest: boolean } & Omit<Props, "ask">;
 
 function ActionCard({ action: a, d, profile, onState, onReload, onJumpToField, onSend, busy, latest }: CardProps) {
   const [note, setNote] = useState<string | null>(null);
@@ -159,6 +176,12 @@ function ActionCard({ action: a, d, profile, onState, onReload, onJumpToField, o
       </div>
     );
   }
+  if (a.type === "rso_checklist") return <RsoChecklistCard section={a.section} step={a.step} />;
+  if (a.type === "handoff") return <HandoffCard title={a.title} url={a.url} label={a.label} steps={a.steps} />;
+  if (a.type === "rso_email") return <RsoEmailCard target={a.target} />;
+  if (a.type === "rso_status") return <RsoStatusCard />;
+  if (a.type === "rso_portal") return <RsoPortalCard />;
+  if (a.type === "fields" && a.scope === "rso") return <RsoFieldsCard keys={a.keys} title={a.title} then={a.then} onSend={onSend} disabled={busy || !latest} />;
   if (a.type === "fields") {
     const save = async (patch: Record<string, unknown>) => {
       try { onState(await pipelineApi.updateProfile(patch)); } catch (e) { setNote((e as Error).message); }

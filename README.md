@@ -1,8 +1,9 @@
 # TrojanConnect
 
 TrojanConnect is a campus agent network for USC. Club officers plan events with an assistant that
-books rooms through a venue agent, students find clubs and question each club's agent, and student
-government answers questions only from its own published pages. Built for a hackathon; it is not an
+books rooms through a venue agent and walks them through RSO recognition (new or renewing), students
+find clubs and question each club's agent, and student government answers questions only from its own
+published pages. Built for a hackathon; it is not an
 official USC product and makes no real reservations. The spec is
 [`TrojanConnect_Final_PRD.md`](TrojanConnect_Final_PRD.md).
 
@@ -26,10 +27,14 @@ All figures below come from the linked public pages (collected 14 Nov 2026).
 | Notice needed to book a venue | outdoor 6 weeks, Tutor Campus Center 3 weeks, classrooms by Thursday noon the week before, EEB/PHE 3 days | [`docs/event-pipeline.md`](docs/event-pipeline.md) (from the venues' request forms) |
 | Notice for a non-approved caterer | 2 weeks (health permit and insurance) | same |
 | Club directory | 1,998 student organisations | collected from EngageSC public pages |
+| RSO recognition, 2026–27 cycle | application closes **Nov 22, 11:59 PM**; advisor items due **Dec 1**; recognition runs to **June 30, 2027**; late applications not accepted | [RSO Recognition Process](https://campusactivities.usc.edu/programs/recognized-student-organizations/rso-recognition-process/) |
+| What one RSO application needs | 5 officers, 1 full-time faculty/staff advisor, ≥ 5 more members, a constitution, an Accountability Document and 3 documents from each officer (15 in all) | same |
 
 A club officer planning one event deals with up to seven separate offices and forms (venue, food,
 event permit, funding, EngageSC, accessibility statement, publicity), each with its own deadline.
 Missing the earliest one, the 6-week funding deadline or outdoor-venue notice, can sink the event.
+And only a *recognized* RSO can create events on EngageSC at all: every RSO must reapply each year
+(all recognition ended June 30, 2026), in a 13-step process with a fixed annual window.
 
 ## What it does, measured
 
@@ -46,7 +51,8 @@ agent, because the Gemini key was over quota that day). The script is reproducib
 | Government questions answered from an approved source | 17 of 20 (85%). The other 3 were correctly refused ("Can USG approve my room booking?", parking prices, GSG travel grants): no approved page covers them, so the assistant says it can't verify and offers to route the question |
 | Club directory | 1,999 clubs (1,998 public + 1 sample) and the clubs' published events |
 | Latency | search 0.8 s, recommendations 1.2 s, full directory 1.5 s, assistant turn 1.5 s median |
-| Backend tests | 149 passing, no network or keys needed |
+| RSO recognition | 13 steps tracked for a new or renewing RSO, with 6 pathways (new, renew, religious, club sport, fall applicant, fraternity/sorority); every step links its USC form or page |
+| Backend tests | 162 passing, no network or keys needed |
 
 ## How the agents work
 
@@ -68,6 +74,9 @@ validated backend function.
           │
           ├─ Event planning Club Agent (app/agents/rules_agent.py, event_agent.py)
           │     → booking workflow: Club Agent ⇄ Venue Scheduling Agent → human reviewer → CONFIRMED
+          │
+          ├─ RSO agent (app/agents/rso_agent.py): recognition checklist, rule-based, no model
+          │     → portal agent (app/workflows/rso/portal_agent.py) submits on a simulated EngageSC, on the officer's click
           │
           └─ Student-government assistant (app/workflows/campus/government.py): retrieval only, no model
 ```
@@ -104,6 +113,18 @@ the backend mark it `CONFIRMED`. Then the same assistant walks through food, the
 funding, EngageSC, accessibility and publicity, with each office's deadline counted back from the
 event date.
 
+**RSO recognition.** In the same Assistant, "start a new RSO" or "renew our existing RSO" opens USC's
+recognition process as a checklist: the right pathway, 13 steps, the roster (5 officers, an advisor,
+≥ 5 more members), the 15 officer documents and the advisor's items, each with its USC link and the
+days left before the deadline. It drafts reminder emails listing exactly what each officer still owes.
+Submission happens on EngageSC: the agent hands off with the exact link and steps, and **only the officer
+records the outcome** (Pending Approval, Requires Modifications, Denied, Recognized); the API refuses
+agent writes. For the demo, a **portal agent** drives Chrome (Playwright) through a simulated EngageSC
+(`/mock-engagesc`, labelled "not a USC system"): it checks the Directory for duplicates, fills the roster,
+uploads placeholder PDFs and submits, but only after the officer clicks Submit and the checklist is ready.
+"Check status" reads the decision back. Until the RSO is recognized, the event assistant's EngageSC step
+points to recognition, since only recognized RSOs can create EngageSC events.
+
 **Student-government assistant.** No language model. It ranks 13 approved sources (11 official USG/GSG
 pages and 2 news reports labelled as news) by keyword overlap and answers with the excerpt and its
 link, or says it can't verify. Concerns can be routed as feedback, with identity shared only on a
@@ -117,13 +138,13 @@ rule-based agent answers through the same tools, so every flow keeps working.
 | Role (demo account) | What they do |
 |---|---|
 | **Student** (Priya) | Student Agent chat; Discover across 1,999 clubs with search, interest chips and reasons; club pages with each Club Agent, FAQ, events and source links; save clubs; express interest (name shared only if ticked); rate recommendations (helpful, not relevant, hide); notifications from followed clubs and student government; USG/GSG assistant; feedback |
-| **Club representative** (Maya, for **HackSC**) | Event planning assistant (`/plan`): rooms, venue request, permit, food, funding, emails, 7-step plan with deadlines; bookings with status and audit trail; **outreach**: post events, recruitment calls and updates, which notify followers (and the club's Slack channel); edit the public profile; recruitment inbox |
+| **Club representative** (Maya, for **HackSC**) | Event planning assistant (`/plan`): rooms, venue request, permit, food, funding, emails, 7-step plan with deadlines; **RSO recognition** tab and chat (new or renewing), with the EngageSC hand-off and the simulated portal agent; bookings with status and audit trail; **outreach**: post events, recruitment calls and updates, which notify followers (and the club's Slack channel); edit the public profile; recruitment inbox |
 | **Venue reviewer** (Daniel) | Queue of agent-prepared requests for their venue only; approve, reject or request changes; confirm with a reservation number |
 | **USG representative** (Jordan) | Same assistant students see; manage approved sources (versioned); feedback inbox with acknowledgement; announcements; analytics of what students ask about |
 
 Live vs simulated: clubs, club events, government sources and everything students, officers and
-representatives write are stored in Supabase. **Venue inventory and availability are simulated** and
-labelled so everywhere. Nothing is sent to a USC system.
+representatives write are stored in Supabase. **Venue inventory and availability are simulated**, and so
+is the EngageSC portal the RSO portal agent submits to; both are labelled so everywhere. Nothing is sent to a USC system.
 
 ## Slack bot
 
@@ -188,6 +209,7 @@ but not wired into the UI.
 | `DEMO_AUTO_REVIEW` | `true` lets a simulated reviewer approve; `false` needs a person |
 | `BOOKING_STORE`, `CAMPUS_STORE` | `auto` / `supabase` / `json` storage for bookings and for government and outreach records |
 | `SLACK_*`, `APP_BASE_URL` | Slack bot (above) |
+| `RSO_PORTAL`, `RSO_PORTAL_BASE_URL`, `RSO_PORTAL_SHOW_BROWSER` | RSO portal agent: `mock` (simulated EngageSC) or `off`; `true` shows Chrome while it submits. Needs Google Chrome installed |
 | `FRONTEND_ORIGIN` | Allowed browser origins |
 
 Database: apply `supabase/migrations/0001`–`0006` in order.
@@ -210,9 +232,12 @@ over email.
 - Realtime push: screens poll every 8–30 seconds.
 - Supabase Auth sign-in in the UI.
 - A real USC venue-system integration (the adapter is a stub by design).
+- Submitting to the real EngageSC: that needs USC's authorization. The portal agent only drives the
+  simulated portal (`PortalAdapter` is the seam).
 
 ## Docs
 
 - [`CONTEXT.md`](CONTEXT.md), [`use-ui-styling.md`](use-ui-styling.md): frontend architecture and design system
 - [`event-planning-integration.md`](event-planning-integration.md), [`docs/event-pipeline.md`](docs/event-pipeline.md): the planning workflow
+- [`docs/rso-recognition.md`](docs/rso-recognition.md): the RSO recognition process, every USC link, sources and where USC's pages disagree
 - [`docs/student-agent-contract.md`](docs/student-agent-contract.md): student and club agent contract

@@ -7,13 +7,14 @@ import { deriveState, type PipelineState, type StepId } from "@/lib/pipeline/pla
 import { AssistantPanel } from "./AssistantPanel";
 import { FieldMatrix } from "./FieldMatrix";
 import { ProfileForm } from "./ProfileForm";
+import { RsoPanel } from "./RsoCards";
 import { StepDetail } from "./StepDetail";
 import { StepList } from "./StepList";
 import { ListSkeleton, Tabs } from "@/components/ui/kit";
 import { Pill, btnPrimary, fmtDate } from "./ui";
 
-type Tab = "pipeline" | "assistant" | "profile" | "fields" | "log";
-const TABS: [Tab, string][] = [["assistant", "Assistant"], ["pipeline", "Steps"], ["profile", "Event profile"], ["fields", "Field map"], ["log", "Activity"]];
+type Tab = "pipeline" | "assistant" | "rso" | "profile" | "fields" | "log";
+const TABS: [Tab, string][] = [["assistant", "Assistant"], ["pipeline", "Steps"], ["rso", "RSO recognition"], ["profile", "Event profile"], ["fields", "Field map"], ["log", "Activity"]];
 
 export function PipelineApp() {
   const [state, setState] = useState<PipelineState | null>(null);
@@ -21,6 +22,8 @@ export function PipelineApp() {
   const [error, setError] = useState<string | null>(null);
   const [tab, setTab] = useState<Tab>("assistant");
   const [selected, setSelected] = useState<StepId | null>(null);
+  const [ask, setAsk] = useState<{ id: number; text: string } | null>(null);
+  const askAssistant = (text: string) => { setTab("assistant"); setAsk(a => ({ id: (a?.id ?? 0) + 1, text })); };
 
   const load = useCallback(async () => {
     try { setState(await pipelineApi.state()); setToday(new Date()); setError(null); }
@@ -133,8 +136,9 @@ export function PipelineApp() {
         )}
         {/* Kept mounted so the conversation survives switching tabs. */}
         <div hidden={tab !== "assistant"}>
-          <AssistantPanel d={d} profile={P} onState={setState} onReload={load} onJumpToField={jumpToField} />
+          <AssistantPanel d={d} profile={P} onState={setState} onReload={load} onJumpToField={jumpToField} ask={ask} />
         </div>
+        {tab === "rso" && <RsoPanel onAsk={askAssistant} />}
         {tab === "profile" && <ProfileForm profile={P} onSave={saveProfile} />}
         {tab === "fields" && <FieldMatrix profile={P} />}
         {tab === "log" && (

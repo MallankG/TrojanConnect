@@ -76,6 +76,15 @@ def create_app() -> FastAPI:
 
     app.include_router(event_pipeline_router)
     app.include_router(booking_router)
+    # RSO recognition (/api/v1/rso): the RSO agent for new and renewing organizations, handing off to EngageSC.
+    from app.workflows.rso.router import router as rso_router
+
+    app.include_router(rso_router)
+    # Simulated EngageSC portal for demos (/mock-engagesc; RSO_PORTAL=off disables it). Not a USC system.
+    from app.workflows.rso import mock_portal
+
+    if mock_portal.enabled():
+        app.include_router(mock_portal.router)
     # =============================================================================
 
     return app

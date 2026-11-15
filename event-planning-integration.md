@@ -2,9 +2,12 @@
 
 The main way to use event planning is the **Assistant**. A club officer types something like *"Book a 35 person event for December 20th 2026 from 7pm - 8pm"* and gets back the free rooms. After they pick one, the assistant takes them through the rest of the campus process: the venue request, food, the event permit and the emails.
 
+The same Assistant also runs the **RSO agent**: *"Start a new RSO"* or *"Renew our existing RSO"* walks a club through USC's RSO recognition process step by step and hands off to EngageSC, where the application is submitted (section 6b).
+
 This guide is for embedding that Assistant in a larger app with your own styling. All the logic is in the backend. Your UI only shows the reply text and the **cards** that come with it, and calls a few endpoints when a card's button is pressed. You don't re-implement any planning rule.
 
 - Feature overview and the booking workflow: [docs/event-pipeline.md](docs/event-pipeline.md)
+- RSO recognition process, sources and every USC link: [docs/rso-recognition.md](docs/rso-recognition.md)
 - Interactive API reference (generated, always current): http://localhost:8000/docs
 - Reference UI: `frontend/src/components/pipeline/AssistantPanel.tsx` (it renders every card type)
 
@@ -16,6 +19,9 @@ This guide is for embedding that Assistant in a larger app with your own styling
  Your app's Assistant UI
    │  POST /api/v1/pipeline/agent/chat   {message, history}
    ▼
+ RSO message? ("RSO", "recognition", "renew", "new club", …) ──► RSO agent (rule-based, backend/app/agents/rso_agent.py)
+   │                                                               └─► RSO tracker  backend/app/workflows/rso  → hand-off to EngageSC
+   ▼ otherwise
  Club Agent  ── Gemini (ASSISTANT_MODE=gemini)  or  built-in rules agent (ASSISTANT_MODE=rules / no key / Gemini fails)
    │  calls validated tools only (backend/app/tools/event_plan.py)
    ▼
@@ -71,6 +77,9 @@ Settings in `backend/.env`:
 | `DEMO_AUTO_REVIEW` | `true`: a **simulated** venue or permits office approves accepted requests, so the waterfall continues without a person. `false`: a reviewer approves on `/pipeline/review`. | `false` |
 | `BOOKING_STORE` | Where booking requests are kept: `auto` uses Supabase when `SUPABASE_URL`/`SUPABASE_SERVICE_ROLE_KEY` are set and `supabase/migrations/0004_venue_booking.sql` has been applied, otherwise `backend/data/bookings.json`. `supabase` or `json` forces one. `GET /api/v1/bookings/storage` shows which is in use and why. | `auto` |
 | `BOOKING_ADAPTER` | Who supplies availability and places confirmed bookings (`backend/app/workflows/booking/adapters.py`). Only `simulated` exists today; an admin-agent adapter that books through the real venue systems can be registered later without changing the workflow. | `simulated` |
+| `RSO_PORTAL` | `mock`: serve the **simulated EngageSC** at `/mock-engagesc` and let the RSO portal agent submit there with demo data. `off`: no portal, the user submits on EngageSC themselves | `mock` |
+| `RSO_PORTAL_BASE_URL` | Where the portal agent's browser opens the simulated portal | `http://localhost:8000/mock-engagesc` |
+| `RSO_PORTAL_SHOW_BROWSER` | `true` opens a visible Chrome window while the portal agent works (for demos) | `false` (headless) |
 | `FRONTEND_ORIGIN` | Browser origins allowed to call the API, comma-separated. **Add your host app's origin here.** | `http://localhost:3000` |
 
 ---
@@ -159,6 +168,21 @@ The built-in agent understands these; Gemini understands them too, plus free-for
 | "What should I do next?" | Steps to do now, waiting and late, plus `suggestions` |
 | "Start over" | `reset` card |
 
+RSO recognition (the RSO agent answers these in either assistant mode):
+
+| The user says | The agent does |
+|---|---|
+| "Help me with RSO recognition" | Deadlines, plus an `options` card of pathways (new, renew, applied in fall, religious, club sport, fraternity/sorority) |
+| "Start a new RSO" (also "register a new club", "RSO for a religious or spiritual group", "RSO for a club sport") | Sets the pathway, lists what's needed, returns `fields` (scope `rso`) for the organization and submitting officer, and the steps `rso_checklist` |
+| "Renew our existing RSO" → "Renew our RSO: I'm a listed officer" / "…I'm not listed as an officer" | Asks whether you're a listed officer on EngageSC (`options`), then sets the renewal path; not listed adds the officer-access and re-establish forms |
+| "RSO next step" / "What's next for our RSO?" | The next unfinished step with its links, the matching card (form, checklist or `handoff`), and `suggestions` |
+| "RSO roster" | `fields` for the five officers, the advisor and the member count; lists what's still missing |
+| "RSO officer documents" | Per-officer checklist (`rso_checklist` officers) and an `rso_email` reminder for every officer still owing documents |
+| "RSO advisor requirements" | Advisor checklist and the advisor `rso_email` (due Dec 1) |
+| "Submit our RSO on EngageSC" | If ready: `handoff` to EngageSC plus `rso_status`; if not: what's still blocking |
+| "RSO deadlines" / "RSO requirements" / "RSO contact" | Dates and sessions; membership rules and reasons for denial; Campus Activities contact |
+| "Record our RSO status" | `rso_status` buttons (only the user records what EngageSC shows) |
+
 ---
 
 ## 5. Cards (`actions`)
@@ -168,15 +192,20 @@ Every card is plain JSON, so you can style it any way you like. Where a card has
 | `type` | Shape | Render | When the user acts |
 |---|---|---|---|
 | `options` | `{title, options: [{label, detail, message}]}` | A list of choices (rooms, caterers) | Send `message` as the next chat turn |
-| `fields` | `{title, keys: string[], then}` | An inline form for those profile fields. Get each field's label, type and options from `GET /pipeline/schema` | Save each field with `PUT /pipeline/profile {key: value}`; on "Continue", send `then` as the next chat turn |
+| `fields` | `{title, keys: string[], then, scope?}` | An inline form. `scope` absent or `"event"`: event profile fields from `GET /pipeline/schema`. `scope: "rso"`: RSO fields from `GET /rso/schema` | Event: `PUT /pipeline/profile {key: value}`. RSO: `PUT /rso/fields {key: value}` (invalid values come back in `rejected`). On "Continue", send `then` |
 | `suggestions` | `{items: [{label, message}]}` | Quick-reply chips. Show them only under the latest message | Send `message` |
 | `booking` | `{kind: "venue_booking" \| "event_permit"}` | The booking card (section 6) | Booking endpoints (section 6). After submit, accept or alternatives, send "Where is my booking?" so the agent narrates what happened |
 | `form` | `{formId, step}` | An email draft card: `GET /pipeline/emails/{formId}` returns `{to, subject, body, mailto, ready, missing_fields}` | Link to `mailto`; nothing is sent by the app |
 | `field` | `{key}` | A button that opens your profile form at that field (used for the USC ID if someone types it into chat) | Your navigation |
 | `reset` | `{}` | A "Clear this event" button | Ask the user to confirm, then `POST /pipeline/reset` |
+| `rso_checklist` | `{section: "steps" \| "officers" \| "advisor" \| "step", step?}` | From `GET /rso/state`: all steps, one step, the five officers' documents, or the advisor's items, each with its USC links | Tick items with `PUT /rso/checks {key, done}` (keys: `step.<id>`, `<role>.<accepted\|hazing\|learningPath\|commitment>`, `advisor.<item>`) |
+| `handoff` | `{title, url, label, steps: string[]}` | A "continue on EngageSC" card: the steps, then a button to `url` | Open `url` in a new tab (USC login). Nothing is submitted by the app |
+| `rso_email` | `{target: "advisor" \| <officer role>}` | A reminder draft: `GET /rso/emails/{target}` returns `{to, subject, body, mailto, ready}` listing only what's still owed | Link to `mailto` |
+| `rso_status` | `{}` | Buttons: Pending Approval, Requires Modifications, Denied, Recognized | Confirm, then `PUT /rso/status {status}`. Only the user records this |
+| `rso_portal` | `{}` | The portal agent: from `GET /rso/portal`, the submitted application (ID, portal status, staff note), the live log of the current run, and links to the simulated portal and its review page | "Submit through the portal" → `POST /rso/portal/submit` (enabled when `ready_to_submit`); "Check status now" → `POST /rso/portal/sync`. Poll `GET /rso/portal` while `running`, then refresh RSO cards |
 
 Rules for cards:
-- **Only the newest `booking` card per `kind` needs to be live.** Older ones can collapse to a line like "see the latest card below", because every booking card shows the same request.
+- **Only the newest `booking` card per `kind`, and the newest `rso_checklist` per section, needs to be live.** Older ones can collapse to a line like "see the latest card below", because they show the same data. After any chat turn, refresh RSO cards from `GET /rso/state`.
 - **`options` and `fields` from older messages should be disabled.** Their choices may be out of date.
 - **Unknown `type`s should be ignored**, so the backend can add cards later.
 
@@ -235,6 +264,54 @@ What the reference UI does from a blank event (checked in a browser):
    **Reply:** permit confirmed with a code.
 8. **Draft the budget email → `fields` → Continue**
    **Card:** `form` with the draft.
+
+---
+
+## 6b. RSO recognition
+
+USC requires every recognized student organization (RSO) to apply on EngageSC each year. TrojanConnect turns USC's process page and its subpages into a tracked checklist, so the RSO agent can say exactly what's next and link the right USC page. Submitting happens on EngageSC, which needs a USC login. TrojanConnect never signs in there; the last step is a `handoff` card, and the user records the outcome.
+
+**Pathways:** `new` (never recognized), `renew` (previously recognized; all recognition ended June 30, 2026), `religious` (same steps via the ORSL button), `club_sports` (become an RSO first), `fall_applicant` (don't reapply) and `fsl` (handled by Fraternity & Sorority Life, so no steps).
+
+**Steps** (from `GET /rso/state`, in order; each has `title`, `detail`, `where`, `links`, `done`):
+
+| Step | Done when | Where |
+|---|---|---|
+| `check_directory` (new) / `officer_access` (renew) | Ticked; for renewals, automatic if the user is a listed officer | EngageSC Directory; officer-access or re-establish form |
+| `submitter` | Submitting officer's position and name saved | Here |
+| `start_application` | Ticked (`handoff` to the Directory or the group page) | EngageSC |
+| `roster` | 5 officers' names and USC emails, the advisor (full-time confirmed) and ≥ 5 more members saved | EngageSC |
+| `acceptances` | Every officer and the advisor ticked as accepted | EngageSC email |
+| `group_details`, `constitution`, `accountability`, `questions` | Ticked | Templates on USC's site; EngageSC |
+| `officer_docs` | All 15 documents ticked (Hazing Prevention 101, Learning Path, Commitment to Community × 5 officers) | USC trainings and Docusign |
+| `submit` | The user recorded Pending Approval (or a later status) | EngageSC (`handoff`) |
+| `advisor` | Advisor training, commitment, Clery and form ticked (due Dec 1; doesn't block submitting) | USC forms |
+| `review` | The user recorded Recognized | EngageSC Chat |
+
+`ready_to_submit` is true when every step before `submit` is done (except acceptances and the advisor's items) and the deadline hasn't passed. `submit_blockers` lists what's left. `status` is `not_started`, `in_progress`, `pending_approval`, `requires_modifications`, `denied` or `recognized`; only the last four are recorded, and only by the user.
+
+**Portal agent (simulated EngageSC).** To show the whole journey with demo data, the backend also serves a **simulated EngageSC** at `/mock-engagesc`. It's labelled "not a USC system" and follows the flow the process page describes: sign in → Directory → "+Register a new Recognized Student Organization" (or group page → "Begin re-registration") → application form → My Activity, plus a simulated Campus Activities review page at `/mock-engagesc/admin`. When the checklist is ready and the user presses **Submit through the portal**, the **portal agent** (`backend/app/workflows/rso/portal_agent.py`) drives Chrome through those pages like a person:
+- signs in and searches the Directory (refusing to register a group that already exists, or to renew one that doesn't)
+- fills the form from the tracker and uploads placeholder documents
+- submits and reads back the application ID
+
+**Check status now** opens My Activity and maps the portal's status onto the tracker: Pending Approval, Requires Modifications, Denied, or Approved → Recognized. Statuses read from the portal are recorded with the actor `portal:simulated-engagesc`. The chat agent still can't record or submit anything. Pointing the portal agent at the real EngageSC would need USC's authorization; `PortalAdapter` is where that connection would go.
+
+**Connection to events:** only a recognized RSO can create EngageSC events. `GET /pipeline/status` includes `rso: {status, status_label, recognized}`, and the event agent's EngageSC answer points to RSO recognition until the status is Recognized. Once recognized, the RSO agent suggests planning an event.
+
+### An RSO conversation
+
+1. **User:** "Start a new RSO". **Reply:** 8 days to the Nov 22, 11:59 PM deadline, and what's needed. **Cards:** `fields` (organization, submitting officer) and the 13-step `rso_checklist`.
+2. **User fills the form → Continue** (sends "RSO next step"). **Reply:** next step, "Check the group isn't already on EngageSC", with Directory links.
+3. **User ticks it, sends "RSO next step".** **Cards:** `handoff` ("Open the EngageSC Directory" → `https://engage.usc.edu/club_signup`, click "+Register a new Recognized Student Organization").
+4. **"Officer documents" suggestion.** **Cards:** officer checklist and five `rso_email` reminders.
+5. **…roster, constitution, Accountability Document, questions…** then "Submit our RSO on EngageSC". **Cards:** `rso_portal` and `handoff`.
+6. **Submit through the portal.** The log shows the agent signing in, clicking "+Register a new Recognized Student Organization", filling and uploading, and submitting: "Application APP-949090: Pending Approval". The tracker becomes Pending Approval.
+7. **On `/mock-engagesc/admin`, approve it, then "Check status now".** The agent reads "Approved" from My Activity, and the tracker becomes **Recognized**. "Plan an event" opens the event planner.
+
+With `RSO_PORTAL=off`, step 5 shows `handoff` and `rso_status` instead: the user submits on the real EngageSC and records the outcome.
+
+The reference UI also has an **RSO recognition** tab (`RsoPanel`) with the same checklist on one screen; its "Ask the assistant" button sends the next step to the chat.
 
 ---
 
@@ -316,6 +393,7 @@ These come from the PRD and are not optional styling choices:
 - **Show a proposal's `differences`** before the user accepts it.
 - **Don't send the USC ID as a chat message.** Collect it in a form (`fields` card or profile form) that calls `PUT /pipeline/profile`.
 - **Confirm before `POST /pipeline/reset`.** It erases the event and withdraws open bookings.
+- **RSO: never present the application as submitted or recognized unless the user recorded it** (`rso_status`). Label EngageSC links as needing a USC login, and keep USC's own wording for deadlines ("Late applications are not accepted").
 
 ---
 
@@ -351,6 +429,23 @@ The cards above use these. You only need them directly for screens beyond the As
 | `POST /reviews/{task}/decision` | Approve, reject or request changes |
 | `POST /reviews/{task}/confirm` | Record the reference and confirm |
 
+**RSO recognition** (base `/api/v1/rso`):
+
+| Method and path | Purpose |
+|---|---|
+| `GET /schema` | Fields, pathways, steps per pathway, officer documents, advisor items, dates, sessions, contact, denial reasons, discrepancies, every USC link |
+| `GET /state` | The tracker: pathway, status, steps with `done` and links, `next_step`, `ready_to_submit`, `submit_blockers`, officers, advisor, `dates` with `days_left`, `handoff` |
+| `PUT /fields` | Save RSO fields (`organizationName`, `submitterRole`, `<role>Name`, `<role>Email`, `facultyAdvisorName`, …). Returns `{saved, rejected, state}` |
+| `PUT /pathway` | `{pathway, listed_officer?}` |
+| `PUT /checks` | `{key, done}` |
+| `PUT /status` | `{status, note?}`: record what EngageSC shows |
+| `GET /emails/{target}` | Reminder draft for an officer role or `advisor` |
+| `GET /portal` | Portal agent: `enabled`, `mode`, `base_url`, `admin_url`, `running`, `kind`, `lines` (live log), `error`, `application` |
+| `POST /portal/submit` | Submit through the simulated EngageSC (409 `NOT_READY`, `ALREADY_SUBMITTED` or `PORTAL_BUSY`) |
+| `POST /portal/sync` | Read the application's status from the portal and update the tracker |
+| `POST /agent/chat` | Standalone RSO agent turn (the main chat routes RSO messages here too) |
+| `POST /reset` | Clear the RSO tracker |
+
 ---
 
 ## 10. Current limits
@@ -358,6 +453,7 @@ The cards above use these. You only need them directly for screens beyond the As
 - **One event, no user accounts.** The club rep is a single local user, and reviewers are demo identities. Add Supabase Auth to the router dependencies before multi-user use.
 - **Storage.** Booking requests go to Supabase (`booking_requests`, `booking_idempotency`) once migration `0004_venue_booking.sql` is applied, and to `backend/data/bookings.json` until then. The event profile and step progress are still `backend/data/event_pipeline.json`.
 - **Simulated inventory.** Rooms, most capacities and all availability are seeded demo data.
+- **RSO process data is a snapshot** of USC's pages read on 14 Nov 2026 (`backend/app/workflows/rso/process.py`). Dates, links and templates change every cycle; refresh them. USC's pages disagree on a few points (e.g. 5 vs 10 members); these are listed in `GET /rso/schema` → `discrepancies`. The RSO tracker is stored in `backend/data/rso.json`, one organization at a time.
 - **The built-in agent understands booking-style phrasing** (section 4), not open questions. Use `gemini` mode for free-form chat; it falls back to the built-in agent when Gemini fails.
 - **The reference UI computes step status itself** (`lib/pipeline/plan.ts` mirrors `backend/app/workflows/event_pipeline/plan.py`). A new UI should read `GET /status` instead.
 
@@ -368,6 +464,9 @@ The cards above use these. You only need them directly for screens beyond the As
 | What | Path |
 |---|---|
 | Chat endpoint and mode switch | `backend/app/workflows/event_pipeline/router.py` (`/agent`, `/agent/chat`) |
+| RSO agent, process data, tracker and API | `backend/app/agents/rso_agent.py`, `backend/app/workflows/rso/{process,service,router}.py` |
+| Reference RSO cards and tab | `frontend/src/components/pipeline/RsoCards.tsx` |
+| Simulated EngageSC and the portal agent | `backend/app/workflows/rso/{mock_portal,portal_agent}.py` |
 | Built-in Club Agent (parsing, room options, waterfall) | `backend/app/agents/rules_agent.py` |
 | Gemini Club Agent | `backend/app/agents/event_agent.py`, `backend/app/integrations/gemini/` |
 | Agent tools (shared by both agents) | `backend/app/tools/event_plan.py` |
