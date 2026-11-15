@@ -27,12 +27,12 @@ class Settings(BaseSettings):
     ollama_base_url: str = "http://127.0.0.1:11434"
     ollama_embedding_model: str = "nomic-embed-text:latest"
 
-    # Messaging channel (WhatsApp alternative TBD) - unused by the student agent for now.
-    whatsapp_access_token: str = ""
-    whatsapp_phone_number_id: str = ""
-    whatsapp_app_secret: str = ""
-    whatsapp_verify_token: str = ""
-    telegram_bot_token: str = ""
+    # Slack bot (replaces WhatsApp as the messaging channel; works on a free Slack workspace).
+    slack_signing_secret: str = ""      # verifies that requests really come from Slack
+    slack_bot_token: str = ""           # xoxb-... for chat.postMessage (club posts to a channel)
+    slack_outreach_channel: str = ""    # channel id that receives club posts, e.g. C0123456789
+    slack_user_map: str = ""            # verified links: "U012ABC:demo-student-1,U034DEF:demo-rep-1"
+    app_base_url: str = "http://localhost:3000"  # web app link for actions that need a step-up confirmation
 
     # Which in-memory seed dataset to serve: "auto" | "real" | "demo" (see repositories/memory.py)
     seed_dataset: str = "auto"

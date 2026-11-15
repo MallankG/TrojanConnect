@@ -93,18 +93,22 @@ export function useDb(): Db {
 // ---- Demo identity ---------------------------------------------------------
 // Kept per tab (sessionStorage) so two windows can hold two different roles.
 
-function readRole(): Role | null {
+/** The signed-in demo account: a user id (several students exist), or a role from older sessions. */
+function readSession(): string | null {
   try {
     const value = sessionStorage.getItem(ROLE_KEY);
-    return USERS.some((u) => u.role === value) ? (value as Role) : null;
+    return value && USERS.some((u) => u.id === value || u.role === value) ? value : null;
   } catch {
     return null;
   }
 }
 
-export function setRole(role: Role | null) {
+const findUser = (value: string | null) => USERS.find((u) => u.id === value) ?? USERS.find((u) => u.role === value) ?? null;
+
+/** Sign in as a demo user id (or the first user with a role). */
+export function setRole(idOrRole: string | Role | null) {
   try {
-    if (role) sessionStorage.setItem(ROLE_KEY, role);
+    if (idOrRole) sessionStorage.setItem(ROLE_KEY, idOrRole);
     else sessionStorage.removeItem(ROLE_KEY);
   } catch {
     // Ignored: the picker simply shows again next time.
@@ -113,19 +117,18 @@ export function setRole(role: Role | null) {
 }
 
 export function currentUser(): DemoUser | null {
-  const role = readRole();
-  return USERS.find((u) => u.role === role) ?? null;
+  return findUser(readSession());
 }
 
-/** `undefined` until hydrated, then the user or `null` when no role is chosen. */
+/** `undefined` until hydrated, then the user or `null` when nobody is chosen. */
 export function useUser(): DemoUser | null | undefined {
-  const role = useSyncExternalStore(
+  const value = useSyncExternalStore(
     subscribe,
-    () => readRole() ?? "none",
+    () => readSession() ?? "none",
     () => "pending" as const,
   );
-  if (role === "pending") return undefined;
-  return USERS.find((u) => u.role === role) ?? null;
+  if (value === "pending") return undefined;
+  return findUser(value);
 }
 
 export const uid = (prefix: string) =>

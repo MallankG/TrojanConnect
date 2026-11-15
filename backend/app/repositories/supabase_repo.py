@@ -65,7 +65,17 @@ class SupabaseRepository:
 
     # ---- clubs / events ----
     async def list_clubs(self) -> list[ClubProfile]:
-        rows = await self._rows(lambda: self._client.table("club_profiles").select(CLUB_COLS).order("name"))
+        # PostgREST returns at most 1000 rows per request; page through so no club silently drops out.
+        rows: list[dict[str, Any]] = []
+        page = 1000
+        while True:
+            start = len(rows)
+            batch = await self._rows(lambda: self._client.table("club_profiles").select(CLUB_COLS)
+                                     .order("organization_id").range(start, start + page - 1))
+            rows.extend(batch)
+            if len(batch) < page:
+                break
+        rows.sort(key=lambda r: r["name"])
         return [ClubProfile.model_validate(r) for r in rows]
 
     async def get_club(self, organization_id: str) -> Optional[ClubProfile]:
@@ -83,6 +93,21 @@ class SupabaseRepository:
                 q = q.gte("end_at", _now_iso())
             return q.order("start_at")
         return [ClubEvent.model_validate(r) for r in await self._rows(build)]
+
+    async def create_event(self, event: ClubEvent) -> ClubEvent:
+        payload = event.model_dump(mode="json")
+        await self._rows(lambda: self._client.table("events").insert(payload))
+        return event
+
+    async def update_club(self, organization_id: str, patch: dict) -> Optional[ClubProfile]:
+        current = await self.get_club(organization_id)
+        if current is None:
+            return None
+        merged = ClubProfile.model_validate({**current.model_dump(), **patch})
+        payload = {k: merged.model_dump(mode="json")[k] for k in patch}
+        payload["updated_at"] = _now_iso()
+        await self._rows(lambda: self._client.table("club_profiles").update(payload).eq("organization_id", organization_id))
+        return merged
 
     async def match_clubs(self, embedding: list[float], limit: int) -> Optional[list[tuple[str, float]]]:
         """Returns None (caller falls back to in-process similarity) when the RPC fails, e.g.

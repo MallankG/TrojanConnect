@@ -1,13 +1,12 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import Link from "next/link";
 import { useParams } from "next/navigation";
-import { BadgeCheck, Bookmark, CalendarDays, MessageCircle, Search } from "lucide-react";
-import { api, explain, recommend, useDb, useUser } from "@/lib/api/client";
+import { BadgeCheck, Bookmark, CalendarDays, ExternalLink, MessageCircle, Search } from "lucide-react";
+import { LIVE_TAGS, api, live, tagLabel, useDb, useUser } from "@/lib/api/client";
 import type { CampusEvent, Club, Interest } from "@/lib/api/types";
-import { INTEREST_TAGS } from "@/lib/api/mock/seed";
-import { fmtDay, fmtDayHeading, fmtTime, fmtTimeRange } from "@/lib/time";
+import { fmtDay, fmtDayHeading, fmtTimeRange } from "@/lib/time";
 import { sound } from "@/lib/sound/engine";
 import { Page } from "@/components/layout/AppShell";
 import { Chat } from "@/components/chat/Chat";
@@ -28,33 +27,40 @@ import {
 } from "@/components/ui/kit";
 import { Section } from "./club";
 
+// Club data on these screens is live from the backend directory (lib/api/live.ts).
+
 const RECRUITMENT: Record<Club["recruitment"], { label: string; tone: "good" | "attention" | "neutral" }> = {
   open: { label: "Open to join", tone: "good" },
   applications: { label: "By application", tone: "attention" },
   closed: { label: "Closed this semester", tone: "neutral" },
+  unknown: { label: "Recruitment not stated", tone: "neutral" },
 };
 
 function useStudent() {
-  const db = useDb();
   const user = useUser();
-  const prefs = user ? db.prefs[user.id] : undefined;
-  return { db, user, prefs, ready: db.seededAt !== "" };
+  return { user, isStudent: user?.role === "student" };
 }
 
-function nextEvent(events: CampusEvent[], clubId: string) {
-  return events
-    .filter((e) => e.clubId === clubId && new Date(e.start) > new Date())
-    .sort((a, b) => a.start.localeCompare(b.start))[0];
+/** Saved club ids for the signed-in student, with a toggle that writes to the backend. */
+function useSavedIds(enabled: boolean) {
+  const saved = live.useSaved(enabled);
+  return { ids: new Set((saved.data ?? []).map((c) => c.id)), clubs: saved.data, error: saved.error };
 }
 
 function SaveButton({ clubId, saved, name }: { clubId: string; saved: boolean; name: string }) {
+  const toast = useToast();
+  const [busy, setBusy] = useState(false);
   return (
     <button
       type="button"
       aria-pressed={saved}
+      disabled={busy}
       aria-label={saved ? `Remove ${name} from saved clubs` : `Save ${name}`}
-      onClick={() => {
-        api.toggleSaved(clubId);
+      onClick={async () => {
+        setBusy(true);
+        const result = await api.setSaved(clubId, !saved);
+        setBusy(false);
+        if (!result.ok) return toast(result.error.message, "bad");
         sound.play("tick", { volume: 0.5 });
       }}
       className={`${buttonClass("secondary")} ${saved ? "border-ink" : ""}`}
@@ -65,32 +71,87 @@ function SaveButton({ clubId, saved, name }: { clubId: string; saved: boolean; n
   );
 }
 
-/** A club as a compact row: poster, name, the reason it is shown, next event. */
-function ClubRow({ club, reason }: { club: Club; reason?: string | null }) {
+/** A club as a compact row: poster, name, the reason it is shown. */
+function ClubRow({ id, name, tagline, reason }: { id: string; name: string; tagline?: string; reason?: string | null }) {
   return (
-    <Link href={`/clubs/${club.id}`} className="flex items-center gap-3.5 rounded-2xl p-2 hover:bg-wash">
-      <Poster seed={club.id} name={club.name} className="size-16 shrink-0" />
+    <Link href={`/clubs/${id}`} className="flex items-center gap-3.5 rounded-2xl p-2 hover:bg-wash">
+      <Poster seed={id} name={name} className="size-16 shrink-0" />
       <span className="min-w-0">
-        <span className="block truncate text-[17px] font-semibold leading-tight">{club.name}</span>
-        <span className="block truncate text-[15px] text-gray-70">{club.tagline}</span>
+        <span className="block truncate text-[17px] font-semibold leading-tight">{name}</span>
+        {tagline && <span className="block truncate text-[15px] text-gray-70">{tagline}</span>}
         {reason && <span className="mt-0.5 block truncate text-sm">{reason}</span>}
       </span>
     </Link>
   );
 }
 
+/** Rate a recommendation (PRD 2.3). "Not relevant" ranks it lower; "Hide" removes it. */
+function RecFeedback({ clubId, name }: { clubId: string; name: string }) {
+  const toast = useToast();
+  const [sent, setSent] = useState<string | null>(null);
+  const rate = async (feedback: "helpful" | "not_relevant" | "hide", done: string) => {
+    const r = await live.recommendationFeedback(clubId, feedback);
+    if (!r.ok) return toast(r.error.message, "bad");
+    setSent(done);
+    sound.play("tick", { volume: 0.4 });
+  };
+  if (sent) return <span className="text-sm text-gray-70">{sent}</span>;
+  return (
+    <span className="flex gap-1" role="group" aria-label={`Rate the recommendation for ${name}`}>
+      <button type="button" onClick={() => rate("helpful", "Thanks")} className="rounded-full px-2.5 py-1 text-sm text-gray-70 hover:bg-wash hover:text-ink">Helpful</button>
+      <button type="button" onClick={() => rate("not_relevant", "Noted")} className="rounded-full px-2.5 py-1 text-sm text-gray-70 hover:bg-wash hover:text-ink">Not relevant</button>
+      <button type="button" onClick={() => rate("hide", "Hidden")} className="rounded-full px-2.5 py-1 text-sm text-gray-70 hover:bg-wash hover:text-ink">Hide</button>
+    </span>
+  );
+}
+
+const matchedLine = (tags: string[]) => (tags.length ? `Matches your interest in ${tags.map(tagLabel).join(", ").toLowerCase()}` : null);
+
+/** Where a live profile came from (PRD 8.1: no invented facts; 8.4: cite sources). */
+function SourceNote({ club }: { club: Club }) {
+  const meta = club.live;
+  if (!meta) return null;
+  const label =
+    meta.dataLabel === "public_web"
+      ? `Collected from the club's public pages${meta.collectedAt ? ` on ${fmtDay(meta.collectedAt)}` : ""}. Not reviewed by the club's officers.`
+      : meta.dataLabel === "demo"
+        ? "Sample club for this demo."
+        : "Managed by the club's officers.";
+  return (
+    <div className="mt-3 text-sm text-gray-70">
+      <p>{label}</p>
+      {meta.sourceUrls.length > 0 && (
+        <ul className="mt-1 flex flex-wrap gap-x-4 gap-y-1">
+          {meta.sourceUrls.slice(0, 3).map((url) => (
+            <li key={url}>
+              <a href={url} target="_blank" rel="noreferrer" className="inline-flex items-center gap-1 underline decoration-gray-30 underline-offset-2 hover:text-ink">
+                <ExternalLink aria-hidden className="size-3.5" />
+                {new URL(url).hostname + new URL(url).pathname.replace(/\/$/, "")}
+              </a>
+            </li>
+          ))}
+        </ul>
+      )}
+    </div>
+  );
+}
+
+function LiveError({ message }: { message: string }) {
+  return <ErrorNote>{message}</ErrorNote>;
+}
+
 // ---- Dashboard -------------------------------------------------------------
 
 export function StudentDashboard() {
-  const { db, user, prefs, ready } = useStudent();
+  const db = useDb();
+  const { user, isStudent } = useStudent();
   const chatId = useOpenChat(() => api.openStudentChat(), []);
-  const recs = recommend(db, prefs).filter((r) => r.matched.length > 0).slice(0, 3);
-  const saved = db.clubs.filter((c) => prefs?.savedClubIds.includes(c.id));
-  const relevant = new Set([...recs.map((r) => r.club.id), ...saved.map((c) => c.id)]);
-  const events = db.events
-    .filter((e) => relevant.has(e.clubId) && new Date(e.start) > new Date())
-    .sort((a, b) => a.start.localeCompare(b.start))
-    .slice(0, 4);
+  const prefs = live.usePrefs(isStudent);
+  const personalized = prefs.data?.personalization_enabled ?? false;
+  const recs = live.useRecommendations(isStudent && personalized);
+  const saved = useSavedIds(isStudent);
+  const events = live.useEvents();
+  const upcoming = (events.data ?? []).filter((e) => new Date(e.end) > new Date()).slice(0, 4);
   const chats = db.conversations.filter((c) => c.ownerId === user?.id && c.kind === "club").slice(0, 3);
 
   return (
@@ -99,6 +160,28 @@ export function StudentDashboard() {
         title={`Hi ${user?.name.split(" ")[0] ?? ""}`}
         lead="Find a club, ask it a question before you show up, and see what is on this week."
       />
+
+      <section aria-label="Your interests" className="mt-6 rounded-2xl bg-wash p-4">
+        <div className="flex flex-wrap items-baseline justify-between gap-2">
+          <h2 className="text-[15px] font-semibold">Your interests</h2>
+          <Link href="/settings" className="text-sm text-gray-70 underline decoration-gray-30 underline-offset-2 hover:text-ink">Edit</Link>
+        </div>
+        {prefs.error ? (
+          <p className="mt-2 text-sm text-gray-70">{prefs.error}</p>
+        ) : !prefs.data ? (
+          <div className="skeleton mt-2 h-8" />
+        ) : prefs.data.interest_tags.length ? (
+          <ul className="mt-2 flex flex-wrap gap-1.5">
+            {prefs.data.interest_tags.map((t) => (
+              <li key={t} className="rounded-full border border-line bg-paper px-3 py-1 text-sm">{tagLabel(t)}</li>
+            ))}
+          </ul>
+        ) : (
+          <p className="mt-2 text-sm text-gray-70">None yet. Pick a few in Settings and recommendations use only those.</p>
+        )}
+        {prefs.data?.goals && <p className="mt-2 text-sm text-gray-70">Looking for: {prefs.data.goals}</p>}
+        {prefs.data && !prefs.data.personalization_enabled && <p className="mt-2 text-sm">Personalization is off.</p>}
+      </section>
 
       <div className="mt-6">
         {chatId ? (
@@ -114,38 +197,54 @@ export function StudentDashboard() {
       </div>
 
       <Section title="Recommended for you" href="/discover">
-        {!ready ? (
+        {prefs.error ? (
+          <LiveError message={prefs.error} />
+        ) : !prefs.data ? (
           <ListSkeleton />
-        ) : !prefs?.personalization ? (
+        ) : !personalized ? (
           <EmptyState
             title="Personalization is off"
             body="Recommendations use only the interests you choose. Turn it on in Settings to see them."
             action={<Link href="/settings" className={buttonClass("primary")}>Open settings</Link>}
           />
-        ) : recs.length === 0 ? (
+        ) : recs.error ? (
+          <LiveError message={recs.error} />
+        ) : !recs.data ? (
+          <ListSkeleton />
+        ) : recs.data.length === 0 ? (
           <EmptyState
             title="Pick a few interests"
             body="Recommendations use only the interests you choose, never anything inferred about you."
             action={<Link href="/settings" className={buttonClass("primary")}>Choose interests</Link>}
           />
         ) : (
-          <div className="space-y-1">
-            {recs.map((r) => (
-              <ClubRow key={r.club.id} club={r.club} reason={explain(r.matched)} />
-            ))}
-          </div>
+          <>
+            <div className="space-y-1">
+              {recs.data.slice(0, 4).map((r) => (
+                <div key={r.organization_id} className="flex flex-wrap items-center gap-x-2">
+                  <div className="min-w-0 flex-1">
+                    <ClubRow id={r.organization_id} name={r.club_name} reason={matchedLine(r.matched_tags) ?? "Related to the goals you wrote"} />
+                  </div>
+                  <RecFeedback clubId={r.organization_id} name={r.club_name} />
+                </div>
+              ))}
+            </div>
+            <p className="mt-2 text-xs text-gray-70">Ranked by relevance to the interests you chose. A relevance score, not a prediction that you will join.</p>
+          </>
         )}
       </Section>
 
       <Section title="Coming up" href="/events">
-        {events.length ? <EventList events={events} /> : (
-          <p className="text-[15px] text-gray-70">Events from clubs you save or match appear here.</p>
+        {events.error ? <LiveError message={events.error} /> : !events.data ? <ListSkeleton rows={2} /> : upcoming.length ? (
+          <EventList events={upcoming} />
+        ) : (
+          <p className="text-[15px] text-gray-70">No club has published an upcoming event yet.</p>
         )}
       </Section>
 
-      <Section title="Saved clubs" count={saved.length}>
-        {saved.length ? (
-          <div className="space-y-1">{saved.map((c) => <ClubRow key={c.id} club={c} />)}</div>
+      <Section title="Saved clubs" count={saved.clubs?.length}>
+        {saved.error ? <LiveError message={saved.error} /> : !saved.clubs ? <ListSkeleton rows={2} /> : saved.clubs.length ? (
+          <div className="space-y-1">{saved.clubs.map((c) => <ClubRow key={c.id} id={c.id} name={c.name} tagline={c.tagline} />)}</div>
         ) : (
           <p className="text-[15px] text-gray-70">Save a club from Discover to keep it here.</p>
         )}
@@ -183,49 +282,55 @@ export function StudentDashboard() {
   );
 }
 
-export function EventList({ events }: { events: CampusEvent[] }) {
-  const db = useDb();
+function EventRow({ event: e }: { event: CampusEvent }) {
+  const club = live.useClub(e.clubId);
   return (
-    <ul className="space-y-1">
-      {events.map((e) => {
-        const club = db.clubs.find((c) => c.id === e.clubId);
-        return (
-          <li key={e.id}>
-            <Link href={`/events/${e.id}`} className="flex gap-3.5 rounded-2xl p-2 hover:bg-wash">
-              <Poster seed={e.id} name={e.title} className="size-16 shrink-0" />
-              <span className="min-w-0">
-                <span className="block truncate text-sm text-gray-70">{club?.name}</span>
-                <span className="block truncate text-[17px] font-semibold leading-tight">{e.title}</span>
-                <span className="tabular block truncate text-sm text-gray-70">
-                  {fmtDay(e.start)}, {fmtTimeRange(e.start, e.end)} · {e.location}
-                </span>
-              </span>
-            </Link>
-          </li>
-        );
-      })}
-    </ul>
+    <li>
+      <Link href={`/events/${encodeURIComponent(e.id)}`} className="flex gap-3.5 rounded-2xl p-2 hover:bg-wash">
+        <Poster seed={e.id} name={e.title} className="size-16 shrink-0" />
+        <span className="min-w-0">
+          <span className="block truncate text-sm text-gray-70">{club.data?.name ?? "\u00a0"}</span>
+          <span className="block truncate text-[17px] font-semibold leading-tight">{e.title}</span>
+          <span className="tabular block truncate text-sm text-gray-70">
+            {fmtDay(e.start)}, {fmtTimeRange(e.start, e.end)}{e.location ? ` · ${e.location}` : ""}
+          </span>
+        </span>
+      </Link>
+    </li>
   );
+}
+
+export function EventList({ events }: { events: CampusEvent[] }) {
+  return <ul className="space-y-1">{events.map((e) => <EventRow key={e.id} event={e} />)}</ul>;
 }
 
 // ---- Discover --------------------------------------------------------------
 
 export function Discover() {
-  const { db, prefs, ready } = useStudent();
+  const { isStudent } = useStudent();
   const [query, setQuery] = useState("");
+  const [debounced, setDebounced] = useState("");
   const [tag, setTag] = useState<string | null>(null);
   const [savedOnly, setSavedOnly] = useState(false);
-  const saved = prefs?.savedClubIds ?? [];
+  const saved = useSavedIds(isStudent);
+  const prefs = live.usePrefs(isStudent);
+  const yours = new Set(prefs.data?.interest_tags ?? []);
+  const chips = [...new Set([...(prefs.data?.interest_tags ?? []), ...LIVE_TAGS])];
 
-  const results = recommend(db, prefs).filter(({ club }) => {
-    if (savedOnly && !saved.includes(club.id)) return false;
-    if (tag && !club.tags.includes(tag)) return false;
-    return `${club.name} ${club.tagline} ${club.description} ${club.tags.join(" ")}`
-      .toLowerCase()
-      .includes(query.trim().toLowerCase());
-  });
+  useEffect(() => {
+    const t = setTimeout(() => setDebounced(query), 300);
+    return () => clearTimeout(t);
+  }, [query]);
+
+  const search = live.useClubs(debounced, tag);
+  const results = savedOnly
+    ? (saved.clubs ?? []).map((club) => ({ club, matched: [] as string[] }))
+    : search.data;
+  const error = savedOnly ? saved.error : search.error;
+  const searching = !!(debounced.trim() || tag);
   const clear = () => {
     setQuery("");
+    setDebounced("");
     setTag(null);
     setSavedOnly(false);
   };
@@ -234,17 +339,19 @@ export function Discover() {
     <Page wide>
       <PageHeader
         title="Discover clubs"
-        lead="Sample clubs for this demo. Matches are explained by the interests you chose, nothing else."
+        lead="The campus club directory. Matches are explained by what you searched or the interests you chose, nothing else."
         action={
-          <button
-            type="button"
-            aria-pressed={savedOnly}
-            onClick={() => setSavedOnly((v) => !v)}
-            className={`${buttonClass(savedOnly ? "primary" : "secondary")}`}
-          >
-            <Bookmark aria-hidden className="size-4" />
-            {savedOnly ? "Showing saved" : <>Saved <span className="tabular">{saved.length}</span></>}
-          </button>
+          isStudent && (
+            <button
+              type="button"
+              aria-pressed={savedOnly}
+              onClick={() => setSavedOnly((v) => !v)}
+              className={`${buttonClass(savedOnly ? "primary" : "secondary")}`}
+            >
+              <Bookmark aria-hidden className="size-4" />
+              {savedOnly ? "Showing saved" : <>Saved <span className="tabular">{saved.clubs?.length ?? ""}</span></>}
+            </button>
+          )
         }
       />
 
@@ -253,15 +360,16 @@ export function Discover() {
         <input
           value={query}
           onChange={(e) => setQuery(e.target.value)}
-          placeholder="Search clubs or interests"
+          placeholder="Search clubs or interests, e.g. robotics, film, consulting"
           aria-label="Search clubs"
+          maxLength={300}
           className={`${inputClass} h-12 pl-11`}
         />
       </div>
       <div className="mt-3 flex gap-2 overflow-x-auto pb-1" role="group" aria-label="Filter by interest">
-        {INTEREST_TAGS.map((t) => {
+        {chips.map((t) => {
           const on = tag === t;
-          const yours = prefs?.interests.includes(t);
+          const mine = yours.has(t);
           return (
             <button
               key={t}
@@ -272,32 +380,39 @@ export function Discover() {
                 on ? "border-ink bg-ink text-paper" : "border-line hover:border-gray-70"
               }`}
             >
-              {yours && <span aria-hidden className={`size-1.5 rounded-full ${on ? "bg-gold" : "bg-cardinal"}`} />}
-              {t}
-              {yours && <span className="sr-only">(one of your interests)</span>}
+              {mine && <span aria-hidden className={`size-1.5 rounded-full ${on ? "bg-gold" : "bg-cardinal"}`} />}
+              {tagLabel(t)}
+              {mine && <span className="sr-only">(one of your interests)</span>}
             </button>
           );
         })}
       </div>
 
       <p className="tabular mt-6 text-sm text-gray-70" aria-live="polite">
-        {results.length} {results.length === 1 ? "club" : "clubs"}
+        {results
+          ? savedOnly
+            ? `${results.length} saved ${results.length === 1 ? "club" : "clubs"}`
+            : searching
+              ? `${results.length} closest ${results.length === 1 ? "match" : "matches"}`
+              : `Showing ${results.length} clubs. Search or pick an interest to narrow the directory.`
+          : "Loading clubs…"}
       </p>
-      {!ready ? (
+      {error ? (
+        <div className="mt-4"><LiveError message={error} /></div>
+      ) : !results ? (
         <div className="mt-4"><ListSkeleton /></div>
       ) : results.length === 0 ? (
         <div className="mt-4">
           <EmptyState
-            title="No clubs match"
-            body="Try a different word or interest."
+            title={savedOnly ? "No saved clubs yet" : "No clubs match"}
+            body={savedOnly ? "Save a club and it shows up here." : "Try a different word or interest."}
             action={<Button variant="primary" onClick={clear}>Clear filters</Button>}
           />
         </div>
       ) : (
         <ul className="mt-4 grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
           {results.map(({ club, matched }) => {
-            const next = nextEvent(db.events, club.id);
-            const why = explain(matched);
+            const why = matchedLine(matched.filter((t) => yours.has(t)));
             return (
               <li key={club.id} className="flex min-w-0 flex-col rounded-3xl border border-line p-3">
                 <Link href={`/clubs/${club.id}`} className="block">
@@ -305,20 +420,19 @@ export function Discover() {
                   <p className="mt-3 text-xl font-semibold leading-tight">{club.name}</p>
                 </Link>
                 <p className="mt-1 text-[15px] text-gray-70">{club.tagline}</p>
-                {why && (
-                  <p className="mt-3 rounded-xl bg-wash px-3 py-2 text-sm">{why}</p>
+                <p className="mt-2 line-clamp-3 text-sm">{club.description}</p>
+                {why && <p className="mt-3 rounded-xl bg-wash px-3 py-2 text-sm">{why}</p>}
+                {club.meets && (
+                  <p className="mt-3 flex items-center gap-1.5 text-sm text-gray-70">
+                    <CalendarDays aria-hidden className="size-3.5 shrink-0" />
+                    <span className="truncate">Meets {club.meets}</span>
+                  </p>
                 )}
-                <p className="tabular mt-3 flex items-center gap-1.5 text-sm text-gray-70">
-                  <CalendarDays aria-hidden className="size-3.5 shrink-0" />
-                  <span className="truncate">
-                    {next ? `${next.title}, ${fmtDay(next.start)} ${fmtTime(next.start)}` : `Meets ${club.meets}`}
-                  </span>
-                </p>
                 <div className="mt-auto flex gap-2 pt-4">
                   <Link href={`/clubs/${club.id}#ask`} className={`${buttonClass("primary")} flex-1`}>
-                    Ask this club
+                    {isStudent ? "Ask this club" : "Open club"}
                   </Link>
-                  <SaveButton clubId={club.id} saved={saved.includes(club.id)} name={club.name} />
+                  {isStudent && <SaveButton clubId={club.id} saved={saved.ids.has(club.id)} name={club.name} />}
                 </div>
               </li>
             );
@@ -332,33 +446,34 @@ export function Discover() {
 // ---- Club page -------------------------------------------------------------
 
 export function ClubPage() {
-  const { clubId } = useParams<{ clubId: string }>();
-  const { db, user, prefs, ready } = useStudent();
-  const club = db.clubs.find((c) => c.id === clubId);
+  const { clubId: rawId } = useParams<{ clubId: string }>();
+  const clubId = decodeURIComponent(rawId);
+  const { isStudent } = useStudent();
+  const result = live.useClub(clubId);
+  const club = result.data;
+  const events = live.useClubEvents(club ? clubId : null);
+  const fit = live.useFit(club && isStudent ? clubId : null);
+  const saved = useSavedIds(isStudent);
   const [interestOpen, setInterestOpen] = useState(false);
-  const isStudent = user?.role === "student";
   const chatId = useOpenChat(
-    () => (club && isStudent ? api.openClubChat(club.id) : ""),
+    () => (club && isStudent ? api.openClubChat(club.id, club.name) : ""),
     [club?.id, isStudent],
   );
 
-  if (!ready) return <Page><ListSkeleton /></Page>;
-  if (!club) {
+  if (result.error) {
     return (
       <Page>
         <EmptyState
-          title="Club not found"
-          body="It isn't in the demo directory."
+          title={/not found/i.test(result.error) ? "Club not found" : "Can't load this club"}
+          body={result.error}
           action={<Link href="/discover" className={buttonClass("primary")}>Back to Discover</Link>}
         />
       </Page>
     );
   }
-  const events = db.events
-    .filter((e) => e.clubId === club.id && new Date(e.start) > new Date())
-    .sort((a, b) => a.start.localeCompare(b.start));
-  const why = explain(recommend(db, prefs).find((r) => r.club.id === club.id)?.matched ?? []);
+  if (!club) return <Page><ListSkeleton /></Page>;
   const recruitment = RECRUITMENT[club.recruitment];
+  const upcoming = (events.data ?? []).filter((e) => new Date(e.end) > new Date());
 
   return (
     <Page>
@@ -373,32 +488,64 @@ export function ClubPage() {
             Verified organization
           </span>
         )}
-        <span className="tabular">{club.members} members</span>
-        <span>Meets {club.meets}</span>
+        <span>{club.tagline}</span>
+        {club.meets && <span>Meets {club.meets}</span>}
       </p>
       <div className="mt-2"><StatusPill label={recruitment.label} tone={recruitment.tone} /></div>
-      {why && isStudent && <p className="mt-3 text-[15px]">{why}.</p>}
+      {fit.data && fit.data.fit_level !== "unknown" && fit.data.reasons.length > 0 && (
+        <p className="mt-3 text-[15px]">{fit.data.reasons[0]}</p>
+      )}
 
       {isStudent && (
-        <div className="mt-5 grid grid-cols-3 gap-2">
-          <a href="#ask" className={buttonClass("primary")}>Ask this club</a>
-          <SaveButton clubId={club.id} saved={prefs?.savedClubIds.includes(club.id) ?? false} name={club.name} />
+        <div className="mt-5 grid grid-cols-2 gap-2 sm:grid-cols-3">
+          <a href="#ask" className={`${buttonClass("primary")} col-span-2 sm:col-span-1`}>Ask this club</a>
+          <SaveButton clubId={club.id} saved={saved.ids.has(club.id)} name={club.name} />
           <Button onClick={() => setInterestOpen(true)}>Express interest</Button>
         </div>
       )}
 
       <Section title="About">
-        <p className="max-w-[65ch] text-[17px] leading-relaxed">{club.description}</p>
-        <p className="mt-3 flex flex-wrap gap-1.5">
-          {club.tags.map((t) => (
-            <span key={t} className="rounded-full border border-line px-2.5 py-1 text-sm">{t}</span>
-          ))}
-        </p>
+        <p className="max-w-[65ch] whitespace-pre-line text-[17px] leading-relaxed">{club.description || "The club hasn't published a description."}</p>
+        {club.tags.length > 0 && (
+          <p className="mt-3 flex flex-wrap gap-1.5">
+            {club.tags.map((t) => (
+              <span key={t} className="rounded-full border border-line px-2.5 py-1 text-sm">{tagLabel(t)}</span>
+            ))}
+          </p>
+        )}
+        <SourceNote club={club} />
       </Section>
 
-      <Section title="Upcoming events" count={events.length}>
-        {events.length ? <EventList events={events} /> : (
-          <p className="text-[15px] text-gray-70">Nothing on the calendar yet. The club meets {club.meets}.</p>
+      {(club.live?.activities.length || club.live?.howToJoin || club.live?.timeCommitment) ? (
+        <Section title="What members do">
+          {club.live?.activities.length ? (
+            <ul className="list-disc space-y-1 pl-5 text-[15px]">
+              {club.live.activities.map((a) => <li key={a}>{a}</li>)}
+            </ul>
+          ) : null}
+          {club.live?.timeCommitment && <p className="mt-3 text-[15px]"><span className="text-gray-70">Time commitment:</span> {club.live.timeCommitment}</p>}
+          {club.live?.howToJoin && <p className="mt-2 text-[15px]"><span className="text-gray-70">How to join:</span> {club.live.howToJoin}</p>}
+        </Section>
+      ) : null}
+
+      {club.faq.length > 0 && (
+        <Section title="Questions people ask" count={club.faq.length}>
+          <dl className="divide-y divide-line overflow-hidden rounded-2xl bg-wash text-[15px]">
+            {club.faq.map((f) => (
+              <div key={f.q} className="px-4 py-3">
+                <dt className="font-semibold">{f.q}</dt>
+                <dd className="mt-1 text-gray-70">{f.a}</dd>
+              </div>
+            ))}
+          </dl>
+        </Section>
+      )}
+
+      <Section title="Upcoming events" count={events.data ? upcoming.length : undefined}>
+        {events.error ? <LiveError message={events.error} /> : !events.data ? <ListSkeleton rows={2} /> : upcoming.length ? (
+          <EventList events={upcoming} />
+        ) : (
+          <p className="text-[15px] text-gray-70">The club hasn&apos;t published an upcoming event.</p>
         )}
       </Section>
 
@@ -440,6 +587,7 @@ export function InterestSheet({
   const [message, setMessage] = useState("");
   const [share, setShare] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [sending, setSending] = useState(false);
 
   return (
     <Sheet
@@ -450,10 +598,13 @@ export function InterestSheet({
     >
       <form
         className="space-y-4"
-        onSubmit={(e) => {
+        onSubmit={async (e) => {
           e.preventDefault();
+          if (sending) return;
           if (!message.trim()) return setError("Write a short message so the officers know what you are after.");
-          const result = api.submitInterest(club.id, { type, message, shareContact: share });
+          setSending(true);
+          const result = await api.submitInterest(club.id, { type, message, shareContact: share });
+          setSending(false);
           if (!result.ok) return setError(result.error.message);
           sound.play("send");
           toast(share ? "Sent with your name" : "Sent without your name");
@@ -488,7 +639,7 @@ export function InterestSheet({
           </span>
         </label>
         {error && <ErrorNote>{error}</ErrorNote>}
-        <Button variant="primary" type="submit" size="lg" className="w-full">
+        <Button variant="primary" type="submit" size="lg" className="w-full" disabled={sending}>
           {share ? "Send with my name" : "Send without my name"}
         </Button>
       </form>
@@ -499,11 +650,13 @@ export function InterestSheet({
 // ---- Events ----------------------------------------------------------------
 
 export function Events() {
-  const { db, prefs, ready } = useStudent();
+  const { isStudent } = useStudent();
   const [savedOnly, setSavedOnly] = useState(false);
-  const events = db.events
+  const saved = useSavedIds(isStudent);
+  const result = live.useEvents();
+  const events = (result.data ?? [])
     .filter((e) => new Date(e.end) > new Date())
-    .filter((e) => !savedOnly || prefs?.savedClubIds.includes(e.clubId))
+    .filter((e) => !savedOnly || saved.ids.has(e.clubId))
     .sort((a, b) => a.start.localeCompare(b.start));
 
   const groups = new Map<string, CampusEvent[]>();
@@ -516,21 +669,25 @@ export function Events() {
     <Page>
       <PageHeader
         title="Events"
-        lead="What clubs have on the calendar. Sample events for this demo."
+        lead="What clubs have published on their calendars."
         action={
-          <button type="button" aria-pressed={savedOnly} onClick={() => setSavedOnly((v) => !v)} className={buttonClass(savedOnly ? "primary" : "secondary")}>
-            <Bookmark aria-hidden className="size-4" />
-            {savedOnly ? "Saved clubs only" : "All clubs"}
-          </button>
+          isStudent && (
+            <button type="button" aria-pressed={savedOnly} onClick={() => setSavedOnly((v) => !v)} className={buttonClass(savedOnly ? "primary" : "secondary")}>
+              <Bookmark aria-hidden className="size-4" />
+              {savedOnly ? "Saved clubs only" : "All clubs"}
+            </button>
+          )
         }
       />
       <div className="mt-8">
-        {!ready ? (
+        {result.error ? (
+          <LiveError message={result.error} />
+        ) : !result.data ? (
           <ListSkeleton />
         ) : events.length === 0 ? (
           <EmptyState
             title="No events to show"
-            body={savedOnly ? "None of your saved clubs has an upcoming event." : "Nothing is on the calendar."}
+            body={savedOnly ? "None of your saved clubs has an upcoming event." : "No club has published an upcoming event."}
             action={savedOnly ? <Button variant="primary" onClick={() => setSavedOnly(false)}>Show all clubs</Button> : undefined}
           />
         ) : (

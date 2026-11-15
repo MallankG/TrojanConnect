@@ -4,18 +4,19 @@ import { useEffect, useState } from "react";
 import Link from "next/link";
 import { useParams, useRouter } from "next/navigation";
 import { ArrowRight, ChevronRight, ClipboardCheck, Compass, Landmark, MessageCircle, Users } from "lucide-react";
-import { api, setRole, useDb, useUser } from "@/lib/api/client";
+import { LIVE_TAGS, api, live, setRole, tagLabel, useDb, useUser } from "@/lib/api/client";
 import type { Conversation, Role } from "@/lib/api/types";
-import { INTEREST_TAGS, USERS } from "@/lib/api/mock/seed";
+import { USERS } from "@/lib/api/mock/seed";
 import { SENTENCE } from "@/components/landing/content";
 import { fmtRelative } from "@/lib/time";
 import { useSound } from "@/lib/sound/SoundProvider";
 import { sound } from "@/lib/sound/engine";
 import { HOME, Page, ROLE_LABEL } from "@/components/layout/AppShell";
 import { Chat } from "@/components/chat/Chat";
-import { Avatar, Button, EmptyState, Field, ListSkeleton, PageHeader, Row, Rows, Tabs, buttonClass, inputClass, useToast } from "@/components/ui/kit";
+import { Avatar, Button, EmptyState, ErrorNote, Field, ListSkeleton, PageHeader, Row, Rows, Tabs, buttonClass, inputClass, useToast } from "@/components/ui/kit";
 import { BookingStepper, RequestSummary, StatusCard } from "@/components/booking/parts";
-import { ClubDashboard, Section } from "./club";
+import { Section } from "./club";
+import { ClubDashboard } from "./clubLive";
 import { StudentDashboard } from "./student";
 import { WhatsAppPreview } from "./extras";
 
@@ -31,9 +32,9 @@ const ROLE_INFO: Record<Role, { icon: typeof Users; does: string }> = {
 const TWO_WINDOW = [
   "Open this page in two browser windows, side by side.",
   "Pick Club representative in one and Venue reviewer in the other.",
-  "As the club, choose “Use the sample request” and send it to the venue team.",
-  "Accept the proposal. It appears in the reviewer's queue straight away.",
-  "Approve it as the reviewer and watch the club's window turn to Confirmed.",
+  "As the club, open the Assistant and tap “Book a 35 person event…”, then pick a room.",
+  "Fill in the missing details, confirm the summary, and accept the venue agent's proposal.",
+  "As the reviewer, approve it and enter a reservation number. The club's booking turns to Confirmed.",
 ];
 
 export function RolePicker() {
@@ -41,10 +42,10 @@ export function RolePicker() {
   const current = useUser();
   const toast = useToast();
 
-  const enter = (role: Role) => {
-    setRole(role);
+  const enter = (user: (typeof USERS)[number]) => {
+    setRole(user.id);
     sound.play("send");
-    router.push(HOME[role]);
+    router.push(HOME[user.role]);
   };
 
   return (
@@ -61,8 +62,8 @@ export function RolePicker() {
           Who are you in this demo?
         </h1>
         <p className="mt-4 max-w-xl text-lg text-gray-70">
-          Four people, four views of the same campus. There is no sign-up: each role is a seeded
-          account, and you can switch at any time.
+          Four roles, three students with different interests. There is no sign-up: each is a
+          seeded account, and you can switch at any time.
         </p>
 
         <ul className="mt-10 grid gap-3 sm:grid-cols-2">
@@ -72,9 +73,9 @@ export function RolePicker() {
               <li key={u.id}>
                 <button
                   type="button"
-                  onClick={() => enter(u.role)}
+                  onClick={() => enter(u)}
                   className={`group flex h-full w-full flex-col rounded-3xl border p-5 text-left transition-colors hover:border-ink ${
-                    current?.role === u.role ? "border-ink" : "border-line"
+                    current?.id === u.id ? "border-ink" : "border-line"
                   }`}
                 >
                   <span className="flex items-center gap-3">
@@ -90,8 +91,15 @@ export function RolePicker() {
                     </span>
                   </span>
                   <span className="mt-4 block text-[15px]">{info.does}</span>
+                  {u.interests && (
+                    <span className="mt-3 flex flex-wrap gap-1.5">
+                      {u.interests.map((t) => (
+                        <span key={t} className="rounded-full border border-line px-2.5 py-0.5 text-xs">{tagLabel(t)}</span>
+                      ))}
+                    </span>
+                  )}
                   <span className="mt-auto flex items-center gap-1.5 pt-4 text-[15px] font-semibold text-cardinal">
-                    {current?.role === u.role ? "Continue" : "Enter"} as {u.name.split(" ")[0]}
+                    {current?.id === u.id ? "Continue" : "Enter"} as {u.name.split(" ")[0]}
                     <ArrowRight aria-hidden className="size-4 transition-transform group-hover:translate-x-0.5" />
                   </span>
                 </button>
@@ -106,7 +114,7 @@ export function RolePicker() {
               Run the booking across two windows
             </h2>
             <p className="mt-2 text-[15px] text-gray-70">
-              Both windows read the same demo data, so each sees the other&apos;s changes live.
+              Both windows use the same backend, so each sees the other&apos;s changes within a few seconds.
             </p>
           </div>
           <ol className="space-y-3">
@@ -121,8 +129,9 @@ export function RolePicker() {
 
         <div className="mt-12 flex flex-wrap items-center justify-between gap-4 rounded-2xl bg-wash px-5 py-4">
           <p className="max-w-xl text-sm text-gray-70">
-            A hackathon project, not affiliated with or endorsed by USC. Clubs, people, rooms and
-            availability are invented or simulated. No real reservation is made.
+            A hackathon project, not affiliated with or endorsed by USC. Club and student-government
+            information comes from public pages; the people are demo accounts, and rooms and availability
+            are simulated. No real reservation is made.
           </p>
           <Button
             onClick={() => {
@@ -294,7 +303,6 @@ export function Settings() {
   const toast = useToast();
   const { on, toggle } = useSound();
   const prefs = user ? db.prefs[user.id] : undefined;
-  const interests = prefs?.interests ?? [];
 
   return (
     <Page>
@@ -314,72 +322,7 @@ export function Settings() {
         <Link href="/demo" className={`${buttonClass("secondary")} mt-3`}>Switch role</Link>
       </Section>
 
-      {user?.role === "student" && (
-        <>
-          <Section title="Your interests">
-            <p className="mb-3 max-w-[60ch] text-[15px] text-gray-70">
-              Recommendations use only what you pick here. Nothing is inferred about you, and you
-              can clear it at any time.
-            </p>
-            <div className="flex flex-wrap gap-2" role="group" aria-label="Interests">
-              {INTEREST_TAGS.map((tag) => {
-                const picked = interests.includes(tag);
-                return (
-                  <button
-                    key={tag}
-                    type="button"
-                    aria-pressed={picked}
-                    onClick={() => {
-                      api.updatePrefs({ interests: picked ? interests.filter((t) => t !== tag) : [...interests, tag] });
-                      sound.play("tick", { volume: 0.5 });
-                    }}
-                    className={`rounded-full border px-3.5 py-2 text-sm transition-colors ${
-                      picked ? "border-cardinal bg-cardinal text-paper" : "border-line hover:border-gray-70"
-                    }`}
-                  >
-                    {tag}
-                  </button>
-                );
-              })}
-            </div>
-            <div className="mt-4">
-              <Field label="What are you looking for?" hint="Optional">
-                <input
-                  defaultValue={prefs?.goals ?? ""}
-                  onBlur={(e) => api.updatePrefs({ goals: e.target.value })}
-                  className={inputClass}
-                />
-              </Field>
-            </div>
-          </Section>
-
-          <Section title="Personalization">
-            <label className="flex items-start gap-3 text-[15px]">
-              <input
-                type="checkbox"
-                checked={prefs?.personalization ?? true}
-                onChange={(e) => api.updatePrefs({ personalization: e.target.checked })}
-                className="mt-1 size-4 accent-cardinal"
-              />
-              <span>
-                Recommend clubs from my interests
-                <span className="block text-sm text-gray-70">
-                  Off: clubs are listed alphabetically and no match reasons are shown.
-                </span>
-              </span>
-            </label>
-            <Button
-              className="mt-4"
-              onClick={() => {
-                api.updatePrefs({ interests: [], goals: "", savedClubIds: [] });
-                toast("Interests and saved clubs cleared");
-              }}
-            >
-              Clear my interests and saved clubs
-            </Button>
-          </Section>
-        </>
-      )}
+      {user?.role === "student" && <StudentPrefsSettings />}
 
       <Section title="WhatsApp">
         <label className="flex items-start gap-3 text-[15px]">
@@ -427,5 +370,97 @@ export function Settings() {
         </Button>
       </Section>
     </Page>
+  );
+}
+
+/** Interests, goals and personalization, stored on the backend (GET/PUT /me/preferences). */
+function StudentPrefsSettings() {
+  const toast = useToast();
+  const prefs = live.usePrefs(true);
+  const saved = live.useSaved(true);
+  const [busy, setBusy] = useState(false);
+  const interests = prefs.data?.interest_tags ?? [];
+  const chips = [...new Set([...interests, ...LIVE_TAGS])];
+  const save = async (patch: Parameters<typeof live.updatePrefs>[0], done?: string) => {
+    setBusy(true);
+    const result = await live.updatePrefs(patch);
+    setBusy(false);
+    if (!result.ok) toast(result.error.message, "bad");
+    else if (done) toast(done);
+  };
+
+  if (prefs.error) return <Section title="Your interests"><ErrorNote>{prefs.error}</ErrorNote></Section>;
+  if (!prefs.data) return <Section title="Your interests"><ListSkeleton rows={2} /></Section>;
+
+  return (
+    <>
+      <Section title="Your interests">
+        <p className="mb-3 max-w-[60ch] text-[15px] text-gray-70">
+          Recommendations use only what you pick here. Nothing is inferred about you, and you
+          can clear it at any time.
+        </p>
+        <div className="flex flex-wrap gap-2" role="group" aria-label="Interests">
+          {chips.map((tag) => {
+            const picked = interests.includes(tag);
+            return (
+              <button
+                key={tag}
+                type="button"
+                aria-pressed={picked}
+                disabled={busy}
+                onClick={() => {
+                  void save({ interest_tags: picked ? interests.filter((t) => t !== tag) : [...interests, tag] });
+                  sound.play("tick", { volume: 0.5 });
+                }}
+                className={`rounded-full border px-3.5 py-2 text-sm transition-colors disabled:opacity-60 ${
+                  picked ? "border-cardinal bg-cardinal text-paper" : "border-line hover:border-gray-70"
+                }`}
+              >
+                {tagLabel(tag)}
+              </button>
+            );
+          })}
+        </div>
+        <div className="mt-4">
+          <Field label="What are you looking for?" hint="Optional">
+            <input
+              key={prefs.data.goals}
+              defaultValue={prefs.data.goals}
+              maxLength={1000}
+              onBlur={(e) => e.target.value !== prefs.data?.goals && save({ goals: e.target.value }, "Saved")}
+              className={inputClass}
+            />
+          </Field>
+        </div>
+      </Section>
+
+      <Section title="Personalization">
+        <label className="flex items-start gap-3 text-[15px]">
+          <input
+            type="checkbox"
+            checked={prefs.data.personalization_enabled}
+            disabled={busy}
+            onChange={(e) => save({ personalization_enabled: e.target.checked })}
+            className="mt-1 size-4 accent-cardinal"
+          />
+          <span>
+            Recommend clubs from my interests
+            <span className="block text-sm text-gray-70">
+              Off: no recommendations or match reasons are shown.
+            </span>
+          </span>
+        </label>
+        <Button
+          className="mt-4"
+          disabled={busy}
+          onClick={async () => {
+            await Promise.all((saved.data ?? []).map((c) => live.setSaved(c.id, false)));
+            await save({ interest_tags: [], goals: "" }, "Interests and saved clubs cleared");
+          }}
+        >
+          Clear my interests and saved clubs
+        </Button>
+      </Section>
+    </>
   );
 }

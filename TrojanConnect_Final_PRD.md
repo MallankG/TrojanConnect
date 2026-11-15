@@ -240,6 +240,8 @@ These are test targets, not claims of measured performance.
 -   Student Agent and club discovery.
 -   Club public profile and Club Agent Q&A.
 -   Basic USG/GSG knowledge assistant using approved content.
+-   RSO recognition assistant: guides a club through USC's recognition
+    process (new or renewing) and hands off to EngageSC (see 5.4).
 -   WhatsApp webhook integration for booking workflow, if credentials
     and approval are available.
 -   Web chat fallback for every WhatsApp flow.
@@ -251,10 +253,13 @@ These are test targets, not claims of measured performance.
 -   USG/GSG feedback intake and engagement analytics.
 -   WhatsApp notifications for booking status and student interactions.
 -   Basic alumni opt-in profile and mentorship discovery.
+-   RSO portal agent that submits a ready application on a simulated
+    EngageSC and reads the decision back (demo only).
 
 ## P2: Future
 
 -   Authorized integrations with real USC scheduling systems.
+-   Authorized EngageSC integration for RSO submissions.
 -   Calendar integrations.
 -   More campus departments and venue owners.
 -   Alumni mentorship workflows.
@@ -304,6 +309,33 @@ These are test targets, not claims of measured performance.
 5.  The authorized representative sees a structured feedback item.
 6.  The student receives a tracking acknowledgement, not a promise of
     resolution.
+
+## 5.4 RSO recognition journey
+
+Only recognized student organizations (RSOs) can create events on
+EngageSC, and every RSO must reapply each year in a fixed window
+(2026--27: application closes Nov 22, 11:59 PM; advisor requirements
+due Dec 1; recognition through June 30, 2027). Source: USC Campus
+Activities, RSO Recognition Process (read 14 Nov 2026).
+
+1.  Club representative asks the Assistant to start a new RSO or renew
+    an existing one.
+2.  The RSO agent picks the pathway (new, renew, religious, club sport,
+    fall applicant, fraternity/sorority) and shows the 13-step
+    checklist with USC links and deadlines.
+3.  The representative fills the organization details and roster
+    (5 officers, 1 full-time advisor, at least 5 more members) and
+    ticks off the constitution, Accountability Document, the 15
+    officer documents and the advisor's items.
+4.  The agent drafts reminder emails listing what each officer or the
+    advisor still owes.
+5.  When ready, the agent hands off to EngageSC with the exact link and
+    steps. In the demo, the representative may click Submit to let the
+    portal agent submit on a simulated EngageSC.
+6.  Only the representative records the outcome (Pending Approval,
+    Requires Modifications, Denied, Recognized), or the portal agent
+    reads it from the simulated portal. Once recognized, the
+    Assistant offers to plan an event.
 
 ------------------------------------------------------------------------
 
@@ -689,6 +721,17 @@ FAILED_REQUIRES_HUMAN
 -   Do not promise a government response or resolution.
 -   Obtain consent before forwarding a student's concern with
     identifying information.
+
+## 8.4b RSO recognition guardrails
+
+-   Use only USC's published recognition pages; link every form and
+    show where USC's pages disagree.
+-   The agent never submits, and never records a recognition outcome.
+    The API refuses agent writes to status.
+-   The portal agent runs only on the user's explicit click, only when
+    the checklist is complete, and only against the simulated portal.
+    Statuses it reads are recorded as coming from the simulated portal.
+-   Do not present the simulated portal as a USC system.
 
 ## 8.5 WhatsApp guardrails
 

@@ -9,6 +9,7 @@ from app.api.deps import repo_dep
 from app.config import Settings, get_settings
 from app.schemas.common import AppError
 from app.security.actor import Actor
+from app.security.demo_roles import apply_demo_roles
 
 UNAUTHENTICATED = "UNAUTHENTICATED"
 DEFAULT_DEMO_USER = "demo-student-1"
@@ -64,6 +65,14 @@ async def get_actor(
                 get = demo.get if isinstance(demo, dict) else lambda k, d="": getattr(demo, k, d)
                 actor.display_name = str(get("display_name", "") or "")
                 actor.email = str(get("email", "") or "")
+        apply_demo_roles(actor)
         return actor
 
     raise _unauthenticated("Sign in required.")
+
+
+async def require_club_rep(actor: Actor = Depends(get_actor)) -> Actor:
+    """Event planning, bookings and RSO recognition act for a club: only a club representative may use them."""
+    if "club_rep" not in actor.roles:
+        raise AppError("PERMISSION_DENIED", "Only a verified club representative can do this.", status_code=403)
+    return actor

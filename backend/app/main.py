@@ -69,8 +69,22 @@ def create_app() -> FastAPI:
     app.include_router(student_router, prefix="/api/v1")
 
     # === ADDITIONAL ROUTERS GO HERE (booking, venue review, USG/GSG, webhooks) ===
-    # from app.api.v1.bookings import router as bookings_router
-    # app.include_router(bookings_router, prefix="/api/v1")
+    # Event planning: /api/v1/pipeline/* (event plan + Club Agent chat) and the venue booking / permit
+    # workflow (/api/v1/bookings, /venue-review, /reviews). See event-planning-integration.md.
+    from app.workflows.booking.router import router as booking_router
+    from app.workflows.event_pipeline.router import router as event_pipeline_router
+
+    app.include_router(event_pipeline_router)
+    app.include_router(booking_router)
+    # RSO recognition (/api/v1/rso): the RSO agent for new and renewing organizations, handing off to EngageSC.
+    from app.workflows.rso.router import router as rso_router
+
+    app.include_router(rso_router)
+    # Simulated EngageSC portal for demos (/mock-engagesc; RSO_PORTAL=off disables it). Not a USC system.
+    from app.workflows.rso import mock_portal
+
+    if mock_portal.enabled():
+        app.include_router(mock_portal.router)
     # =============================================================================
 
     return app

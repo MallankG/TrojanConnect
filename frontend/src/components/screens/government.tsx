@@ -2,8 +2,9 @@
 
 import { useState } from "react";
 import { ExternalLink, Plus } from "lucide-react";
-import { api, useDb, useUser } from "@/lib/api/client";
-import type { GovScope, KnowledgeDoc } from "@/lib/api/types";
+import { api, campus, useUser } from "@/lib/api/client";
+import type { GovSource } from "@/lib/api/live";
+import type { GovScope } from "@/lib/api/types";
 import { fmtDay, fmtRelative } from "@/lib/time";
 import { sound } from "@/lib/sound/engine";
 import { Page } from "@/components/layout/AppShell";
@@ -24,19 +25,20 @@ import {
 } from "@/components/ui/kit";
 import { Section } from "./club";
 
-const SAMPLE_NOTE =
-  "Sample knowledge base written for this demo. It is not official USG or GSG content and must be replaced with approved sources.";
+const SOURCE_NOTE =
+  "Answers come only from USG's and GSG's own public pages (usg.usc.edu, gsg.usc.edu, collected 14 Nov 2026) and two clearly labelled news reports. Each answer links its source.";
 
 // ---- Assistant -------------------------------------------------------------
 
 export function GovernmentHome() {
-  const db = useDb();
   const user = useUser();
   const isRep = user?.role === "gov_rep";
   const [picked, setPicked] = useState<GovScope>("USG");
   const scope: GovScope = isRep ? (user.scopeId as GovScope) : picked;
   const chatId = useOpenChat(() => api.openGovernmentChat(scope), [scope, user?.id]);
-  const announcements = db.announcements.filter((a) => a.scope === scope);
+  // Announcements are written and listed on the representative's side; students get them as notifications.
+  const feed = campus.useAnnouncements(isRep ? scope : null);
+  const announcements = feed.data ?? [];
 
   return (
     <Page>
@@ -61,7 +63,7 @@ export function GovernmentHome() {
           />
         </div>
       )}
-      <p className="mt-4 rounded-xl bg-gold-25 px-3.5 py-2.5 text-sm">{SAMPLE_NOTE}</p>
+      <p className="mt-4 rounded-xl bg-gold-25 px-3.5 py-2.5 text-sm">{SOURCE_NOTE}</p>
 
       <div className="mt-4">
         {chatId ? (
@@ -72,8 +74,8 @@ export function GovernmentHome() {
             placeholder={`Ask the ${scope} assistant`}
             suggestions={
               scope === "USG"
-                ? ["How do we get funding for an event?", "Who approves room bookings?", "Room booking rules are too hard to find"]
-                : ["How do travel grants work?"]
+                ? ["How do we apply for USG funding?", "How many senators are in the USG Senate?", "Funding deadlines are too hard to find"]
+                : ["How does GSG review funding applications?", "When does the GSG Senate meet?"]
             }
           />
         ) : (
@@ -81,14 +83,15 @@ export function GovernmentHome() {
         )}
       </div>
 
-      <Section title="Announcements" count={announcements.length}>
-        {announcements.length ? (
+      {isRep && (
+      <Section title="Published announcements" count={feed.data ? announcements.length : undefined}>
+        {feed.error ? <ErrorNote>{feed.error}</ErrorNote> : !feed.data ? <ListSkeleton rows={2} /> : announcements.length ? (
           <ul className="divide-y divide-line">
             {announcements.map((a) => (
               <li key={a.id} className="py-3.5">
                 <p className="text-[17px] font-semibold leading-tight">{a.title}</p>
                 <p className="mt-1 text-[15px]">{a.body}</p>
-                <p className="mt-1 text-sm text-gray-70">{a.author} · {fmtRelative(a.at)}</p>
+                <p className="mt-1 text-sm text-gray-70">{a.author} · {fmtRelative(a.created_at)}</p>
               </li>
             ))}
           </ul>
@@ -96,28 +99,33 @@ export function GovernmentHome() {
           <p className="text-[15px] text-gray-70">No announcements from {scope} yet.</p>
         )}
       </Section>
+      )}
 
-      {isRep && <Composer />}
+      {isRep && <Composer scope={scope} />}
       {isRep && <Analytics scope={scope} />}
     </Page>
   );
 }
 
-function Composer() {
+function Composer({ scope }: { scope: GovScope }) {
   const user = useUser();
   const toast = useToast();
   const [title, setTitle] = useState("");
   const [body, setBody] = useState("");
   const [error, setError] = useState<string | null>(null);
+  const [busy, setBusy] = useState(false);
 
   return (
     <Section title="New announcement">
       <div className="grid gap-5 md:grid-cols-2">
         <form
           className="space-y-3"
-          onSubmit={(e) => {
+          onSubmit={async (e) => {
             e.preventDefault();
-            const result = api.publishAnnouncement(title, body);
+            if (busy) return;
+            setBusy(true);
+            const result = await campus.publish(scope, title, body);
+            setBusy(false);
             if (!result.ok) return setError(result.error.message);
             sound.play("send");
             toast("Announcement published");
@@ -133,7 +141,7 @@ function Composer() {
             <textarea rows={4} value={body} onChange={(e) => setBody(e.target.value)} maxLength={400} className={inputClass} />
           </Field>
           {error && <ErrorNote>{error}</ErrorNote>}
-          <Button variant="primary" type="submit">Publish to students</Button>
+          <Button variant="primary" type="submit" disabled={busy}>Publish to students</Button>
         </form>
         <div>
           <p className="text-sm font-medium">Preview</p>
@@ -149,43 +157,37 @@ function Composer() {
 }
 
 function Analytics({ scope }: { scope: GovScope }) {
-  const db = useDb();
-  const questions = db.govQuestions.filter((q) => q.scope === scope);
-  const byDoc = new Map<string, number>();
-  for (const q of questions) byDoc.set(q.docId ?? "none", (byDoc.get(q.docId ?? "none") ?? 0) + 1);
-  const rows = [...byDoc.entries()]
-    .map(([id, count]) => ({
-      id,
-      count,
-      label: id === "none" ? "No approved source matched" : db.knowledge.find((k) => k.id === id)?.title ?? "Removed source",
-    }))
-    .sort((a, b) => b.count - a.count);
+  const stats = campus.useAnalytics(scope);
+  const rows = stats.data?.top_topics ?? [];
   const max = Math.max(1, ...rows.map((r) => r.count));
+  const none = "Not covered by approved sources";
 
   return (
-    <Section title="What students ask about" count={questions.length}>
-      {rows.length === 0 ? (
+    <Section title="What students ask about" count={stats.data?.questions}>
+      {stats.error ? <ErrorNote>{stats.error}</ErrorNote> : !stats.data ? <ListSkeleton rows={3} /> : rows.length === 0 ? (
         <p className="text-[15px] text-gray-70">Questions are counted here once students start asking.</p>
       ) : (
-        <ul className="space-y-3">
-          {rows.map((r) => (
-            <li key={r.id}>
-              <div className="flex items-baseline justify-between gap-3 text-[15px]">
-                <span className={r.id === "none" ? "font-medium" : ""}>{r.label}</span>
-                <span className="tabular text-gray-70">{r.count}</span>
-              </div>
-              <div className="mt-1 h-2 rounded-full bg-wash">
-                <div
-                  className={`h-2 rounded-full ${r.id === "none" ? "bg-mark-orange" : "bg-cardinal"}`}
-                  style={{ width: `${(r.count / max) * 100}%` }}
-                />
-              </div>
-            </li>
-          ))}
-        </ul>
+        <>
+          <p className="tabular mb-3 text-[15px]">
+            {stats.data.answered_pct}% answered from an approved source · {stats.data.concerns} raised a concern
+          </p>
+          <ul className="space-y-3">
+            {rows.map((r) => (
+              <li key={r.topic}>
+                <div className="flex items-baseline justify-between gap-3 text-[15px]">
+                  <span className={r.topic === none ? "font-medium" : ""}>{r.topic}</span>
+                  <span className="tabular text-gray-70">{r.count}</span>
+                </div>
+                <div className="mt-1 h-2 rounded-full bg-wash">
+                  <div className={`h-2 rounded-full ${r.topic === none ? "bg-mark-orange" : "bg-cardinal"}`} style={{ width: `${(r.count / max) * 100}%` }} />
+                </div>
+              </li>
+            ))}
+          </ul>
+        </>
       )}
       <p className="mt-3 text-sm text-gray-70">
-        Questions with no matching source are where a new approved page would help most.
+        Only the topic is counted, never who asked. Questions with no matching source are where a new approved page would help most.
       </p>
     </Section>
   );
@@ -197,15 +199,16 @@ type Draft = { id?: string; title: string; excerpt: string; url: string; owner: 
 const BLANK: Draft = { title: "", excerpt: "", url: "", owner: "" };
 
 export function Knowledge() {
-  const db = useDb();
   const user = useUser();
   const toast = useToast();
   const scope = user?.scopeId as GovScope;
-  const docs = db.knowledge.filter((k) => k.scope === scope);
+  const list = campus.useSources(scope ?? null);
+  const docs = list.data ?? [];
+  const [busy, setBusy] = useState(false);
   const [draft, setDraft] = useState<Draft | null>(null);
   const [error, setError] = useState<string | null>(null);
 
-  const edit = (doc: KnowledgeDoc) =>
+  const edit = (doc: GovSource) =>
     setDraft({ id: doc.id, title: doc.title, excerpt: doc.excerpt, url: doc.url, owner: doc.owner });
 
   return (
@@ -220,10 +223,12 @@ export function Knowledge() {
           </Button>
         }
       />
-      <p className="mt-4 rounded-xl bg-gold-25 px-3.5 py-2.5 text-sm">{SAMPLE_NOTE}</p>
+      <p className="mt-4 rounded-xl bg-gold-25 px-3.5 py-2.5 text-sm">{SOURCE_NOTE}</p>
 
       <div className="mt-6">
-        {db.seededAt === "" ? (
+        {list.error ? (
+          <ErrorNote>{list.error}</ErrorNote>
+        ) : !list.data ? (
           <ListSkeleton />
         ) : docs.length === 0 ? (
           <EmptyState
@@ -245,9 +250,9 @@ export function Knowledge() {
                     <ExternalLink aria-hidden className="size-3.5" />
                     Source page
                   </a>
-                  <span>{doc.owner}</span>
+                  <span>{doc.kind === "news" ? `News report · ${doc.owner}` : doc.owner}</span>
                   <span>{doc.version}</span>
-                  <span>Verified {fmtDay(doc.verifiedAt)}</span>
+                  <span>Checked {fmtDay(doc.verified_at)}</span>
                 </p>
               </li>
             ))}
@@ -264,11 +269,13 @@ export function Knowledge() {
         {draft && (
           <form
             className="space-y-4"
-            onSubmit={(e) => {
+            onSubmit={async (e) => {
               e.preventDefault();
               if (!draft.title.trim() || !draft.excerpt.trim() || !draft.url.trim())
                 return setError("A source needs a title, the approved text and a link.");
-              const result = api.saveKnowledge({ ...draft, scope });
+              setBusy(true);
+              const result = await campus.saveSource({ ...draft, scope });
+              setBusy(false);
               if (!result.ok) return setError(result.error.message);
               toast("Source saved");
               setError(null);
@@ -282,7 +289,7 @@ export function Knowledge() {
             <Field label="Link to the source page"><input type="url" value={draft.url} onChange={(e) => setDraft({ ...draft, url: e.target.value })} placeholder="https://" className={inputClass} /></Field>
             <Field label="Owner"><input value={draft.owner} onChange={(e) => setDraft({ ...draft, owner: e.target.value })} placeholder="Committee or office" className={inputClass} /></Field>
             {error && <ErrorNote>{error}</ErrorNote>}
-            <Button variant="primary" type="submit" size="lg" className="w-full">Save source</Button>
+            <Button variant="primary" type="submit" size="lg" className="w-full" disabled={busy}>Save source</Button>
           </form>
         )}
       </Sheet>
@@ -293,11 +300,12 @@ export function Knowledge() {
 // ---- Feedback inbox --------------------------------------------------------
 
 export function FeedbackInbox() {
-  const db = useDb();
   const user = useUser();
   const toast = useToast();
   const [tab, setTab] = useState<"new" | "acknowledged">("new");
-  const all = db.feedback.filter((f) => f.scope === user?.scopeId);
+  const scope = (user?.scopeId as GovScope) ?? null;
+  const inbox = campus.useFeedback(scope);
+  const all = inbox.data ?? [];
   const shown = all.filter((f) => f.status === tab);
 
   return (
@@ -318,7 +326,9 @@ export function FeedbackInbox() {
         />
       </div>
       <div className="mt-2">
-        {db.seededAt === "" ? (
+        {inbox.error ? (
+          <div className="mt-4"><ErrorNote>{inbox.error}</ErrorNote></div>
+        ) : !inbox.data ? (
           <div className="mt-4"><ListSkeleton /></div>
         ) : shown.length === 0 ? (
           <div className="mt-4">
@@ -333,20 +343,20 @@ export function FeedbackInbox() {
               <li key={f.id} className="py-4">
                 <div className="flex flex-wrap items-center justify-between gap-2">
                   <p className="text-sm text-gray-70">
-                    <span className="tabular">{f.id}</span> · {f.category} · {fmtRelative(f.at)}
+                    <span className="tabular">{f.id.slice(0, 8)}</span> · {f.category} · {fmtRelative(f.created_at)}
                   </p>
                   <StatusPill
-                    label={f.sharedIdentity ? `From ${f.fromName}` : "Identity not shared"}
-                    tone={f.sharedIdentity ? "good" : "neutral"}
+                    label={f.identity_sharing_consent ? `From ${f.from_name}` : "Identity not shared"}
+                    tone={f.identity_sharing_consent ? "good" : "neutral"}
                   />
                 </div>
                 <p className="mt-1.5 max-w-[65ch] font-serif text-[19px] italic leading-snug">“{f.message}”</p>
                 {f.status === "new" && (
                   <Button
                     className="mt-3"
-                    onClick={() => {
-                      api.acknowledgeFeedback(f.id);
-                      toast("Marked acknowledged");
+                    onClick={async () => {
+                      const result = await campus.acknowledge(f.scope, f.id);
+                      toast(result.ok ? "Marked acknowledged" : result.error.message, result.ok ? undefined : "bad");
                     }}
                   >
                     Mark acknowledged

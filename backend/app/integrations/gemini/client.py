@@ -186,6 +186,11 @@ _SECTION_KEYWORDS = {
     "public_description": "about describe description overview mission purpose focus",
     "public_contact": "contact email reach instagram website",
 }
+_OVERVIEW_WORDS = {"club", "group", "organization", "org", "do", "doe", "does", "mean", "purpose", "mission", "focus",
+                   "work", "about", "overview", "you", "they", "exactly", "actually", "usc"}
+_OVERVIEW_RE = re.compile(
+    r"\bwhat\s+(does|do|is|are)\b(?!.*\b(time|commitment|join|meet|meeting|cost|dues|require|event|contact|history|founded)\b)"
+    r"|\btell me (more )?about\b|\bwho are (you|they)\b|\bwhat.*\babout\b|\boverview\b|\bwhat do you do\b", re.I)
 _SECTION_LABELS = {
     "history": "History", "activities": "Activities", "notable_events": "Notable events",
     "meeting_schedule": "Meeting schedule", "time_commitment": "Time commitment",
@@ -338,6 +343,14 @@ class RuleBasedLLM:
     def _answer_from_profile(self, question: str, club: dict) -> str:
         name = club.get("name", "this club")
         q = _words(question) - _words(name)
+        if not (q - _OVERVIEW_WORDS) and (_OVERVIEW_RE.search(question) or _words(question) & _words(name)):
+            # "What does X do?" / "Tell me about X": the description, plus activities when the profile lists them.
+            parts = [club.get("public_description", "").strip()]
+            if club.get("activities"):
+                parts.append("Activities: " + "; ".join(club["activities"]))
+            parts = [p for p in parts if p]
+            if parts:
+                return f"From {name}'s public profile:\n" + "\n".join(f"- {p}" for p in parts)
         candidates: list[tuple[float, str]] = []
         for field, kw in _SECTION_KEYWORDS.items():
             value = club.get(field)

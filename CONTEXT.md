@@ -3,6 +3,11 @@
 Written 14 November 2026. Read this before touching `frontend/`. The product spec is
 `TrojanConnect_Final_PRD.md`; section numbers below refer to it.
 
+For a feature-oriented reference to the design system, responsive patterns, shared UI
+components, motion, sound, accessibility, and a source-file map, also read
+[`use-ui-styling.md`](use-ui-styling.md). This handoff remains canonical if the two documents
+ever diverge.
+
 ## What exists
 
 Branch `feat/landing-and-app-ui`. Commit `e875586` holds the landing page and the first

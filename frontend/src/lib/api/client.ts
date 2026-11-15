@@ -4,7 +4,9 @@
  * The one module the UI talks to. Each command mirrors an endpoint in PRD
  * section 12 and returns the typed result from PRD 9.1.
  *
- * Today every call goes to the in-browser mock under ./mock. To move to the
+ * Club data (directory, profiles, events, search, recommendations, saved clubs,
+ * interest, preferences, Student and Club Agent chat) is live from the FastAPI
+ * backend through ./live. Everything else still runs on the in-browser mock. To move the
  * FastAPI backend, replace a function body with a fetch to the endpoint named
  * in its comment (base URL: NEXT_PUBLIC_API_BASE_URL) and swap `useDb` readers
  * for fetched data plus Supabase Realtime. Components need no changes.
@@ -14,13 +16,14 @@
  * the client (PRD 9.1).
  */
 
-import type { GovScope, Interest, KnowledgeDoc, Result, StudentPrefs } from "./types";
+import type { Club, GovScope, Interest, KnowledgeDoc, Result, StudentPrefs } from "./types";
 import * as booking from "./mock/booking";
 import * as agents from "./mock/agents";
-import { currentUser, getDb, mutate, resetDb, uid } from "./mock/store";
+import { currentUser, mutate, resetDb, uid } from "./mock/store";
+import { campus, live } from "./live";
 
 export { useDb, useUser, setRole, getDb } from "./mock/store";
-export { recommend, explain } from "./mock/agents";
+export { campus, live, invalidate, tagLabel, LIVE_TAGS } from "./live";
 
 const denied = (message: string): Result<never> => ({
   ok: false,
@@ -55,20 +58,20 @@ export const api = {
     booking.recordDecision(reviewId, decision, reason, me()),
   markCancelled: (bookingId: string) => booking.markCancelled(bookingId, me()),
 
-  openClubChat(clubId: string) {
-    const club = getDb().clubs.find((c) => c.id === clubId)!;
+  // Club and Student Agent chats run on the live backend (POST /conversations, /messages).
+  openClubChat(clubId: string, clubName: string) {
     return agents.openConversation(me(), "club", {
       clubId,
-      title: club.name,
-      agentName: `${club.name} agent`,
-      greeting: `Hi, I'm the agent for ${club.name}. I answer from information the club's officers approved. What would you like to know?`,
+      title: clubName,
+      agentName: `${clubName} agent`,
+      greeting: `Hi, I'm the agent for ${clubName}. I answer only from the club's public profile, FAQ and events, and say so when they don't cover something. What would you like to know?`,
     });
   },
   openStudentChat: () =>
     agents.openConversation(me(), "student", {
       title: "Student Agent",
       agentName: "Student Agent",
-      greeting: "Tell me what you're into and I'll find clubs that match. I only use the interests you chose and the clubs' public profiles.",
+      greeting: "Tell me what you're into and I'll find clubs in the directory that match. I only use the interests you chose and the clubs' public profiles.",
     }),
   openGovernmentChat: (scope: GovScope) =>
     agents.openConversation(me(), "government", {
@@ -76,37 +79,25 @@ export const api = {
       agentName: `${scope} assistant`,
       greeting: `I answer questions about ${scope} from approved sources and link each one. I'm an assistant, not an elected representative, and I can't make commitments on ${scope}'s behalf.`,
     }),
-  askClub: (conversationId: string, text: string) => agents.askClub(conversationId, text),
-  askStudentAgent: (conversationId: string, text: string) =>
-    agents.askStudentAgent(conversationId, text, me()),
-  askGovernment: (conversationId: string, text: string, scope: GovScope) =>
-    agents.askGovernment(conversationId, text, scope),
+  askClub: (conversationId: string, text: string) => live.ask(conversationId, text),
+  askStudentAgent: (conversationId: string, text: string) => live.ask(conversationId, text),
+  // POST /api/v1/conversations/{id}/confirm
+  confirmAgentAction: (conversationId: string, confirmed: boolean) => live.confirm(conversationId, confirmed),
+  // POST /api/v1/government/ask (approved, attributed sources only)
+  askGovernment: (conversationId: string, text: string, scope: GovScope) => campus.ask(conversationId, text, scope),
   // POST /api/v1/feedback
   submitFeedback: (
     conversationId: string | null,
     input: { scope: GovScope; category: string; message: string; shareIdentity: boolean },
-  ) => agents.submitFeedback(conversationId, input, me()),
+  ) => campus.submitFeedback(conversationId, input),
 
   // POST /api/v1/clubs/{id}/interest
-  submitInterest(clubId: string, input: { type: Interest["type"]; message: string; shareContact: boolean }): Result<null> {
-    const user = me();
-    if (user.role !== "student") return denied("Only students can express interest in a club.");
-    mutate((db) => {
-      db.interests.unshift({
-        id: uid("i"),
-        clubId,
-        studentId: user.id,
-        studentName: input.shareContact ? user.name : "A student",
-        type: input.type,
-        message: input.message.trim(),
-        sharedContact: input.shareContact,
-        at: new Date().toISOString(),
-      });
-      for (const rep of db.users.filter((u) => u.role === "club_rep" && u.scopeId === clubId))
-        db.notifications.unshift({ id: uid("n"), userId: rep.id, text: "A student expressed interest in your club", href: "/recruitment", at: new Date().toISOString(), read: false });
-    });
-    return { ok: true, data: null };
+  submitInterest(clubId: string, input: { type: Interest["type"]; message: string; shareContact: boolean }): Promise<Result<null>> {
+    if (me().role !== "student") return Promise.resolve(denied("Only students can express interest in a club."));
+    return live.submitInterest(clubId, input);
   },
+  // POST / DELETE /api/v1/clubs/{id}/save
+  setSaved: (clubId: string, saved: boolean) => live.setSaved(clubId, saved),
 
   updatePrefs(patch: Partial<StudentPrefs>) {
     const user = me();
@@ -115,17 +106,7 @@ export const api = {
       db.prefs[user.id] = { ...base, ...patch };
     });
   },
-  toggleSaved(clubId: string) {
-    const user = me();
-    mutate((db) => {
-      const prefs = (db.prefs[user.id] ??= { interests: [], goals: "", personalization: true, savedClubIds: [] });
-      prefs.savedClubIds = prefs.savedClubIds.includes(clubId)
-        ? prefs.savedClubIds.filter((id) => id !== clubId)
-        : [...prefs.savedClubIds, clubId];
-    });
-  },
-
-  updateClub(clubId: string, patch: { tagline?: string; description?: string; recruitment?: "open" | "applications" | "closed" }): Result<null> {
+  updateClub(clubId: string, patch: { tagline?: string; description?: string; recruitment?: Club["recruitment"] }): Result<null> {
     const user = me();
     if (user.role !== "club_rep" || user.scopeId !== clubId) return denied("You can only edit your own club's profile.");
     mutate((db) => Object.assign(db.clubs.find((c) => c.id === clubId)!, patch));

@@ -2,9 +2,11 @@ fastapi
 uvicorn[standard]
 pydantic>=2
 pydantic-settings
-google-genai
+google-genai>=3.3  # student agents + event planning agent (Gemini)
 supabase
 pyjwt
 httpx
 pytest
+playwright>=1.47  # RSO portal agent: drives the installed Google Chrome (or `playwright install chromium`)
+python-multipart  # file uploads on the simulated EngageSC portal
 pytest-asyncio

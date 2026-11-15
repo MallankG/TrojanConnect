@@ -55,6 +55,13 @@ class FakeRepo:
     async def list_events(self, organization_id=None, upcoming_only=True):
         return [e for e in self.events if organization_id in (None, e.organization_id)]
 
+    async def create_event(self, event):
+        self.events.append(event)
+        return event
+
+    async def update_club(self, organization_id, patch):
+        return None
+
     async def match_clubs(self, embedding, limit):
         return self.match_result
 

@@ -1,3 +1,5 @@
 .venv/
 __pycache__/
 .env
+# event pipeline + bookings: local state
+data/

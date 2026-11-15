@@ -1,6 +1,6 @@
 import type { Metadata } from "next";
 import { Only } from "@/components/layout/AppShell";
-import { ClubProfile } from "@/components/screens/club";
+import { ClubProfile } from "@/components/screens/clubLive";
 
 export const metadata: Metadata = { title: "Club profile" };
 

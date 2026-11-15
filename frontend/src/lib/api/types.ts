@@ -13,6 +13,8 @@ export type DemoUser = {
   /** What the role acts for: a club, a venue authority, a government body. */
   scopeId: string | null;
   scopeName: string | null;
+  /** Students only: the interests their demo profile starts with (the live values are on the backend). */
+  interests?: string[];
 };
 
 // ---- Booking (PRD 7.1) -----------------------------------------------------
@@ -164,11 +166,22 @@ export type Club = {
   tagline: string;
   description: string;
   tags: string[];
-  members: number;
+  /** Seeded demo clubs only; the live directory does not publish member counts. */
+  members?: number;
   meets: string;
-  recruitment: "open" | "applications" | "closed";
+  recruitment: "open" | "applications" | "closed" | "unknown";
   verified: boolean;
   faq: { q: string; a: string }[];
+  /** Present on clubs from the live backend directory (lib/api/live.ts). */
+  live?: {
+    dataLabel: "demo" | "public_web" | "live";
+    howToJoin: string;
+    activities: string[];
+    timeCommitment: string;
+    website: string;
+    sourceUrls: string[];
+    collectedAt: string | null;
+  };
 };
 
 export type CampusEvent = {
@@ -257,13 +270,14 @@ export type Announcement = {
 
 // ---- Conversations --------------------------------------------------------
 
-export type Source = { title: string; url: string; verifiedAt: string };
+export type Source = { title: string; url: string; verifiedAt: string; owner?: string; kind?: string };
 
 export type MessageCard =
   | { type: "summary"; bookingId: string }
   | { type: "proposal"; bookingId: string; proposalId: string }
   | { type: "status"; bookingId: string }
-  | { type: "clubs"; clubIds: string[]; reasons: Record<string, string[]> }
+  | { type: "clubs"; clubIds: string[]; reasons: Record<string, string[]>; names?: Record<string, string> }
+  | { type: "confirm"; summary: string; done: boolean }
   | { type: "feedback_offer"; scope: GovScope; message: string; category: string }
   | { type: "feedback_sent"; feedbackId: string };
 
@@ -279,6 +293,8 @@ export type ChatMessage = {
   /** A sourced answer could not be found; the UI marks it. */
   unverified?: boolean;
   failed?: boolean;
+  /** Concise summary of the backend tools the agent ran (PRD 11.8). Never chain-of-thought. */
+  toolSummary?: string;
 };
 
 export type ConversationKind = "booking" | "club" | "student" | "government";
@@ -297,6 +313,8 @@ export type Conversation = {
   awaiting: "title" | "attendance" | "time" | null;
   messages: ChatMessage[];
   updatedAt: string;
+  /** The backend conversation id, for club and student agent chats on the live service. */
+  remoteId?: string;
 };
 
 // ---- Notifications --------------------------------------------------------

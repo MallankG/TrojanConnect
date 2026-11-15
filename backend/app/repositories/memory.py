@@ -162,6 +162,17 @@ class InMemoryRepository:
         events.sort(key=lambda e: e.start_at)
         return [e.model_copy(deep=True) for e in events]
 
+    async def create_event(self, event: ClubEvent) -> ClubEvent:
+        self._events.append(event.model_copy(deep=True))
+        return event
+
+    async def update_club(self, organization_id: str, patch: dict) -> Optional[ClubProfile]:
+        club = self._clubs.get(organization_id)
+        if club is None:
+            return None
+        self._clubs[organization_id] = ClubProfile.model_validate({**club.model_dump(), **patch})
+        return self._clubs[organization_id].model_copy(deep=True)
+
     async def match_clubs(self, embedding: list[float], limit: int) -> Optional[list[tuple[str, float]]]:
         return None  # no vector index in memory; callers do in-process cosine similarity
 

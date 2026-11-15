@@ -42,3 +42,17 @@ def api_client(api_app):
 
     with TestClient(api_app) as client:
         yield client
+
+
+@pytest.fixture
+def demo_rep_auth(api_settings):
+    """Planning, RSO and booking routes need a signed-in club rep: demo sign-in, no .env, no database lookup."""
+    import main
+    from app.api.deps import repo_dep
+    from app.config import get_settings
+
+    main.app.dependency_overrides[get_settings] = lambda: api_settings
+    main.app.dependency_overrides[repo_dep] = lambda: None
+    yield
+    main.app.dependency_overrides.pop(get_settings, None)
+    main.app.dependency_overrides.pop(repo_dep, None)
