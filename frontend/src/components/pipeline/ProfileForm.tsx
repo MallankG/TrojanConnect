@@ -6,13 +6,13 @@ const USED_BY: Record<string, number> = Object.fromEntries(
   FIELDS.map(f => [f.key, Object.values(FORMS).filter(v => v.requires.includes(f.key)).length]),
 );
 const GROUPS = [...new Set(FIELDS.map(f => f.group))];
-const input = "w-full rounded-lg border bg-paper px-2.5 py-2 text-ink";
+const input = "w-full rounded-xl border bg-paper px-3 py-2.5 text-[15px] text-ink focus:border-ink focus:outline-none";
 
 export function ProfileForm({ profile, onSave }: { profile: Profile; onSave: (patch: Record<string, unknown>) => void }) {
   return (
     <form className="grid grid-cols-[repeat(auto-fill,minmax(min(100%,320px),1fr))] gap-4" onSubmit={e => e.preventDefault()}>
       {GROUPS.map(g => (
-        <fieldset key={g} className="m-0 rounded-xl border-0 bg-surface p-4 shadow-sm">
+        <fieldset key={g} className="m-0 rounded-2xl border border-line bg-paper p-4">
           <legend className="float-left mb-2 w-full p-0 font-bold">{g}</legend>
           <div className="clear-both">
             {FIELDS.filter(f => f.group === g && fieldApplies(profile, f.key)).map(f => (
@@ -29,7 +29,7 @@ export function Field({ f, profile, onSave }: { f: FieldDef; profile: Profile; o
   const v = profile[f.key];
   const prob = f.optional ? null : fieldProblem(profile, f.key);
   const bad = !!prob && prob !== "missing";
-  const border = bad ? "border-late" : "border-line";
+  const border = bad ? "border-cardinal" : "border-line";
   const commit = (val: unknown) => { if (val !== v) onSave({ [f.key]: val }); };
   const id = `fld-${f.key}`;
 
@@ -80,12 +80,12 @@ export function Field({ f, profile, onSave }: { f: FieldDef; profile: Profile; o
 
   return (
     <div className="mb-3 grid gap-1 rounded-lg" data-field={f.key}>
-      <label id={`${id}-l`} htmlFor={f.type === "bool" || f.type === "multi" ? undefined : id} className="text-[13px] text-muted">
+      <label id={`${id}-l`} htmlFor={f.type === "bool" || f.type === "multi" ? undefined : id} className="text-[13px] text-gray-70">
         {f.label}{f.optional && " (optional)"}
       </label>
       {control}
-      {bad && <span className="text-xs text-late">{prob}</span>}
-      {USED_BY[f.key] > 0 && <span className="text-[11px] text-muted">Used by {USED_BY[f.key]} form{USED_BY[f.key] > 1 ? "s" : ""}</span>}
+      {bad && <span className="text-xs text-cardinal">{prob}</span>}
+      {USED_BY[f.key] > 0 && <span className="text-[11px] text-gray-70">Used by {USED_BY[f.key]} form{USED_BY[f.key] > 1 ? "s" : ""}</span>}
     </div>
   );
 }

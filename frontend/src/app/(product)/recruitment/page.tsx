@@ -1,6 +1,6 @@
 import type { Metadata } from "next";
 import { Only } from "@/components/layout/AppShell";
-import { Recruitment } from "@/components/screens/club";
+import { Recruitment } from "@/components/screens/clubLive";
 
 export const metadata: Metadata = { title: "Recruitment" };
 

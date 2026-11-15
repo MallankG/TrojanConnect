@@ -9,6 +9,7 @@ from app.api.deps import repo_dep
 from app.config import Settings, get_settings
 from app.schemas.common import AppError
 from app.security.actor import Actor
+from app.security.demo_roles import apply_demo_roles
 
 UNAUTHENTICATED = "UNAUTHENTICATED"
 DEFAULT_DEMO_USER = "demo-student-1"
@@ -64,6 +65,7 @@ async def get_actor(
                 get = demo.get if isinstance(demo, dict) else lambda k, d="": getattr(demo, k, d)
                 actor.display_name = str(get("display_name", "") or "")
                 actor.email = str(get("email", "") or "")
+        apply_demo_roles(actor)
         return actor
 
     raise _unauthenticated("Sign in required.")

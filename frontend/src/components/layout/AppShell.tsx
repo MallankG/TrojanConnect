@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { DropdownMenu, Popover } from "radix-ui";
@@ -15,26 +15,27 @@ import {
   Library,
   MessageCircle,
   Plus,
+  Sparkles,
   Ticket,
   Users,
   Volume2,
   VolumeX,
   type LucideIcon,
 } from "lucide-react";
-import { api, useDb, useUser } from "@/lib/api/client";
+import { campus, useUser } from "@/lib/api/client";
 import type { DemoUser, Role } from "@/lib/api/types";
 import { useSound } from "@/lib/sound/SoundProvider";
 import { sound } from "@/lib/sound/engine";
 import { fmtRelative } from "@/lib/time";
-import { Avatar, Button, ListSkeleton, ToastProvider, buttonClass, useToast } from "@/components/ui/kit";
+import { Avatar, ListSkeleton, ToastProvider, buttonClass } from "@/components/ui/kit";
 
 type NavItem = { href: string; label: string; icon: LucideIcon };
 
 export const NAV: Record<Role, NavItem[]> = {
   club_rep: [
     { href: "/dashboard", label: "Home", icon: House },
+    { href: "/plan", label: "Assistant", icon: Sparkles },
     { href: "/bookings", label: "Bookings", icon: Ticket },
-    { href: "/conversations", label: "Chats", icon: MessageCircle },
     { href: "/club-profile", label: "Club", icon: Users },
   ],
   venue_reviewer: [{ href: "/venue-review", label: "Review queue", icon: ClipboardCheck }],
@@ -99,7 +100,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
     <ToastProvider>
       <div className="flex min-h-dvh flex-col">
         <p className="bg-gold-25 px-4 py-1.5 text-center text-[13px] text-ink">
-          Demo mode. Data is seeded and venue availability is simulated. No real reservation is
+          Demo mode. Clubs and club events come from public club pages; bookings, venues and availability are simulated. No real reservation is
           made.
         </p>
         <TopBar user={user} />
@@ -112,17 +113,8 @@ export function AppShell({ children }: { children: React.ReactNode }) {
 
 function TopBar({ user }: { user: DemoUser }) {
   const pathname = usePathname();
-  const router = useRouter();
-  const toast = useToast();
   const { on, toggle } = useSound();
   const nav = NAV[user.role];
-
-  const createRequest = () => {
-    const result = api.startBooking();
-    if (!result.ok) return toast(result.error.message, "bad");
-    sound.play("send");
-    router.push(`/conversations/${result.data.conversationId}`);
-  };
 
   return (
     <header className="sticky top-0 z-40 border-b border-line bg-paper/90 backdrop-blur">
@@ -154,10 +146,10 @@ function TopBar({ user }: { user: DemoUser }) {
         <div className="flex items-center gap-1.5">
           {user.role === "club_rep" && (
             <span className="hidden lg:block">
-              <Button variant="primary" onClick={createRequest}>
+              <Link href="/plan" className={buttonClass("primary")}>
                 <Plus aria-hidden className="size-4" />
-                Create event request
-              </Button>
+                Plan an event
+              </Link>
             </span>
           )}
           <button
@@ -178,12 +170,25 @@ function TopBar({ user }: { user: DemoUser }) {
 }
 
 function Notifications({ user }: { user: DemoUser }) {
-  const db = useDb();
-  const items = db.notifications.filter((n) => n.userId === user.id).slice(0, 8);
-  const unread = items.filter((n) => !n.read).length;
+  // Live: club posts from clubs you follow, government announcements, and representatives' inboxes.
+  const feed = campus.useNotifications(user.role !== "venue_reviewer");
+  const items = feed.data ?? [];
+  const [seenAt, setSeenAt] = useState<string>("");
+  useEffect(() => {
+    let saved = "";
+    try { saved = localStorage.getItem(`tc-seen-${user.id}`) ?? ""; } catch { /* storage unavailable */ }
+    const frame = requestAnimationFrame(() => setSeenAt(saved));
+    return () => cancelAnimationFrame(frame);
+  }, [user.id]);
+  const unread = items.filter((n) => n.at > seenAt).length;
+  const markRead = () => {
+    const now = new Date().toISOString();
+    setSeenAt(now);
+    try { localStorage.setItem(`tc-seen-${user.id}`, now); } catch { /* storage unavailable */ }
+  };
 
   return (
-    <Popover.Root onOpenChange={(open) => !open && unread > 0 && api.markNotificationsRead()}>
+    <Popover.Root onOpenChange={(open) => !open && unread > 0 && markRead()}>
       <Popover.Trigger
         aria-label={unread ? `Notifications, ${unread} unread` : "Notifications"}
         className="relative grid size-10 place-items-center rounded-full hover:bg-wash"
@@ -201,7 +206,7 @@ function Notifications({ user }: { user: DemoUser }) {
         >
           <p className="px-3 pb-1 pt-2 text-sm font-semibold">Notifications</p>
           {items.length === 0 ? (
-            <p className="px-3 pb-3 pt-1 text-sm text-gray-70">Nothing yet. Updates on your requests appear here.</p>
+            <p className="px-3 pb-3 pt-1 text-sm text-gray-70">{feed.error ?? "Nothing yet. Posts from clubs you save, and student government announcements, appear here."}</p>
           ) : (
             <ul>
               {items.map((n) => (
@@ -210,7 +215,7 @@ function Notifications({ user }: { user: DemoUser }) {
                     <Link href={n.href} className="flex items-start gap-2.5 rounded-xl px-3 py-2.5 hover:bg-wash">
                       <span
                         aria-hidden
-                        className={`mt-1.5 size-2 shrink-0 rounded-full ${n.read ? "bg-gray-30" : "bg-cardinal"}`}
+                        className={`mt-1.5 size-2 shrink-0 rounded-full ${n.at <= seenAt ? "bg-gray-30" : "bg-cardinal"}`}
                       />
                       <span className="min-w-0">
                         <span className="block text-[15px] leading-snug">{n.text}</span>

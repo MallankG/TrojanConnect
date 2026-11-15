@@ -1,0 +1,132 @@
+[
+  {
+    "id": "usg-about",
+    "scope": "USG",
+    "title": "What USG is and how it is organised",
+    "excerpt": "The USC Undergraduate Student Government is the official governing body of over 20,000 undergraduates at USC. It has Executive, Legislative and Judicial branches, plus Advocacy, Communications, Funding and Programming departments. Its Funding branch disburses nearly $350,000 for research, student organisations and professional development.",
+    "url": "https://usg.usc.edu/branches/about-2-0/",
+    "owner": "USC Undergraduate Student Government",
+    "kind": "official",
+    "page_updated": "2026-05-28"
+  },
+  {
+    "id": "usg-funding",
+    "scope": "USG",
+    "title": "USG funding: who can apply and deadlines",
+    "excerpt": "Recognized Student Organizations and USC undergraduates can apply through the USG Funding Application on EngageSC after reviewing the funding guidelines and modules. Applications are due Wednesdays by 11:59 PM, six academic weeks before the event when using an approved vendor, or nine academic weeks before the first payment for approved USC vendors. The department can allocate up to $356,100 a year; each RSO can have up to 4 events funded per semester, staying under $8,000 from USG Funding per year. Questions: usgfunds@usc.edu.",
+    "url": "https://usg.usc.edu/branches/funding/",
+    "owner": "USG Funding Department",
+    "kind": "official",
+    "page_updated": "2026-10-30"
+  },
+  {
+    "id": "usg-senate",
+    "scope": "USG",
+    "title": "The USG Senate",
+    "excerpt": "The Senate has twelve elected Senators who represent undergraduate students and meets in person every week. Students with an idea or project, or organisations that want a Senator to visit, can contact the Speaker of the Senate at usgsots@usc.edu.",
+    "url": "https://usg.usc.edu/branches/senate/",
+    "owner": "USG Legislative Branch",
+    "kind": "official",
+    "page_updated": "2026-08-18"
+  },
+  {
+    "id": "usg-committees",
+    "scope": "USG",
+    "title": "USG standing committees",
+    "excerpt": "USG has six standing legislative committees: Academic Affairs; Accessibility; Affordability & Basic Needs (including FGLI and undocumented students); External Affairs (the surrounding community and local government); Sustainability & Campus Infrastructure (infrastructure, safety, hospitality and sustainable operations); and Wellness Affairs.",
+    "url": "https://usg.usc.edu/branches/standing-committees/",
+    "owner": "USG Legislative Branch",
+    "kind": "official",
+    "page_updated": "2024-02-08"
+  },
+  {
+    "id": "usg-programming",
+    "scope": "USG",
+    "title": "USG Programming: assemblies and committees",
+    "excerpt": "The Programming Department works with student organisations to coordinate activities and pool resources. It includes 16 community assemblies (for example the Black Student Assembly, Environmental Student Assembly, First Generation Student Assembly, International Student Assembly and Student Assembly for Accessibility) and 4 special-interest committees: Concerts, Performing Arts, Trojan Pride and Speakers. Assemblies act as umbrella organisations that give funding, advice and event planning support.",
+    "url": "https://usg.usc.edu/branches/programming/",
+    "owner": "USG Programming Department",
+    "kind": "official",
+    "page_updated": "2026-10-23"
+  },
+  {
+    "id": "usg-advocacy",
+    "scope": "USG",
+    "title": "USG Advocacy Department",
+    "excerpt": "The Advocacy Department bridges university administrators and students on issues affecting campus communities. Advocacy Liaisons, nominated by student assemblies and campus offices, carry each community's priorities. The department works under the Chief Diversity Officer.",
+    "url": "https://usg.usc.edu/branches/advocacy/",
+    "owner": "USG Advocacy Department",
+    "kind": "official",
+    "page_updated": "2026-06-02"
+  },
+  {
+    "id": "usg-elections-2026",
+    "scope": "USG",
+    "title": "USG elections 2026",
+    "excerpt": "Applications for the 2026 USG elections opened on 19 November 2025. Voting ran online from 17 to 22 February 2026. Preliminary results were announced on 24 February 2026, and final results at the 3 March 2026 Senate meeting in TCC 450. The election chose the President, Vice President and twelve Senators.",
+    "url": "https://usg.usc.edu/elections-2026/",
+    "owner": "USG Judicial Council",
+    "kind": "official",
+    "page_updated": "2026-06-01"
+  },
+  {
+    "id": "usg-contact",
+    "scope": "USG",
+    "title": "Contacting USG: office location and email",
+    "excerpt": "USG's office is at 3607 Trousdale Parkway, SKS 404, Los Angeles, CA 90089. The general email is usg@usc.edu.",
+    "url": "https://usg.usc.edu/contact/",
+    "owner": "USC Undergraduate Student Government",
+    "kind": "official",
+    "page_updated": "2026-11-04"
+  },
+  {
+    "id": "usg-turnout-news",
+    "scope": "USG",
+    "title": "USG election turnout (news report)",
+    "excerpt": "The Daily Trojan reported that turnout in USG elections has been falling, with only around 17% of the undergraduate student body voting in the 2025 general election.",
+    "url": "https://dailytrojan.com/2026/02/13/students-reflect-on-usg-amid-election/",
+    "owner": "Daily Trojan (student newspaper, not USG)",
+    "kind": "news",
+    "page_updated": "2026-02-13"
+  },
+  {
+    "id": "usg-fee-news",
+    "scope": "USG",
+    "title": "How USG is funded (news report)",
+    "excerpt": "Annenberg Media reported that every undergraduate pays for USG's budget through the student programming fee, $64 each semester. The Daily Trojan reported that the 2025-26 budget, passed by the Senate on 15 April, cut programming funding by roughly 12%.",
+    "url": "https://www.uscannenbergmedia.com/2025/03/05/what-is-usg-an-inside-look-at-how-student-government-works/",
+    "owner": "Annenberg Media and Daily Trojan (news, not USG)",
+    "kind": "news",
+    "page_updated": "2025-09-08"
+  },
+  {
+    "id": "gsg-about",
+    "scope": "GSG",
+    "title": "What GSG is",
+    "excerpt": "Graduate Student Government represents more than 27,500 graduate and professional students at USC. It has an Executive Board of 29 officers selected each spring and elected senators from every school and department. GSG senators meet monthly. Offices: UPC, 3607 Trousdale Pkwy SKS 410; HSC, 1969 Zonal Avenue. The President can be reached at gsgpres@usc.edu.",
+    "url": "https://gsg.usc.edu/",
+    "owner": "USC Graduate Student Government",
+    "kind": "official",
+    "page_updated": "2026-10-03"
+  },
+  {
+    "id": "gsg-senate",
+    "scope": "GSG",
+    "title": "The GSG Senate",
+    "excerpt": "Senate approval is required for change in GSG: senators carry out committee goals, elect GSG leadership, confirm positions and approve the budget. Each senator represents an academic unit. Senate meetings are open to everyone, with registration on EngageSC.",
+    "url": "https://gsg.usc.edu/gsg-senate/",
+    "owner": "GSG Senate",
+    "kind": "official",
+    "page_updated": "2026-09-08"
+  },
+  {
+    "id": "gsg-finance",
+    "scope": "GSG",
+    "title": "GSG funding and the Finance Committee",
+    "excerpt": "GSG's Finance Committee reviews and processes all funding applications submitted to GSG, checks them against GSG funding policy and their impact on graduate students, and reviews RSO applications weekly. Finance contacts: gsgupcfi@usc.edu (UPC) and gsghscfi@usc.edu (HSC).",
+    "url": "https://gsg.usc.edu/committees/",
+    "owner": "GSG Finance Committee",
+    "kind": "official",
+    "page_updated": "2025-09-17"
+  }
+]

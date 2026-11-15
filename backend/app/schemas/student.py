@@ -153,7 +153,7 @@ class ClubInterest(StrictModel):
 
 # ---------- Conversations ----------
 AgentType = Literal["student", "club"]
-Channel = Literal["web", "whatsapp", "telegram"]
+Channel = Literal["web", "whatsapp", "telegram", "slack"]
 
 
 class Conversation(StrictModel):

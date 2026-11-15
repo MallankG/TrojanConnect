@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import { Page } from "@/components/layout/AppShell";
 import { PipelineApp } from "@/components/pipeline/PipelineApp";
 
 export const metadata: Metadata = {
@@ -7,5 +8,5 @@ export const metadata: Metadata = {
 };
 
 export default function PipelinePage() {
-  return <PipelineApp />;
+  return <Page wide><PipelineApp /></Page>;
 }

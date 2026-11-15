@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import { Page } from "@/components/layout/AppShell";
 import { VenueReviewApp } from "@/components/review/VenueReviewApp";
 
 export const metadata: Metadata = {
@@ -7,5 +8,5 @@ export const metadata: Metadata = {
 };
 
 export default function VenueReviewPage() {
-  return <VenueReviewApp />;
+  return <Page wide><VenueReviewApp /></Page>;
 }

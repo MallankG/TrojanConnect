@@ -7,6 +7,7 @@
 import { useCallback, useEffect, useState } from "react";
 import { bookingApi, type Booking, type Reviewer } from "@/lib/api-client";
 import { Pill, btn, btnPrimary, type Tone } from "@/components/pipeline/ui";
+import { SimulatedTag } from "@/components/ui/kit";
 
 const OPEN = ["PENDING_HUMAN_REVIEW", "APPROVED", "CANCEL_REQUESTED"];
 const TONE: Record<string, Tone> = { PENDING_HUMAN_REVIEW: "waiting", APPROVED: "ready", CANCEL_REQUESTED: "waiting", CONFIRMED: "done", REJECTED: "late", CHANGES_REQUESTED: "late", CANCELLED: "plain" };
@@ -51,35 +52,35 @@ export function VenueReviewApp() {
   const openCount = queue?.filter(b => OPEN.includes(b.state)).length ?? 0;
 
   return (
-    <div className="min-h-screen bg-paper text-ink">
-      <header className="flex flex-wrap items-end justify-between gap-4 px-4 pt-7 pb-4 md:px-8">
+    <div className="text-ink">
+      <header className="flex flex-wrap items-end justify-between gap-4 pb-6">
         <div>
-          <p className="text-xs font-semibold uppercase tracking-wider text-muted">TrojanConnect</p>
-          <h1 className="mt-0.5 mb-1 text-[28px] font-bold tracking-tight">Venue review</h1>
-          <p className="text-muted">Requests the Club and Venue agents prepared. You decide; nothing is confirmed without you.</p>
+          <p className="text-xs font-semibold text-gray-70">Club and Venue agents</p>
+          <h1 className="mt-0.5 mb-1 text-[clamp(1.5rem,3.2vw,2.25rem)] font-semibold leading-[1.05] tracking-[-0.02em]">Venue review</h1>
+          <p className="text-gray-70">Requests the Club and Venue agents prepared. You decide; nothing is confirmed without you.</p>
         </div>
-        <label className="grid gap-1 text-[13px] text-muted">
+        <label className="grid gap-1 text-[13px] text-gray-70">
           Signed in as (demo identity, stands in for real sign-in)
-          <select value={me} onChange={e => pick(e.target.value)} className="rounded-lg border border-line bg-surface px-2.5 py-2 text-ink">
+          <select value={me} onChange={e => pick(e.target.value)} className="rounded-lg border border-line bg-paper px-2.5 py-2 text-ink">
             {reviewers.map(r => <option key={r.id} value={r.id}>{r.name}</option>)}
           </select>
         </label>
       </header>
 
-      {error && <p role="alert" className="mx-4 mb-3 rounded-lg bg-late-bg px-3 py-2 text-sm text-late md:mx-8">{error}</p>}
+      {error && <p role="alert" className="mb-3 rounded-xl bg-wash px-3 py-2 text-sm text-cardinal">{error}</p>}
       {reviewer && reviewer.role !== "venue_reviewer" && (
-        <p role="status" className="mx-4 mb-3 rounded-lg bg-wait-bg px-3 py-2 text-sm text-wait md:mx-8">
+        <p role="status" className="mb-3 rounded-xl bg-gold-25 px-3 py-2 text-sm text-ink">
           {reviewer.name} has no venue authority, so there is nothing to review. Student government does not approve venue reservations.
         </p>
       )}
 
-      <main className="grid items-start gap-6 px-4 pb-12 md:px-8 lg:grid-cols-[minmax(260px,360px)_1fr]">
-        <section aria-label="Review queue" className="rounded-xl bg-surface p-3 shadow-sm">
-          <h2 className="mb-2 px-1 text-xs font-semibold uppercase tracking-wider text-muted">
+      <main className="grid items-start gap-6 lg:grid-cols-[minmax(260px,360px)_1fr]">
+        <section aria-label="Review queue" className="rounded-2xl bg-paper p-3 border border-line">
+          <h2 className="mb-2 px-1 text-xs font-semibold text-gray-70">
             Queue{reviewer?.authorities.length ? ` · ${reviewer.authorities.join(", ")}` : ""} · {openCount} open
           </h2>
-          {queue === null && <p className="px-1 text-sm text-muted">Loading…</p>}
-          {queue?.length === 0 && <p className="px-1 text-sm text-muted">No requests yet.</p>}
+          {queue === null && <p className="px-1 text-sm text-gray-70">Loading…</p>}
+          {queue?.length === 0 && <p className="px-1 text-sm text-gray-70">No requests yet.</p>}
           <ul className="m-0 grid list-none gap-1.5 p-0">
             {queue?.map(b => (
               <li key={b.id}>
@@ -89,7 +90,7 @@ export function VenueReviewApp() {
                     <span className="truncate text-sm font-semibold">{String(b.review?.packet?.event?.title ?? "Untitled event")}</span>
                     <Pill tone={TONE[b.state] ?? "plain"}>{b.state_label}</Pill>
                   </div>
-                  <div className="text-xs text-muted">{b.kind_label} · {b.accepted_proposal ? `${b.accepted_proposal.venue_name}, ${fmt(b.accepted_proposal.time.start)}` : b.authority?.name}</div>
+                  <div className="text-xs text-gray-70">{b.kind_label} · {b.accepted_proposal ? `${b.accepted_proposal.venue_name}, ${fmt(b.accepted_proposal.time.start)}` : b.authority?.name}</div>
                 </button>
               </li>
             ))}
@@ -117,32 +118,32 @@ function ReviewDetail({ b, reviewer, onDone }: { b: Booking; reviewer: string; o
   };
 
   return (
-    <article className="rounded-xl bg-surface p-6 shadow-sm" aria-label="Request detail">
+    <article className="rounded-2xl bg-paper p-6 border border-line" aria-label="Request detail">
       <div className="flex flex-wrap items-center gap-2">
         <Pill tone={TONE[b.state] ?? "plain"}>{b.state_label}</Pill>
         <Pill tone="plain">{b.kind_label} · {b.authority?.name}</Pill>
-        {isVenue && <Pill tone="waiting">Simulated availability</Pill>}
+        {isVenue && <SimulatedTag label="Simulated availability" />}
       </div>
       <h2 className="mt-2 mb-3 text-xl font-bold">{String(packet?.event?.title ?? "Untitled event")}</h2>
 
       <ul className="m-0 list-none p-0 text-sm">{packet?.summary.map(l => <li key={l} className="py-0.5">{l}</li>)}</ul>
-      <p className="mt-1 text-xs text-muted">Requested by {String(packet?.requester?.name ?? "?")} ({String(packet?.requester?.email ?? "no email")}, {String(packet?.requester?.eboard_position ?? "role not given")})</p>
+      <p className="mt-1 text-xs text-gray-70">Requested by {String(packet?.requester?.name ?? "?")} ({String(packet?.requester?.email ?? "no email")}, {String(packet?.requester?.eboard_position ?? "role not given")})</p>
 
       {b.accepted_proposal && (
         <div className="mt-3 rounded-lg border border-line bg-paper p-3">
-          <p className="mb-1 text-xs font-semibold uppercase tracking-wider text-muted">Proposal the club accepted</p>
+          <p className="mb-1 text-xs font-semibold text-gray-70">Proposal the club accepted</p>
           <p className="m-0 text-sm font-semibold">{b.accepted_proposal.venue_name} · {fmt(b.accepted_proposal.time.start)}–{new Date(b.accepted_proposal.time.end).toLocaleTimeString(undefined, { hour: "numeric", minute: "2-digit", timeZone: "America/Los_Angeles" })}</p>
-          <p className="m-0 text-[13px] text-muted">Seats {b.accepted_proposal.capacity} · hold {b.accepted_proposal.hold ? `${fmt(b.accepted_proposal.hold.start)} → ${new Date(b.accepted_proposal.hold.end).toLocaleTimeString(undefined, { hour: "numeric", minute: "2-digit", timeZone: "America/Los_Angeles" })}` : "event time only"}</p>
-          {(packet?.differences ?? []).map(d => <p key={d} className="m-0 mt-1 text-[13px] text-wait">≠ {d} (the club accepted this change)</p>)}
+          <p className="m-0 text-[13px] text-gray-70">Seats {b.accepted_proposal.capacity} · hold {b.accepted_proposal.hold ? `${fmt(b.accepted_proposal.hold.start)} → ${new Date(b.accepted_proposal.hold.end).toLocaleTimeString(undefined, { hour: "numeric", minute: "2-digit", timeZone: "America/Los_Angeles" })}` : "event time only"}</p>
+          {(packet?.differences ?? []).map(d => <p key={d} className="m-0 mt-1 text-[13px] text-ink">≠ {d} (the club accepted this change)</p>)}
           {packet?.checks && (
-            <p className="m-0 mt-1.5 text-[13px] text-ok">{Object.entries(packet.checks).map(([k, v]) => `${v ? "✓" : "✗"} ${k.replace("_", " ")}`).join("  ")}</p>
+            <p className="m-0 mt-1.5 text-[13px] text-ink">{Object.entries(packet.checks).map(([k, v]) => `${v ? "✓" : "✗"} ${k.replace("_", " ")}`).join("  ")}</p>
           )}
-          {packet?.negotiation_summary && <p className="m-0 mt-1 text-xs text-muted">{packet.negotiation_summary}</p>}
+          {packet?.negotiation_summary && <p className="m-0 mt-1 text-xs text-gray-70">{packet.negotiation_summary}</p>}
         </div>
       )}
 
       {packet && packet.attention.length > 0 && (
-        <div className="mt-3 rounded-lg bg-wait-bg p-3 text-[13px] text-wait">
+        <div className="mt-3 rounded-lg bg-gold-25 p-3 text-[13px] text-ink">
           <p className="mb-1 font-semibold">Check before deciding</p>
           <ul className="m-0 list-disc pl-[18px]">{packet.attention.map(a => <li key={a}>{a}</li>)}</ul>
           {packet.not_auto_answered && <p className="mt-1.5">{packet.not_auto_answered}</p>}
@@ -154,18 +155,18 @@ function ReviewDetail({ b, reviewer, onDone }: { b: Booking; reviewer: string; o
           {b.review.decisions.map((d, i) => <li key={i}><b>{d.reviewer_name}</b>: {d.decision.replaceAll("_", " ").toLowerCase()}{d.reason ? ` (${d.reason})` : ""} · {fmt(d.at)}</li>)}
         </ul>
       )}
-      {b.confirmation && <p className="mt-2 text-sm text-ok">✓ Confirmed with reference {b.confirmation.reference}</p>}
-      {error && <p role="alert" className="mt-3 rounded-lg bg-late-bg px-3 py-2 text-sm text-late">{error}</p>}
+      {b.confirmation && <p className="mt-2 text-sm text-ink">✓ Confirmed with reference {b.confirmation.reference}</p>}
+      {error && <p role="alert" className="mt-3 rounded-lg bg-wash px-3 py-2 text-sm text-cardinal">{error}</p>}
 
       {(b.state === "PENDING_HUMAN_REVIEW" || b.state === "APPROVED") && (
         <div className="mt-4 grid gap-2.5">
-          <label className="grid gap-1 text-[13px] text-muted">
+          <label className="grid gap-1 text-[13px] text-gray-70">
             {refLabel}{b.state === "PENDING_HUMAN_REVIEW" ? ": optional now; without it the request stays approved but not confirmed" : ""}
             <input value={reference} onChange={e => setReference(e.target.value)} inputMode={isVenue ? "numeric" : "text"} maxLength={40}
               className="rounded-lg border border-line bg-paper px-2.5 py-2 text-ink" />
           </label>
           {b.state === "PENDING_HUMAN_REVIEW" && (
-            <label className="grid gap-1 text-[13px] text-muted">
+            <label className="grid gap-1 text-[13px] text-gray-70">
               Reason (required to reject or request changes)
               <textarea value={reason} onChange={e => setReason(e.target.value)} rows={2} maxLength={1000} className="rounded-lg border border-line bg-paper px-2.5 py-2 text-ink" />
             </label>
@@ -192,9 +193,9 @@ function ReviewDetail({ b, reviewer, onDone }: { b: Booking; reviewer: string; o
       <details className="mt-4">
         <summary className="cursor-pointer text-[13px] font-semibold">Agent conversation and audit trail</summary>
         <ol className="mt-2 grid list-none gap-1 p-0 text-[13px]">
-          {b.messages.map(m => <li key={m.id}><span className="font-semibold">{m.from}</span> <span className="text-xs text-muted">{m.type}</span> · {m.note}</li>)}
+          {b.messages.map(m => <li key={m.id}><span className="font-semibold">{m.from}</span> <span className="text-xs text-gray-70">{m.type}</span> · {m.note}</li>)}
         </ol>
-        <ul className="mt-2 list-none p-0 text-xs text-muted">
+        <ul className="mt-2 list-none p-0 text-xs text-gray-70">
           {b.timeline.map((e, i) => <li key={i}>{fmt(e.at)} · {e.actor} ({e.role}) · {e.to_state ? `${e.from_state} → ${e.to_state}` : e.action} · {e.reason}</li>)}
         </ul>
       </details>

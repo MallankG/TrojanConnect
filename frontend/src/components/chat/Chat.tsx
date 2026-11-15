@@ -27,7 +27,7 @@ function send(conversation: Conversation, text: string): Promise<Result<null>> {
 
 const ROLE_LINE: Record<Conversation["kind"], string> = {
   booking: "Acts for your club. Prepares and negotiates; cannot approve or confirm.",
-  club: "Answers from information the club's officers approved.",
+  club: "Answers only from the club's public profile, FAQ and events.",
   student: "Uses only the interests you chose and public club profiles.",
   government: "Answers from approved sources. Not an elected representative.",
 };
@@ -253,6 +253,9 @@ function Bubble({ message }: { message: ChatMessage }) {
         )}
         {message.text}
       </p>
+      {message.toolSummary && (
+        <p className="mt-1 pl-1 text-xs text-gray-70">Checked: {message.toolSummary}</p>
+      )}
       {message.sources && (
         <ul className="mt-2 space-y-1 pl-1">
           {message.sources.map((s) => (
@@ -266,7 +269,9 @@ function Bubble({ message }: { message: ChatMessage }) {
                 <ExternalLink aria-hidden className="size-3.5" />
                 {s.title}
               </a>
-              <span className="tabular text-xs text-gray-70"> · sample source, verified {fmtDay(s.verifiedAt)}</span>
+              <span className="tabular text-xs text-gray-70">
+                {" "}· {s.kind === "news" ? "news report" : s.owner ?? "official source"}, checked {fmtDay(s.verifiedAt)}
+              </span>
             </li>
           ))}
         </ul>
@@ -319,14 +324,14 @@ function Card({ card }: { card: MessageCard }) {
     return (
       <ul className="space-y-1 rounded-2xl border border-line bg-paper p-2">
         {card.clubIds.map((id) => {
-          const club = db.clubs.find((c) => c.id === id);
-          if (!club) return null;
+          const name = card.names?.[id] ?? db.clubs.find((c) => c.id === id)?.name;
+          if (!name) return null;
           return (
             <li key={id}>
               <Link href={`/clubs/${id}`} className="flex items-center gap-3 rounded-xl p-2 hover:bg-wash">
-                <Poster seed={club.id} name={club.name} className="size-12" />
+                <Poster seed={id} name={name} className="size-12" />
                 <span className="min-w-0">
-                  <span className="block truncate text-[15px] font-semibold">{club.name}</span>
+                  <span className="block truncate text-[15px] font-semibold">{name}</span>
                   <span className="block truncate text-sm text-gray-70">
                     Matched on {card.reasons[id]?.join(", ").toLowerCase()}
                   </span>
@@ -340,6 +345,7 @@ function Card({ card }: { card: MessageCard }) {
   }
 
   if (card.type === "feedback_offer") return <FeedbackOffer card={card} />;
+  if (card.type === "confirm") return <ConfirmCard card={card} />;
 
   return (
     <div className="rounded-2xl border border-line bg-paper p-4 text-[15px]">
@@ -354,9 +360,41 @@ function Card({ card }: { card: MessageCard }) {
   );
 }
 
+/** The agent wants to write something (e.g. send interest to a club). Nothing happens until the user says yes (PRD 8.1). */
+function ConfirmCard({ card }: { card: Extract<MessageCard, { type: "confirm" }> }) {
+  const db = useDb();
+  const toast = useToast();
+  const conversation = db.conversations.find((c) => c.messages.some((m) => m.card?.type === "confirm" && m.card.summary === card.summary));
+  const [busy, setBusy] = useState(false);
+  const answer = async (confirmed: boolean) => {
+    if (!conversation) return;
+    setBusy(true);
+    const result = await api.confirmAgentAction(conversation.id, confirmed);
+    setBusy(false);
+    if (!result.ok) toast(result.error.message, "bad");
+    else sound.play(confirmed ? "send" : "tick");
+  };
+  return (
+    <div className="rounded-2xl border border-line bg-paper p-4 text-[15px]">
+      <p className="text-sm text-gray-70">Needs your confirmation</p>
+      <p className="mt-1">{card.summary}</p>
+      {card.done ? (
+        <p className="mt-2 text-sm text-gray-70">Answered.</p>
+      ) : (
+        <div className="mt-3 flex flex-wrap gap-2">
+          <Button variant="primary" disabled={busy} onClick={() => answer(true)}>Yes, send it</Button>
+          <Button disabled={busy} onClick={() => answer(false)}>No, cancel</Button>
+        </div>
+      )}
+    </div>
+  );
+}
+
 function FeedbackOffer({ card }: { card: Extract<MessageCard, { type: "feedback_offer" }> }) {
   const db = useDb();
+  const toast = useToast();
   const [share, setShare] = useState(false);
+  const [sending, setSending] = useState(false);
   const conversation = db.conversations.find((c) =>
     c.messages.some((m) => m.card === card || (m.card?.type === "feedback_offer" && m.card.message === card.message)),
   );
@@ -381,13 +419,17 @@ function FeedbackOffer({ card }: { card: Extract<MessageCard, { type: "feedback_
       <Button
         variant="primary"
         className="mt-3"
-        onClick={() => {
-          api.submitFeedback(conversation?.id ?? null, {
+        disabled={sending}
+        onClick={async () => {
+          setSending(true);
+          const result = await api.submitFeedback(conversation?.id ?? null, {
             scope: card.scope,
             category: card.category,
             message: card.message,
             shareIdentity: share,
           });
+          setSending(false);
+          if (!result.ok) return toast(result.error.message, "bad");
           sound.play("send");
         }}
       >

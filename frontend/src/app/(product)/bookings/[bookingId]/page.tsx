@@ -2,7 +2,7 @@ import { Suspense } from "react";
 import type { Metadata } from "next";
 import { Only, Page as Column } from "@/components/layout/AppShell";
 import { ListSkeleton } from "@/components/ui/kit";
-import { BookingDetail } from "@/components/screens/club";
+import { BookingDetail } from "@/components/screens/clubLive";
 
 export const metadata: Metadata = { title: "Booking" };
 

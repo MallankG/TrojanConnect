@@ -4,7 +4,7 @@ import { useState } from "react";
 import Link from "next/link";
 import { useParams, useRouter } from "next/navigation";
 import { CalendarPlus, ChevronRight, Clock, MapPin } from "lucide-react";
-import { api, setRole, useDb, useUser } from "@/lib/api/client";
+import { api, live, setRole, useDb, useUser } from "@/lib/api/client";
 import type { ChatMessage, Conversation, Db } from "@/lib/api/types";
 import { USERS } from "@/lib/api/mock/seed";
 import { FEATURE_LABEL } from "@/lib/api/mock/inventory";
@@ -22,20 +22,25 @@ import { EventList, InterestSheet } from "./student";
 const icsStamp = (iso: string) => iso.replace(/[-:]/g, "").replace(/\.\d{3}/, "");
 
 export function EventPage() {
-  const { eventId } = useParams<{ eventId: string }>();
-  const db = useDb();
+  const { eventId: rawId } = useParams<{ eventId: string }>();
+  const eventId = decodeURIComponent(rawId);
   const user = useUser();
   const [interestOpen, setInterestOpen] = useState(false);
-  const event = db.events.find((e) => e.id === eventId);
-  const club = db.clubs.find((c) => c.id === event?.clubId);
+  // Live: GET /events (no single-event route), then the host club's profile and calendar.
+  const events = live.useEvents();
+  const event = events.data?.find((e) => e.id === eventId);
+  const clubResult = live.useClub(event?.clubId ?? null);
+  const clubEvents = live.useClubEvents(event?.clubId ?? null);
+  const club = clubResult.data;
 
-  if (db.seededAt === "") return <Page><ListSkeleton /></Page>;
+  if (!events.data && !events.error) return <Page><ListSkeleton /></Page>;
+  if (event && !club && !clubResult.error) return <Page><ListSkeleton /></Page>;
   if (!event || !club) {
     return (
       <Page>
         <EmptyState
-          title="Event not found"
-          body="It may have passed, or the demo data was reset."
+          title={events.error ? "Can't load events" : "Event not found"}
+          body={events.error ?? clubResult.error ?? "It may have passed or been removed from the club's calendar."}
           action={<Link href={user ? HOME[user.role] : "/demo"} className={buttonClass("primary")}>Go to home</Link>}
         />
       </Page>
@@ -44,8 +49,8 @@ export function EventPage() {
 
   const heading = fmtDayHeading(event.start);
   const isStudent = user?.role === "student";
-  const more = db.events
-    .filter((e) => e.clubId === club.id && e.id !== event.id && new Date(e.start) > new Date())
+  const more = (clubEvents.data ?? [])
+    .filter((e) => e.id !== event.id && new Date(e.start) > new Date())
     .sort((a, b) => a.start.localeCompare(b.start));
 
   const download = () => {
@@ -60,7 +65,7 @@ export function EventPage() {
       `DTEND:${icsStamp(event.end)}`,
       `SUMMARY:${event.title}`,
       `LOCATION:${event.location}`,
-      `DESCRIPTION:${event.description} (TrojanConnect demo event)`,
+      `DESCRIPTION:${event.description} (from ${club.name}'s published calendar)`,
       "END:VEVENT",
       "END:VCALENDAR",
     ].join("\r\n");
@@ -100,8 +105,7 @@ export function EventPage() {
         <div className="flex items-start gap-3">
           <dt><MapPin aria-hidden className="mt-1 size-5 text-gray-70" /><span className="sr-only">Where</span></dt>
           <dd className="flex flex-wrap items-center gap-2">
-            {event.location}
-            <SimulatedTag label="Demo venue" />
+            {event.location || "Location not published"}
           </dd>
         </div>
       </dl>
@@ -116,7 +120,7 @@ export function EventPage() {
       </div>
 
       <Section title="About this event">
-        <p className="max-w-[65ch] text-[17px] leading-relaxed">{event.description}</p>
+        <p className="max-w-[65ch] text-[17px] leading-relaxed">{event.description || "The club hasn't published details for this event."}</p>
       </Section>
 
       {more.length > 0 && (
@@ -235,12 +239,12 @@ export function SignIn() {
                 <button
                   type="button"
                   onClick={() => {
-                    setRole(u.role);
+                    setRole(u.id);
                     sound.play("send");
                     router.push(HOME[u.role]);
                   }}
                   className={`flex w-full items-center gap-3 rounded-2xl border p-3 text-left hover:border-ink ${
-                    current?.role === u.role ? "border-ink" : "border-line"
+                    current?.id === u.id ? "border-ink" : "border-line"
                   }`}
                 >
                   <Avatar name={u.name} className="size-11 text-sm" />

@@ -22,12 +22,17 @@ import { INVENTORY_VERSION } from "./inventory";
  * the demo is first opened so the lists always look current.
  */
 
-export const DB_VERSION = 3;
+export const DB_VERSION = 6;
 
 export const USERS: DemoUser[] = [
-  { id: "u-maya", name: "Maya Okafor", role: "club_rep", scopeId: "trojan-ai", scopeName: "Trojan AI Society" },
+  { id: "u-maya", name: "Maya Okafor", role: "club_rep", scopeId: "usc-hacksc", scopeName: "HackSC" },
   { id: "u-daniel", name: "Daniel Reyes", role: "venue_reviewer", scopeId: "campus-event-spaces", scopeName: "Campus event spaces" },
-  { id: "u-priya", name: "Priya Shah", role: "student", scopeId: null, scopeName: null },
+  { id: "u-priya", name: "Priya Shah", role: "student", scopeId: null, scopeName: null,
+    interests: ["artificial_intelligence", "machine_learning", "entrepreneurship", "hackathons", "startups"] },
+  { id: "u-marcus", name: "Marcus Bell", role: "student", scopeId: null, scopeName: null,
+    interests: ["film", "music", "performing_arts", "media"] },
+  { id: "u-sofia", name: "Sofia Ramirez", role: "student", scopeId: null, scopeName: null,
+    interests: ["sustainability", "outdoors", "community_service", "health"] },
   { id: "u-jordan", name: "Jordan Lee", role: "gov_rep", scopeId: "USG", scopeName: "Undergraduate Student Government" },
 ];
 

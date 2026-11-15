@@ -1,6 +1,6 @@
 import type { Metadata } from "next";
 import { Only } from "@/components/layout/AppShell";
-import { BookingsList } from "@/components/screens/club";
+import { BookingsList } from "@/components/screens/clubLive";
 
 export const metadata: Metadata = { title: "Bookings" };
 
