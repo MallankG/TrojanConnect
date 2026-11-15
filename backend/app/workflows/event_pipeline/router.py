@@ -14,9 +14,10 @@ import shutil
 import subprocess
 import threading
 from typing import Any, Literal
+from urllib.parse import urlsplit
 
 from fastapi import APIRouter, Depends, Header, HTTPException
-from pydantic import BaseModel
+from pydantic import BaseModel, ConfigDict, Field, field_validator
 
 from . import store
 
@@ -58,32 +59,80 @@ class ProgressUpdate(BaseModel):
 
 
 class RecognitionProgressUpdate(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
     check: str
     value: bool
 
 
 RECOGNITION_CHECKS = {
-    "eligibility",
-    "access",
     "group-details",
-    "roster",
-    "position-acceptance",
+    "roster-entered",
+    "position-instructions-sent",
     "constitution",
     "accountability",
     "organization-details",
-    "officer-commitments",
-    "officer-hazing-training",
-    "officer-learning-path",
+    "submitter-designated",
+    "officer-guide-shared",
     "advisor-eligibility",
     "advisor-position",
     "advisor-training",
     "advisor-commitment",
     "clery-training",
-    "application",
-    "submitted",
     "follow-up",
 }
 
+RecognitionPathway = Literal[
+    "undecided",
+    "new",
+    "reestablishing",
+    "fall_application",
+    "religious_spiritual",
+    "fraternity_sorority",
+]
+ApplicationStatus = Literal[
+    "not_started",
+    "draft",
+    "pending_approval",
+    "requires_modifications",
+    "denied",
+    "recognized",
+]
+OfficerRole = Literal["president", "vicePresident", "secretary", "treasurer", "programmingChair"]
+OfficerRequirement = Literal["commitment", "hazingTraining", "learningPath"]
+
+
+class RecognitionSetupUpdate(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    pathway: RecognitionPathway | None = None
+    engageGroupUrl: str | None = Field(default=None, max_length=500)
+    additionalMemberCount: int | None = Field(default=None, ge=0, le=1000)
+    acceptedPositionCount: int | None = Field(default=None, ge=0, le=1006)
+
+    @field_validator("engageGroupUrl")
+    @classmethod
+    def validate_engage_group_url(cls, value: str | None) -> str | None:
+        if value is None or value == "":
+            return value
+        parsed = urlsplit(value)
+        if parsed.scheme != "https" or parsed.netloc.lower() != "engage.usc.edu":
+            raise ValueError("Group page must be an HTTPS URL on engage.usc.edu.")
+        return value
+
+
+class RecognitionStatusUpdate(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    status: ApplicationStatus
+
+
+class OfficerProgressUpdate(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    role: OfficerRole
+    requirement: OfficerRequirement
+    value: bool
 
 def _node() -> str:
     node = shutil.which("node")
@@ -127,9 +176,40 @@ def put_recognition_progress(u: RecognitionProgressUpdate) -> dict[str, Any]:
         raise HTTPException(400, f"Unknown recognition check '{u.check}'")
 
     def apply(s: dict[str, Any]) -> None:
-        recognition = s.setdefault("recognition", {"checks": {}})
+        recognition = s.setdefault("recognition", store.empty_recognition())
         recognition.setdefault("checks", {})[u.check] = u.value
         store.add_log(s, f"recognition: {'✓' if u.value else '✗'} {u.check}")
+
+    return store.update(apply)
+
+
+@router.put("/recognition/setup")
+def put_recognition_setup(u: RecognitionSetupUpdate) -> dict[str, Any]:
+    def apply(s: dict[str, Any]) -> None:
+        recognition = s.setdefault("recognition", store.empty_recognition())
+        changes = u.model_dump(exclude_unset=True, exclude_none=True)
+        recognition.update(changes)
+        for key, value in changes.items():
+            store.add_log(s, f"recognition setup: {key} = {value}")
+
+    return store.update(apply)
+
+
+@router.put("/recognition/officer-progress")
+def put_officer_progress(u: OfficerProgressUpdate) -> dict[str, Any]:
+    def apply(s: dict[str, Any]) -> None:
+        officers = s.setdefault("recognition", store.empty_recognition())["officers"]
+        officers[u.role][u.requirement] = u.value
+        store.add_log(s, f"recognition: {u.role} {u.requirement} {'✓' if u.value else '✗'}")
+
+    return store.update(apply)
+
+
+@router.put("/recognition/status")
+def put_recognition_status(u: RecognitionStatusUpdate) -> dict[str, Any]:
+    def apply(s: dict[str, Any]) -> None:
+        s.setdefault("recognition", store.empty_recognition())["applicationStatus"] = u.status
+        store.add_log(s, f"recognition application status: {u.status}")
 
     return store.update(apply)
 

@@ -3,13 +3,21 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { pipelineApi } from "@/lib/api-client";
 import { VENUE_KINDS, to12h } from "@/lib/pipeline/fields";
-import { deriveState, type PipelineState, type StepId } from "@/lib/pipeline/plan";
+import {
+  deriveState,
+  type PipelineState,
+  type RecognitionApplicationStatus,
+  type RecognitionOfficer,
+  type RecognitionRequirement,
+  type StepId,
+} from "@/lib/pipeline/plan";
 import { FieldMatrix } from "./FieldMatrix";
 import { ProfileForm } from "./ProfileForm";
 import { RecognitionWorkflow } from "./RecognitionWorkflow";
 import { StepDetail } from "./StepDetail";
 import { StepList } from "./StepList";
 import { Pill, fmtDate } from "./ui";
+import { ELIGIBLE_PATHWAYS } from "@/lib/pipeline/recognition";
 
 type Tab = "pipeline" | "recognition" | "profile" | "fields" | "log";
 const TABS: [Tab, string][] = [["pipeline", "Event pipeline"], ["recognition", "RSO recognition"], ["profile", "Event profile"], ["fields", "Field map"], ["log", "Activity"]];
@@ -46,7 +54,80 @@ export function PipelineApp() {
   };
 
   const saveRecognitionCheck = async (check: string, value: boolean) => {
-    try { setState(await pipelineApi.setRecognitionCheck(check, value)); setError(null); }
+    const previous = state?.recognition?.checks[check];
+    setState(current => current?.recognition
+      ? {
+          ...current,
+          recognition: {
+            ...current.recognition,
+            checks: { ...current.recognition.checks, [check]: value },
+          },
+        }
+      : current);
+    try {
+      const saved = await pipelineApi.setRecognitionCheck(check, value);
+      setState(current => current ? { ...current, log: saved.log } : saved);
+      setError(null);
+    } catch (e) {
+      setState(current => current?.recognition
+        ? {
+            ...current,
+            recognition: {
+              ...current.recognition,
+              checks: { ...current.recognition.checks, [check]: previous ?? false },
+            },
+          }
+        : current);
+      setError((e as Error).message);
+    }
+  };
+
+  const saveRecognitionSetup = async (patch: Parameters<typeof pipelineApi.updateRecognitionSetup>[0]) => {
+    try { setState(await pipelineApi.updateRecognitionSetup(patch)); setError(null); }
+    catch (e) { setError((e as Error).message); }
+  };
+
+  const saveOfficerRequirement = async (
+    role: RecognitionOfficer,
+    requirement: RecognitionRequirement,
+    value: boolean,
+  ) => {
+    const previous = state?.recognition?.officers[role]?.[requirement];
+    setState(current => current?.recognition
+      ? {
+          ...current,
+          recognition: {
+            ...current.recognition,
+            officers: {
+              ...current.recognition.officers,
+              [role]: { ...current.recognition.officers[role], [requirement]: value },
+            },
+          },
+        }
+      : current);
+    try {
+      const saved = await pipelineApi.setOfficerRequirement(role, requirement, value);
+      setState(current => current ? { ...current, log: saved.log } : saved);
+      setError(null);
+    } catch (e) {
+      setState(current => current?.recognition
+        ? {
+            ...current,
+            recognition: {
+              ...current.recognition,
+              officers: {
+                ...current.recognition.officers,
+                [role]: { ...current.recognition.officers[role], [requirement]: previous ?? false },
+              },
+            },
+          }
+        : current);
+      setError((e as Error).message);
+    }
+  };
+
+  const saveRecognitionStatus = async (status: RecognitionApplicationStatus) => {
+    try { setState(await pipelineApi.setRecognitionStatus(status)); setError(null); }
     catch (e) { setError((e as Error).message); }
   };
 
@@ -82,6 +163,16 @@ export function PipelineApp() {
   const pct = Math.round((d.complete / d.total) * 100);
   const late = d.steps.filter(s => s.late);
   const totalMissing = new Set(d.steps.filter(s => !s.done && !s.skip).flatMap(s => s.missing)).size;
+  const rec = state.recognition;
+  const recognitionBadge = !rec || rec.pathway === "undecided" || !ELIGIBLE_PATHWAYS.includes(rec.pathway)
+    ? null
+    : rec.applicationStatus === "recognized"
+      ? { text: "✓", tone: "bg-ok-bg text-ok" }
+      : rec.applicationStatus === "requires_modifications"
+        ? { text: "action", tone: "bg-late-bg text-late" }
+        : rec.applicationStatus === "pending_approval"
+          ? { text: "pending", tone: "bg-wait-bg text-wait" }
+          : null;
   const go = (id: StepId) => { setSelected(id); setTab("pipeline"); };
 
   return (
@@ -132,6 +223,7 @@ export function PipelineApp() {
           >
             {label}
             {id === "profile" && totalMissing > 0 && <span className="ml-1 rounded-full bg-late-bg px-1.5 text-xs text-late">{totalMissing}</span>}
+            {id === "recognition" && recognitionBadge && <span className={`ml-1 rounded-full px-1.5 text-xs ${recognitionBadge.tone}`}>{recognitionBadge.text}</span>}
           </button>
         ))}
       </nav>
@@ -140,11 +232,28 @@ export function PipelineApp() {
         {tab === "pipeline" && (
           <div className="grid items-start gap-6 lg:grid-cols-[minmax(280px,400px)_1fr]">
             <StepList d={d} selected={sel.id} onSelect={setSelected} />
-            <StepDetail key={sel.id} d={d} step={sel} profile={P} onState={setState} onJumpToField={jumpToField} />
+            <StepDetail
+              key={sel.id}
+              d={d}
+              step={sel}
+              profile={P}
+              recognition={state.recognition}
+              onState={setState}
+              onJumpToField={jumpToField}
+              onOpenRecognition={() => setTab("recognition")}
+            />
           </div>
         )}
         {tab === "recognition" && (
-          <RecognitionWorkflow checks={state.recognition?.checks ?? {}} onCheck={saveRecognitionCheck} />
+          <RecognitionWorkflow
+            recognition={state.recognition}
+            today={today ?? new Date()}
+            orgName={String(P.orgName || "")}
+            onCheck={saveRecognitionCheck}
+            onSetup={saveRecognitionSetup}
+            onOfficerRequirement={saveOfficerRequirement}
+            onStatus={saveRecognitionStatus}
+          />
         )}
         {tab === "profile" && <ProfileForm profile={P} onSave={saveProfile} />}
         {tab === "fields" && <FieldMatrix profile={P} />}

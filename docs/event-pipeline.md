@@ -31,7 +31,10 @@ Then run the frontend and backend as described in the root README, and open http
 | GET | `/api/v1/pipeline/state` | profile, event and recognition progress, and activity log |
 | PUT | `/api/v1/pipeline/profile` | merge profile fields |
 | PUT | `/api/v1/pipeline/progress` | `{step, check, value}` or `{step, dataKey, dataValue}` |
-| PUT | `/api/v1/pipeline/recognition/progress` | `{check, value}` for the RSO recognition checklist |
+| PUT | `/api/v1/pipeline/recognition/setup` | update application pathway, EngageSC group URL, and roster counts |
+| PUT | `/api/v1/pipeline/recognition/progress` | `{check, value}` for a known recognition checklist item |
+| PUT | `/api/v1/pipeline/recognition/officer-progress` | update a requirement receipt for one of the five officer roles |
+| PUT | `/api/v1/pipeline/recognition/status` | save the user-reported EngageSC application status |
 | POST | `/api/v1/pipeline/run/{tcc\|outdoor\|classroom\|eeRoom\|permit}` | open a browser and pre-fill (the permit returns 409 until a 6-digit reservation # is recorded) |
 | GET | `/api/v1/pipeline/run/{form}` | live log of a pre-fill run |
 | GET | `/api/v1/pipeline/ee-availability` | read the public EEB/PHE calendars for the event date |
@@ -41,11 +44,11 @@ All pipeline requests (any method) must send `X-TrojanConnect-Client: web`. This
 
 ## RSO recognition workflow
 
-The **RSO recognition** tab is a parallel checklist; it does not block or replace event planning, submit materials to EngageSC, or claim to determine recognition eligibility. Checklist state is saved alongside event state by the backend. USC's [live recognition page](https://campusactivities.usc.edu/programs/recognized-student-organizations/rso-recognition-process/) is the source of truth.
+The **RSO recognition** tab is a parallel checklist. It has pathway selection, live deadline countdowns, a "Next up" action, roster counts, and a per-officer document matrix with copyable reminders. It also has a separate advisor lane with a copyable instruction packet, an EngageSC portal handoff, and a manually reported application status. That status also shows on the event pipeline's EngageSC event step. It does not submit materials or read portal status. Sign-in, document upload, and application submission stay in EngageSC. The app does not collect USC passwords or certificates.
 
-The checklist reflects the 2026–27 cycle published on the USC page: applications close November 22, 2026 at 11:59 PM, and advisor requirements are due December 1, 2026. USC says the five required officers each provide a Commitment to Community form and two training certificates; the advisor submits their separate requirements through a Google Form. It also tracks eligibility/access, roster and position acceptance, the Constitution and Accountability Document, application submission, and follow-up.
+The checklist reflects the 2026–27 cycle published on USC's [live recognition page](https://campusactivities.usc.edu/programs/recognized-student-organizations/rso-recognition-process/): application deadline November 22 at 11:59 PM and separate advisor deadline December 1. This is cycle-specific guidance, not a live deadline feed. Verify current requirements with USC.
 
-This is cycle-specific guidance, not a live deadline feed. Verify current requirements and deadlines with USC before acting. Social fraternities and sororities follow the Office of Fraternity & Sorority Life process.
+The full UI/data contract, manual handoff boundary, authorized-integration prerequisites, and verification plan are in [event-pipeline-integration.md](event-pipeline-integration.md).
 
 ## How each step is automated
 

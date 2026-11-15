@@ -4,16 +4,20 @@ import { pipelineApi, type RoomAvailability, type RunStatus } from "@/lib/api-cl
 import { FIELD_BY_KEY, PERMIT_APPROVED_CATERERS, type Profile } from "@/lib/pipeline/fields";
 import { FORMS, emailDraft, mailto, missingFor, type Derived, type DerivedStep, type PipelineState, type RunnableForm } from "@/lib/pipeline/plan";
 import { Pill, STATUS_LABEL, btn, btnPrimary, fmtDate } from "./ui";
+import type { RecognitionProgress } from "@/lib/pipeline/plan";
+import { STATUS_LABEL as RECOGNITION_STATUS_LABEL } from "@/lib/pipeline/recognition";
 
 interface Props {
   d: Derived;
   step: DerivedStep;
   profile: Profile;
+  recognition?: RecognitionProgress;
   onState: (s: PipelineState) => void;
   onJumpToField: (key: string) => void;
+  onOpenRecognition?: () => void;
 }
 
-export function StepDetail({ d, step: s, profile, onState, onJumpToField }: Props) {
+export function StepDetail({ d, step: s, profile, recognition, onState, onJumpToField, onOpenRecognition }: Props) {
   const [error, setError] = useState<string | null>(null);
   const act = async (p: Promise<PipelineState>) => {
     try { onState(await p); setError(null); } catch (e) { setError((e as Error).message); }
@@ -33,6 +37,23 @@ export function StepDetail({ d, step: s, profile, onState, onJumpToField }: Prop
       <p className="mb-3 text-muted">{s.blurb}</p>
       {s.status === "blocked" && <Pill tone="blocked">Finish first: {s.blockedBy.map(b => d.byId[b].title).join(" → ")}</Pill>}
       {error && <p role="alert" className="mt-2 rounded-lg bg-late-bg px-3 py-2 text-sm text-late">{error}</p>}
+
+      {s.id === "engage" && (
+        <div
+          data-testid="engage-recognition-note"
+          className={`mt-3 rounded-lg p-3 text-sm ${recognition?.applicationStatus === "recognized" ? "bg-ok-bg text-ok" : "bg-wait-bg text-ink"}`}
+        >
+          <strong>RSO recognition: {RECOGNITION_STATUS_LABEL[recognition?.applicationStatus ?? "not_started"]}.</strong>{" "}
+          {recognition?.applicationStatus === "recognized"
+            ? "This was recorded manually in TrojanConnect, so confirm the group is active in EngageSC before creating the event."
+            : "USC says organizations that miss annual recognition lose all RSO benefits. Confirm your group's status in EngageSC before relying on it for this event."}
+          {onOpenRecognition && (
+            <button type="button" onClick={onOpenRecognition} className="ml-2 font-semibold text-cardinal underline">
+              Open RSO recognition
+            </button>
+          )}
+        </div>
+      )}
 
       <SectionTitle>Checklist</SectionTitle>
       <div>

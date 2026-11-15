@@ -20,6 +20,26 @@ DATA_DIR = BACKEND_ROOT / "data"
 STATE_PATH = DATA_DIR / "event_pipeline.json"
 BROWSER_PROFILE_DIR = DATA_DIR / "browser-profile"
 
+OFFICER_ROLES = ("president", "vicePresident", "secretary", "treasurer", "programmingChair")
+OFFICER_REQUIREMENTS = ("commitment", "hazingTraining", "learningPath")
+
+
+def empty_recognition() -> dict[str, Any]:
+    return {
+        "cycle": "2026-27",
+        "pathway": "undecided",
+        "engageGroupUrl": "",
+        "additionalMemberCount": 0,
+        "acceptedPositionCount": 0,
+        "applicationStatus": "not_started",
+        "checks": {},
+        "officers": {
+            role: {requirement: False for requirement in OFFICER_REQUIREMENTS}
+            for role in OFFICER_ROLES
+        },
+    }
+
+
 EMPTY_STATE: dict[str, Any] = {
     "profile": {
         "attendance": "",
@@ -32,7 +52,7 @@ EMPTY_STATE: dict[str, Any] = {
         "paymentType": "PO",
     },
     "progress": {},
-    "recognition": {"checks": {}},
+    "recognition": empty_recognition(),
     "log": [],
 }
 
@@ -44,7 +64,14 @@ def load() -> dict[str, Any]:
         state = json.loads(STATE_PATH.read_text())
     except (FileNotFoundError, json.JSONDecodeError):
         return copy.deepcopy(EMPTY_STATE)
-    state.setdefault("recognition", copy.deepcopy(EMPTY_STATE["recognition"]))
+    recognition = state.setdefault("recognition", empty_recognition())
+    defaults = empty_recognition()
+    for key, value in defaults.items():
+        recognition.setdefault(key, copy.deepcopy(value))
+    for role, requirements in defaults["officers"].items():
+        officer = recognition["officers"].setdefault(role, {})
+        for requirement, value in requirements.items():
+            officer.setdefault(requirement, value)
     return state
 
 
@@ -72,6 +99,6 @@ def update(mutator) -> dict[str, Any]:
 def reset() -> dict[str, Any]:
     with _lock:
         state = copy.deepcopy(EMPTY_STATE)
-        state["recognition"] = load().get("recognition", copy.deepcopy(EMPTY_STATE["recognition"]))
+        state["recognition"] = load().get("recognition", empty_recognition())
         save(state)
         return state
