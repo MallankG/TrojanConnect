@@ -63,6 +63,13 @@ async def test_student_greeting_asks_about_interests_when_no_preferences(orch):
     assert "interested in" in turn.message.content and "hours" in turn.message.content
 
 
+async def test_student_prompt_does_not_embed_entire_club_directory(repo):
+    from app.agents.student_agent import build_context
+
+    system, _ = await build_context(repo, ALICE)
+    assert "club_directory_data" not in system and len(system) < 5000
+
+
 async def test_start_with_first_message_runs_a_turn(orch, repo):
     conv, turn = await orch.start_conversation(ALICE, ConversationCreate(agent_type="student", message="recommend clubs for me"))
     assert [m.sender_type for m in repo.messages] == ["user", "agent"]
@@ -104,7 +111,7 @@ async def test_student_fit_check_and_compare(orch):
     fit = next(c for c in turn.cards if c.type == "fit_check")
     assert fit.data["fit_level"] != "strong" and "12 h/week" in turn.message.content
     turn = await orch.send_message(ALICE, conv.id, "Compare Trojan AI Society vs Peaks Hiking Club")
-    assert [a.tool for a in turn.tool_activity] == ["get_club_profile", "get_club_profile"]
+    assert [a.tool for a in turn.tool_activity] == ["search_clubs", "get_club_profile", "get_club_profile"]
     assert "Trojan AI Society" in turn.message.content and "Peaks Hiking Club" in turn.message.content
 
 

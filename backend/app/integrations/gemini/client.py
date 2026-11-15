@@ -159,8 +159,9 @@ _SUBMIT_RE = re.compile(
     r"\bi(?:'d| would)? (?:like|love|want) to (?:join|apply)|interested in joining|\bi want in\b", re.I)
 _FIT_RE = re.compile(r"\bfit\b|right for me|good match|should i join|suit me|for someone like me", re.I)
 _EVENT_RE = re.compile(r"\bevents?\b|what'?s happening|coming up|upcoming", re.I)
+_PROFILE_RE = re.compile(r"tell me about|what does|describe|how do i join|how can i join", re.I)
 _RECOMMEND_RE = re.compile(r"recommend|suggest|for me\b|which clubs? should|what clubs? should|match me", re.I)
-_SEARCH_RE = re.compile(r"\bfind\b|search|looking for|any clubs?|clubs? (about|for|related|on)\b|show me", re.I)
+_SEARCH_RE = re.compile(r"\bfind\b|search|looking for|any clubs?|what clubs?\b|which clubs?\b|clubs? (about|for|related|on|work|do|have)\b|show me", re.I)
 _COMPARE_RE = re.compile(r"compare|\bvs\.?\b|versus|difference between", re.I)
 _PREFS_GET_RE = re.compile(r"my (preferences|profile|interests)\b|what do you know about me", re.I)
 _INTEREST_PHRASE_RE = re.compile(
@@ -238,6 +239,32 @@ class RuleBasedLLM:
             if (results[-1][0] == "update_student_preferences" and results[-1][1].get("ok")
                     and "recommend_clubs" in tool_names and "recommend_clubs" not in done):
                 return self._call("recommend_clubs", {"limit": 5})
+            if results[-1][0] == "search_clubs" and results[-1][1].get("ok"):
+                hits = (results[-1][1].get("data") or {}).get("hits", [])
+                words = _words(user_text)
+                generic = {"trojan", "society", "association", "group", "team", "student", "students"}
+                named = [h for h in hits if h.get("name") and (
+                    h["name"].lower() in user_text.lower() or
+                    (_words(h["name"]) - generic and (_words(h["name"]) - generic) <= words)
+                )]
+                if _COMPARE_RE.search(user_text) and len(named) >= 2 and "get_club_profile" in tool_names:
+                    calls = [("get_club_profile", {"organization_id": h["organization_id"]}) for h in named[:3]]
+                    return self._call(*calls[0], *calls[1:])
+                if len(named) == 1:
+                    organization_id = named[0]["organization_id"]
+                    if _SUBMIT_RE.search(user_text) and "submit_club_interest" in tool_names:
+                        share = bool(re.search(r"share my (contact|email|name)|with my (contact|email)|include my (contact|email)", user_text, re.I))
+                        return self._call("submit_club_interest", {"organization_id": organization_id,
+                                          "interest_type": "membership", "message": user_text[:500], "share_contact": share})
+                    if _FIT_RE.search(user_text) and "check_club_fit" in tool_names:
+                        return self._call("check_club_fit", {"organization_id": organization_id})
+                    if _EVENT_RE.search(user_text) and "list_club_events" in tool_names:
+                        return self._call("list_club_events", {"organization_id": organization_id})
+                    if (_PROFILE_RE.search(user_text) or not (_SEARCH_RE.search(user_text) or _RECOMMEND_RE.search(user_text))) \
+                            and "get_club_profile" in tool_names:
+                        return self._call("get_club_profile", {"organization_id": organization_id})
+                if not named and _EVENT_RE.search(user_text) and "list_club_events" in tool_names:
+                    return self._call("list_club_events", {})
             return self._reply(self._compose(results, club))
         if club is not None:
             return self._club_turn(user_text, club, tool_names)
@@ -340,44 +367,18 @@ class RuleBasedLLM:
 
     # ---- student agent
     def _student_turn(self, text: str, system: str, tool_names: set[str]) -> LLMResponse:
-        directory = _block(system, "club_directory_data") or []
-        known_tags = sorted({_norm_tag(t) for c in directory for t in c.get("tags", [])})
-        low = text.lower()
-        named = [c for c in directory if c.get("name") and c["name"].lower() in low]
-        if not named:  # allow a distinctive partial name, e.g. "robotics" for "Trojan Robotics Club"
-            for c in directory:
-                distinctive = _words(c.get("name", "")) - {"trojan", "society", "association", "group", "team", "student", "students"}
-                if distinctive and distinctive <= _words(text) and re.search(r"\bclub\b|\bsociety\b|\bthem\b|\bjoin\b|\bfit\b", low):
-                    named.append(c)
+        known_tags = list(_ALIASES.values())
         stated = self._stated(text, known_tags)
-
-        if _SUBMIT_RE.search(text) and "submit_club_interest" in tool_names:
-            if len(named) != 1:
-                return self._reply("Which club would you like to send your interest to? Tell me its name and I'll prepare it for you to confirm.")
-            share = bool(re.search(r"share my (contact|email|name)|with my (contact|email)|include my (contact|email)", text, re.I))
-            return self._call("submit_club_interest", {"organization_id": named[0]["organization_id"], "interest_type": "membership",
-                                                       "message": text[:500], "share_contact": share})
-        if _FIT_RE.search(text) and "check_club_fit" in tool_names:
-            if not named:
-                return self._reply("Happy to run a fit check - which club do you have in mind?")
-            return self._call("check_club_fit", {"organization_id": named[0]["organization_id"]})
-        if len(named) >= 2 and "get_club_profile" in tool_names:
-            calls = [("get_club_profile", {"organization_id": c["organization_id"]}) for c in named[:3]]
-            return self._call(*calls[0], *calls[1:])
-        if _COMPARE_RE.search(text) and not named:
-            return self._reply("Which clubs would you like me to compare? Give me two club names.")
-        wants_lookup = _RECOMMEND_RE.search(text) or _SEARCH_RE.search(text)
         prefs = {k: v for k, v in stated.items() if k != "interest_tags" or _INTEREST_PHRASE_RE.search(text)}
-        if prefs and not named and _FIRST_PERSON_RE.search(text) and "update_student_preferences" in tool_names \
+        if prefs and _FIRST_PERSON_RE.search(text) and "update_student_preferences" in tool_names \
                 and not (_SEARCH_RE.search(text) and not _INTEREST_PHRASE_RE.search(text)):
             return self._call("update_student_preferences", prefs)
-        if _EVENT_RE.search(text) and "list_club_events" in tool_names:
-            return self._call("list_club_events", {"organization_id": named[0]["organization_id"]} if named else {})
-        if named and "get_club_profile" in tool_names:
-            return self._call("get_club_profile", {"organization_id": named[0]["organization_id"]})
+        if (_SUBMIT_RE.search(text) or _FIT_RE.search(text) or _EVENT_RE.search(text) or _COMPARE_RE.search(text)
+                or _PROFILE_RE.search(text)) and "search_clubs" in tool_names:
+            return self._call("search_clubs", {"query": text[:200], "interest_tags": stated.get("interest_tags", []), "limit": 5})
         if _RECOMMEND_RE.search(text) and "recommend_clubs" in tool_names:
             return self._call("recommend_clubs", {"limit": 5})
-        if (wants_lookup or stated.get("interest_tags")) and "search_clubs" in tool_names:
+        if (_SEARCH_RE.search(text) or stated.get("interest_tags")) and "search_clubs" in tool_names:
             return self._call("search_clubs", {"query": text[:200], "interest_tags": stated.get("interest_tags", []), "limit": 5})
         if _PREFS_GET_RE.search(text) and "get_student_preferences" in tool_names:
             return self._call("get_student_preferences", {})

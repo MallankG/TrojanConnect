@@ -12,9 +12,7 @@ def agent_id(user_id: str) -> str:
 
 async def build_context(repo, actor: Actor) -> tuple[str, list[ToolSpec]]:
     prefs = await get_preferences(repo, actor.user_id)
-    directory = [{"organization_id": c.organization_id, "name": c.name, "category": c.category, "tags": c.tags}
-                 for c in await repo.list_clubs()]
-    return student_system_prompt(prefs.model_dump(mode="json", exclude={"user_id", "updated_at"}), directory), student_tool_specs()
+    return student_system_prompt(prefs.model_dump(mode="json", exclude={"user_id", "updated_at"})), student_tool_specs()
 
 
 async def greeting(repo, actor: Actor) -> str:
