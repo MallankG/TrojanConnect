@@ -224,6 +224,21 @@ class InMemoryRepository:
         tail = msgs[-limit:] if limit > 0 else []
         return [m.model_copy(deep=True) for m in tail]
 
+    async def claim_pending_confirmation(self, conversation_id: str, message_id: str,
+                                         confirmed: bool) -> Optional[dict[str, Any]]:
+        for message in reversed(self._messages.get(conversation_id, [])):
+            if message.id != message_id or message.sender_type != "agent":
+                continue
+            pending = message.metadata.get("pending_confirmation")
+            if not isinstance(pending, dict):
+                return None
+            decision = message.metadata.get("confirmation_decision")
+            if decision is not None and decision is not confirmed:
+                return None
+            message.metadata["confirmation_decision"] = confirmed
+            return pending.copy()
+        return None
+
     # ---- interests ----
     async def create_interest(self, interest: ClubInterest) -> ClubInterest:
         key = (interest.student_id, interest.organization_id, interest.idempotency_key)

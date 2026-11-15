@@ -78,6 +78,17 @@ class FakeRepo:
     async def list_messages(self, conversation_id, limit=50):
         return [m for m in self.messages if m.conversation_id == conversation_id][-limit:]
 
+    async def claim_pending_confirmation(self, conversation_id, message_id, confirmed):
+        for message in reversed(self.messages):
+            if message.conversation_id == conversation_id and message.id == message_id and message.sender_type == "agent":
+                pending = message.metadata.get("pending_confirmation")
+                decision = message.metadata.get("confirmation_decision")
+                if not isinstance(pending, dict) or (decision is not None and decision is not confirmed):
+                    return None
+                message.metadata["confirmation_decision"] = confirmed
+                return pending.copy()
+        return None
+
     async def create_interest(self, interest):
         self.interests.append(interest)
         return interest

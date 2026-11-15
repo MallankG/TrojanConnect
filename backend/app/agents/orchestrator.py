@@ -114,6 +114,10 @@ class AgentOrchestrator:
             args = SubmitInterestArgs(**{k: v for k, v in pending.payload.items() if k in SubmitInterestArgs.model_fields})
         except ValidationError:
             raise AppError(VALIDATION_ERROR, "The pending action is no longer valid. Please ask again.", status_code=409)
+        claimed = await self.repo.claim_pending_confirmation(conv.id, last_agent.id, confirmed)
+        if claimed is None:
+            raise AppError(VALIDATION_ERROR, "This action was already resolved with a different choice.", status_code=409)
+        pending = PendingConfirmation(**claimed)
         payload = {**pending.payload, **args.model_dump()}
         club_name = payload.get("club_name") or "the club"
         await self.repo.add_message(Message(conversation_id=conv.id, sender_type="system",

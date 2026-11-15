@@ -1,4 +1,4 @@
-"""Supabase (Postgres + pgvector) StudentRepository. Schema: supabase/migrations/0001_student_agent.sql.
+"""Supabase (Postgres + pgvector) StudentRepository. Schema: supabase/migrations/.
 
 Uses the service-role key, which bypasses RLS, so EVERY student-private query here must be
 filtered by the server-supplied user id. The supabase client is synchronous; calls run in a
@@ -177,6 +177,13 @@ class SupabaseRepository:
                                 .order("created_at", desc=True).limit(limit))
         rows.reverse()  # newest-N fetched, returned oldest-first
         return [Message.model_validate(r) for r in rows]
+
+    async def claim_pending_confirmation(self, conversation_id: str, message_id: str,
+                                         confirmed: bool) -> Optional[dict[str, Any]]:
+        rows = await self._rows(lambda: self._client.rpc("claim_pending_confirmation", {
+            "p_conversation_id": conversation_id, "p_message_id": message_id, "p_confirmed": confirmed,
+        }))
+        return rows[0].get("pending_confirmation") if rows else None
 
     # ---- interests ----
     async def _find_interest(self, student_id: str, organization_id: str, idempotency_key: str) -> Optional[ClubInterest]:

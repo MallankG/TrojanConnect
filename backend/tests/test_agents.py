@@ -1,4 +1,6 @@
 """Agent/orchestrator tests. No network or API keys: RuleBasedLLM + HashEmbedder + fake repository."""
+import asyncio
+
 import pytest
 
 from app.agents import prompts
@@ -243,6 +245,39 @@ async def test_cancelled_confirmation_writes_nothing(repo):
     assert "nothing was sent" in cancelled.message.content and repo.interests == []
     with pytest.raises(AppError):
         await orch.confirm_pending(ALICE, conv.id, True)
+
+
+async def test_concurrent_confirm_and_cancel_cannot_resolve_the_same_action_twice(repo):
+    orch = AgentOrchestrator(repo=repo, llm=_submit_script(), embedder=HashEmbedder())
+    conv, _ = await orch.start_conversation(ALICE, ConversationCreate(agent_type="student"))
+    await orch.send_message(ALICE, conv.id, "I want to join the AI society")
+
+    original_list_messages = repo.list_messages
+    both_read_pending = asyncio.Event()
+    reads = 0
+
+    async def synchronized_list_messages(conversation_id, limit=50):
+        nonlocal reads
+        messages = await original_list_messages(conversation_id, limit)
+        if reads < 2:
+            reads += 1
+            if reads == 2:
+                both_read_pending.set()
+            await both_read_pending.wait()
+        return messages
+
+    repo.list_messages = synchronized_list_messages
+    results = await asyncio.gather(
+        orch.confirm_pending(ALICE, conv.id, True),
+        orch.confirm_pending(ALICE, conv.id, False),
+        return_exceptions=True,
+    )
+
+    turns = [result for result in results if not isinstance(result, Exception)]
+    errors = [result for result in results if isinstance(result, AppError)]
+    assert len(turns) == 1 and len(errors) == 1 and errors[0].status_code == 409
+    cancelled = "nothing was sent" in turns[0].message.content
+    assert len(repo.interests) == (0 if cancelled else 1)
 
 
 async def test_rule_based_club_join_flow_end_to_end(orch, repo):

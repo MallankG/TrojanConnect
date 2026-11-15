@@ -1,6 +1,6 @@
 """Repository contract for the student side. Implementations: memory.InMemoryRepository
 (seeded demo data, default) and supabase_repo.SupabaseRepository. All methods are async."""
-from typing import Optional, Protocol, runtime_checkable
+from typing import Any, Optional, Protocol, runtime_checkable
 
 from app.schemas.student import (
     AuditLog, ClubEvent, ClubInterest, ClubProfile, Conversation, Message,
@@ -36,6 +36,8 @@ class StudentRepository(Protocol):
     async def list_messages(self, conversation_id: str, limit: int = 50) -> list[Message]:
         """Oldest-first, last `limit` messages."""
         ...
+    async def claim_pending_confirmation(self, conversation_id: str, message_id: str,
+                                         confirmed: bool) -> Optional[dict[str, Any]]: ...
 
     # interests
     async def create_interest(self, interest: ClubInterest) -> ClubInterest:
