@@ -7,6 +7,8 @@ import json
 import re
 from datetime import datetime, timedelta, timezone
 
+import pytest
+
 from app.config import Settings
 from app.repositories.base import StudentRepository
 from app.repositories.factory import build_repository
@@ -219,12 +221,30 @@ async def test_instances_are_isolated():
     assert "mutated" not in (await b.get_club("club-ai-society")).tags
 
 
-def test_factory_defaults_to_memory_and_falls_back():
+def test_factory_defaults_to_memory_and_fails_closed_with_supabase_config(monkeypatch):
     assert isinstance(build_repository(Settings(_env_file=None, supabase_url="", supabase_service_role_key="")),
                       InMemoryRepository)
-    # Unusable Supabase credentials must not crash boot.
     bad = Settings(_env_file=None, supabase_url="not-a-url", supabase_service_role_key="not-a-key")
-    assert isinstance(build_repository(bad), InMemoryRepository)
+    from app.repositories import supabase_repo
+
+    def fail_to_initialize(_settings):
+        raise RuntimeError("invalid Supabase configuration")
+
+    monkeypatch.setattr(supabase_repo, "SupabaseRepository", fail_to_initialize)
+    with pytest.raises(RuntimeError, match="invalid Supabase configuration"):
+        build_repository(bad)
+
+
+def test_generated_event_id_is_stable():
+    from scripts.gen_seed_sql import event_seed_id
+
+    event = {"organization_id": "usc-example", "title": "Open house",
+             "start_at": "2026-11-15T10:00:00-08:00", "end_at": "2026-11-15T11:00:00-08:00"}
+    first = event_seed_id(event)
+    assert first == "seed-b186c4691877ba630c336087"
+    assert first == event_seed_id(dict(event))
+    assert first.startswith("seed-") and len(first) == 29
+    assert first != event_seed_id({**event, "start_at": "2026-11-16T10:00:00-08:00"})
 
 
 def test_supabase_repo_implements_protocol_surface():

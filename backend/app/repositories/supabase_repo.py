@@ -214,4 +214,5 @@ class SupabaseRepository:
     # ---- audit ----
     async def add_audit_log(self, entry: AuditLog) -> None:
         payload = entry.model_dump(mode="json")
-        await self._rows(lambda: self._client.table("audit_logs").insert(payload))
+        await self._rows(lambda: self._client.table("audit_logs").upsert(
+            payload, on_conflict="id", ignore_duplicates=True))

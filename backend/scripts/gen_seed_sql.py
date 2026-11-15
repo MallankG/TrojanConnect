@@ -11,6 +11,7 @@ Re-run after editing the seed JSON. Output is idempotent (upserts). Demo events 
 re-dated relative to now(); collected events carry their own absolute timestamps."""
 from __future__ import annotations
 
+import hashlib
 import json
 import sys
 from pathlib import Path
@@ -51,6 +52,11 @@ def upsert(table: str, row: dict, conflict: str) -> str:
     values = ",\n    ".join(lit(row[c]) for c in cols)
     return (f"insert into {table} ({', '.join(cols)}) values (\n    {values}\n)\n"
             f"on conflict ({conflict}) {action};\n")
+
+
+def event_seed_id(event: dict) -> str:
+    key = "\0".join(str(event[field]) for field in ("organization_id", "title", "start_at", "end_at"))
+    return "seed-" + hashlib.sha256(key.encode("utf-8")).hexdigest()[:24]
 
 
 def main() -> None:
@@ -95,7 +101,7 @@ def main() -> None:
         if "start_at" in e:  # collected event: absolute timestamps
             cols = ["id", "organization_id", "title", "description", "location", "visibility"]
             row = {c: e.get(c, "") for c in cols}
-            row["id"] = e.get("id") or f"{e['organization_id']}-{abs(hash(e['title'])) % 10**8}"
+            row["id"] = e.get("id") or event_seed_id(e)
             row["timezone"] = e.get("timezone") or TZ
             row["start_at"], row["end_at"] = e["start_at"], e["end_at"]
             out.append(upsert("events", row, "id"))

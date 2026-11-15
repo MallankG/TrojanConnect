@@ -148,6 +148,28 @@ async def test_interest_is_idempotent_and_audited(repo):
     assert repo.audit[0].actor_id == "alice" and repo.audit[0].resource_id == first.id
 
 
+async def test_interest_retry_repairs_a_failed_audit_write(repo):
+    add_audit_log = repo.add_audit_log
+    failed = False
+
+    async def fail_once(entry):
+        nonlocal failed
+        if not failed:
+            failed = True
+            raise RuntimeError("temporary audit write failure")
+        await add_audit_log(entry)
+
+    repo.add_audit_log = fail_once
+    with pytest.raises(RuntimeError, match="temporary audit write failure"):
+        await submit_club_interest(repo, ALICE, _interest())
+    assert len(repo.interests) == 1 and repo.audit == []
+
+    retried = await submit_club_interest(repo, ALICE, _interest())
+    assert retried.id == repo.interests[0].id
+    assert len(repo.interests) == 1 and len(repo.audit) == 1
+    assert repo.audit[0].resource_id == retried.id
+
+
 async def test_interest_without_share_contact_shares_no_contact(repo):
     private = await submit_club_interest(repo, ALICE, _interest())
     assert private.share_contact is False

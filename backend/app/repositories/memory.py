@@ -241,7 +241,8 @@ class InMemoryRepository:
 
     # ---- audit ----
     async def add_audit_log(self, entry: AuditLog) -> None:
-        self._audit.append(entry.model_copy(deep=True))
+        if not any(existing.id == entry.id for existing in self._audit):
+            self._audit.append(entry.model_copy(deep=True))
 
     def audit_entries(self) -> list[AuditLog]:
         """Test/debug helper (not part of the protocol)."""

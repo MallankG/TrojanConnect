@@ -1,5 +1,6 @@
 """Expressions of interest: explicit confirmation, minimal sharing, audit log, idempotent (PRD 8.3, 9.4)."""
 from datetime import datetime, timezone
+from uuid import NAMESPACE_URL, uuid5
 
 from app.schemas.common import CONFIRMATION_REQUIRED, NOT_FOUND, AppError
 from app.schemas.student import AuditLog, ClubInterest, ClubInterestCreate
@@ -9,6 +10,19 @@ from app.security.actor import Actor
 def shared_fields(share_contact: bool) -> list[str]:
     """Exactly what the club receives."""
     return ["interest_type", "message"] + (["display_name", "email"] if share_contact else [])
+
+
+def _interest_audit_log(interest: ClubInterest) -> AuditLog:
+    fields = interest.consent_snapshot.get("shared_fields", shared_fields(interest.share_contact))
+    return AuditLog(
+        id=str(uuid5(NAMESPACE_URL, f"trojanconnect:club_interest.submitted:{interest.id}")),
+        actor_id=interest.student_id,
+        action="club_interest.submitted",
+        resource_type="club_interest",
+        resource_id=interest.id,
+        metadata={"organization_id": interest.organization_id, "interest_type": interest.interest_type,
+                  "share_contact": interest.share_contact, "shared_fields": fields},
+    )
 
 
 async def submit_club_interest(repo, actor: Actor, req: ClubInterestCreate) -> ClubInterest:
@@ -22,6 +36,7 @@ async def submit_club_interest(repo, actor: Actor, req: ClubInterestCreate) -> C
     # SAME club: one key reused across clubs must not swallow the second club's interest.
     for existing in await repo.list_interests_for_student(actor.user_id):
         if (existing.idempotency_key, existing.organization_id) == (req.idempotency_key, club.organization_id):
+            await repo.add_audit_log(_interest_audit_log(existing))
             return existing
 
     fields = shared_fields(req.share_contact)
@@ -39,10 +54,5 @@ async def submit_club_interest(repo, actor: Actor, req: ClubInterestCreate) -> C
         message=req.message, share_contact=req.share_contact, consent_snapshot=snapshot,
         idempotency_key=req.idempotency_key,
     ))
-    await repo.add_audit_log(AuditLog(
-        actor_id=actor.user_id, action="club_interest.submitted", resource_type="club_interest",
-        resource_id=interest.id,
-        metadata={"organization_id": club.organization_id, "interest_type": req.interest_type,
-                  "share_contact": req.share_contact, "shared_fields": fields},
-    ))
+    await repo.add_audit_log(_interest_audit_log(interest))
     return interest

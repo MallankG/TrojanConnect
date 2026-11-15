@@ -99,7 +99,9 @@ class FakeRepo:
 
     async def create_interest(self, interest):
         for existing in self.interests:
-            if (existing.student_id, existing.idempotency_key) == (interest.student_id, interest.idempotency_key):
+            if (existing.student_id, existing.organization_id, existing.idempotency_key) == (
+                interest.student_id, interest.organization_id, interest.idempotency_key
+            ):
                 return existing
         self.interests.append(interest)
         return interest
@@ -111,4 +113,5 @@ class FakeRepo:
         return [i for i in self.interests if i.organization_id == organization_id]
 
     async def add_audit_log(self, entry):
-        self.audit.append(entry)
+        if not any(existing.id == entry.id for existing in self.audit):
+            self.audit.append(entry)
