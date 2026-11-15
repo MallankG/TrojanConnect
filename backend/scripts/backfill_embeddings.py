@@ -20,6 +20,7 @@ import argparse
 import asyncio
 import sys
 from pathlib import Path
+from typing import Any
 
 BACKEND = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(BACKEND))
@@ -30,6 +31,26 @@ from app.repositories.memory import load_seed_clubs, resolve_dataset  # noqa: E4
 from app.services.clubs import club_text  # noqa: E402
 
 BATCH = 50
+PAGE_SIZE = 1000
+
+
+def _fetch_embedding_rows(client: Any) -> list[dict[str, Any]]:
+    rows = []
+    offset = 0
+    while True:
+        page = client.table("club_profiles").select("organization_id, embedding") \
+            .order("organization_id").range(offset, offset + PAGE_SIZE - 1).execute().data or []
+        rows.extend(page)
+        if len(page) < PAGE_SIZE:
+            return rows
+        offset += len(page)
+
+
+async def _embed_batch(embedder: Any, texts: list[str]) -> list[list[float]]:
+    vectors = await embedder.embed(texts)
+    if getattr(embedder, "is_fallback", False):
+        raise RuntimeError("Embedding provider fell back; refusing to store fallback vectors.")
+    return vectors
 
 
 async def main() -> int:
@@ -57,7 +78,7 @@ async def main() -> int:
 
     dataset = resolve_dataset(args.dataset)
     clubs = load_seed_clubs(dataset)
-    rows = client.table("club_profiles").select("organization_id, embedding").execute().data or []
+    rows = _fetch_embedding_rows(client)
     present = {r["organization_id"] for r in rows}
     have_vector = {r["organization_id"] for r in rows if r.get("embedding") is not None}
 
@@ -76,7 +97,7 @@ async def main() -> int:
     done = 0
     for start in range(0, len(todo), BATCH):
         batch = todo[start:start + BATCH]
-        vectors = await embedder.embed([club_text(c) for c in batch])
+        vectors = await _embed_batch(embedder, [club_text(c) for c in batch])
         for club, vector in zip(batch, vectors):
             client.table("club_profiles").update({"embedding": [float(x) for x in vector]}) \
                   .eq("organization_id", club.organization_id).execute()
