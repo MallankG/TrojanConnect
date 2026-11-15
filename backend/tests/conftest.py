@@ -40,7 +40,7 @@ def api_app(api_settings, monkeypatch):
 def api_client(api_app):
     from fastapi.testclient import TestClient
 
-    with TestClient(api_app) as client:
+    with TestClient(api_app, headers={"X-TrojanConnect-Client": "web"}) as client:  # what the web app always sends
         yield client
 
 

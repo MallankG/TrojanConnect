@@ -236,3 +236,13 @@ def test_valid_jwt_accepted(api_app, api_client):
 
 def test_bad_demo_user_id_rejected(api_client):
     err(api_client.get(f"{V1}/me", headers={"X-Demo-User": "../../etc/passwd"}), 401, "UNAUTHENTICATED")
+
+
+def test_browser_routes_need_the_client_header(api_app):
+    """CSRF guard: a cross-site form post can't add the header, so it is refused instead of acting as the demo user."""
+    from fastapi.testclient import TestClient
+    bare = TestClient(api_app)
+    assert bare.get(f"{V1}/clubs").status_code == 403
+    assert bare.post(f"{V1}/clubs/club-ai/save").status_code == 403
+    assert bare.post(f"{V1}/feedback", json={}).status_code == 403
+    assert bare.post(f"{V1}/webhooks/slack/commands", content=b"x=1").status_code == 401  # Slack: signature check, not the header
