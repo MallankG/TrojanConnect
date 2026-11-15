@@ -19,6 +19,7 @@ from __future__ import annotations
 import re
 
 import os
+import shutil
 import threading
 from datetime import datetime, timezone
 from pathlib import Path
@@ -80,10 +81,12 @@ class SimulatedEngageBrowser:
 
     def _browser(self, p: Any) -> Any:
         show = os.environ.get("RSO_PORTAL_SHOW_BROWSER", "").lower() in ("1", "true", "yes")
+        opts = {"headless": not show, "slow_mo": 250 if show else 0}
         try:
-            return p.chromium.launch(channel="chrome", headless=not show, slow_mo=250 if show else 0)
-        except Exception:  # no Chrome installed: Playwright's own Chromium, if downloaded
-            return p.chromium.launch(headless=not show)
+            return p.chromium.launch(channel="chrome", **opts)
+        except Exception:  # no Google Chrome: a system Chromium (Replit's Nix package), else Playwright's download
+            system = os.environ.get("CHROMIUM_PATH") or shutil.which("chromium") or shutil.which("chromium-browser")
+            return p.chromium.launch(executable_path=system, **opts) if system else p.chromium.launch(**opts)
 
     def _sign_in(self, page: Any, log: Log) -> None:
         log(f"Opening the simulated EngageSC portal ({base_url()})")

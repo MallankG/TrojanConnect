@@ -1,5 +1,10 @@
 modules = ["nodejs-20", "python-3.12"]
 
+# Chromium for the RSO portal agent. Playwright's own browser download needs system libraries
+# Replit doesn't have (its bundled Node fails on libatomic.so.1), so the agent uses this one.
+[nix]
+packages = ["chromium"]
+
 # Workspace "Run" button: backend + Next.js dev server.
 run = "bash scripts/replit.sh dev"
 
