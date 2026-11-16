@@ -10,13 +10,15 @@ from __future__ import annotations
 
 import copy
 import json
+import os
 import threading
 from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any
 
 BACKEND_ROOT = Path(__file__).resolve().parents[3]
-DATA_DIR = BACKEND_ROOT / "data"
+# DATA_DIR env: hosts with a read-only app directory (Vercel) point this at /tmp.
+DATA_DIR = Path(os.environ.get("DATA_DIR") or BACKEND_ROOT / "data")
 STATE_PATH = DATA_DIR / "event_pipeline.json"
 
 EMPTY_STATE: dict[str, Any] = {

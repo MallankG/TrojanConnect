@@ -24,6 +24,9 @@ class Settings(BaseSettings):
     gemini_embedding_model: str = "gemini-embedding-001"
     gemini_decision_model: str = "gemini-decision-1"
     gemini_api_version: str = "v1beta"
+    # Requests per minute we allow ourselves (0 = no limit). Match https://aistudio.google.com/rate-limit for the project.
+    gemini_chat_rpm: int = 10
+    gemini_embedding_rpm: int = 100
     embedding_provider: Literal["gemini", "ollama"] = "gemini"
     ollama_base_url: str = "http://127.0.0.1:11434"
     ollama_embedding_model: str = "nomic-embed-text:latest"
