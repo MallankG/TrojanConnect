@@ -14,3 +14,4 @@ dev-ui/
 .pythonlibs/
 .upm/
 .cache/
+.vercel
