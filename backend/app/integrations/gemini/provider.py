@@ -11,6 +11,7 @@ import time
 from typing import Any
 
 from app.agents.model import ModelError, ModelTurn, ToolCall
+from app.integrations.gemini.ratelimit import chat_limiter
 
 DEFAULT_MODEL = "gemini-3.5-flash"
 # (HTTP status, seconds to wait before each retry). One agent turn is several model calls, so a
@@ -71,9 +72,11 @@ class _Session:
         attempt = 0
         while True:
             try:
+                chat_limiter().wait()  # raises a 429-coded error when the wait is too long: handled below
                 return self._client.models.generate_content(model=self._model, contents=self._contents, config=self._config)
             except Exception as e:  # SDK raises several error types; the agent only needs "it failed"
                 code = getattr(e, "code", None)
+                chat_limiter().penalize(e)
                 waits = RETRIES.get(code, ())
                 if attempt < len(waits):
                     time.sleep(waits[attempt])

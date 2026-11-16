@@ -11,6 +11,7 @@ import time
 from typing import Any, Optional
 from uuid import uuid4
 
+from app.integrations.gemini.ratelimit import chat_limiter, embed_limiter
 from app.integrations.llm import ChatMessage, Embedder, LLMClient, LLMResponse, ToolCall, ToolSpec
 
 log = logging.getLogger(__name__)
@@ -83,8 +84,13 @@ class GeminiLLM:
         if response_schema is not None:
             config.response_mime_type = "application/json"
             config.response_json_schema = response_schema
-        resp = await self._client.aio.models.generate_content(
-            model=self.model, contents=self._contents(messages), config=config)
+        await chat_limiter().wait_async()
+        try:
+            resp = await self._client.aio.models.generate_content(
+                model=self.model, contents=self._contents(messages), config=config)
+        except Exception as exc:
+            chat_limiter().penalize(exc)
+            raise
 
         text_parts, calls = [], []
         candidates = resp.candidates or []
@@ -126,6 +132,7 @@ class GeminiEmbedder:
         out: list[list[float]] = []
         config = self._types.EmbedContentConfig(output_dimensionality=self.dimensions)
         for i in range(0, len(texts), 100):
+            await embed_limiter().wait_async()
             resp = await self._client.aio.models.embed_content(
                 model=self.model, contents=[t or " " for t in texts[i:i + 100]], config=config)
             out.extend(_l2(list(e.values or [])) for e in resp.embeddings or [])
