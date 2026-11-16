@@ -4,6 +4,8 @@ const nextConfig: NextConfig = {
   /* config options here */
   cacheComponents: true,
   partialPrefetching: true,
+  // Vercel Services does not route /_next/image (404), so on Vercel serve /public images as-is.
+  images: { unoptimized: !!process.env.VERCEL },
   turbopack: {
     rules: {
       "*.css": {
