@@ -1,3 +1,4 @@
+# Paths without a leading slash match at any depth, so repo-level folders are anchored with "/".
 .env
 .env.*
 !.env.example
@@ -7,10 +8,10 @@ __pycache__
 node_modules
 .next
 .vercel
-backend/tests
-backend/data
-graphify-out
-demo
-docs
-.claude
-.gstack
+/backend/tests
+/backend/data
+/graphify-out
+/demo
+/docs
+/.claude
+/.gstack
